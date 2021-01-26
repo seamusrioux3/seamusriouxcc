@@ -25,8 +25,3 @@ class RRead:
         print("Not implemented")
 
 
-print(RNum(5).pp())
-print(RNegate(RNum(5)).pp())
-print(RAdd(RNum(5),RNum(6)).pp())
-print(RAdd(RNegate(RNum(5)),RNum(6)).pp())
-print(RAdd(RAdd(RNum(5),RNum(6)),RNum(6)).pp())
