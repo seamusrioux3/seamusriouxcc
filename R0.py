@@ -41,4 +41,14 @@ class RRead:
             self.num = _num
         return self.num
 
+class Pow:
+    def __init__(self, _num):
+        self.num = _num
+    
+    def pp(self):
+        return "2^" + str(self.num.pp()) 
+    
+    def interp(self):
+        return 2**self.num.interp()
+
 
