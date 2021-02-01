@@ -38,7 +38,7 @@ class RRead:
         self.num = 0
     
     def pp(self):
-        return str(self.num)
+        return " Read "
 
     def interp(self):
         inp = input("Read: ")

@@ -16,6 +16,9 @@ class Test:
             return True
         print("Test failed expected "+ str(_expected) + " got "+ str(_actual))
         return False
+    
+    def testRandom(self, _r):
+        print(_r.pp() + " value: " +str(_r.interp()))
 
 num_5 = RNum(5)
 num_6 = RNum(6)
@@ -67,8 +70,16 @@ print(s.test(pow_5.pp(),"2^5"))
 print(s.test(pow_5.interp(),32))
 print(s.test(pow_16.pp(),"2^16"))
 print(s.test(pow_16.interp(),65536))
+print(s.test(Pow(RNum(4)).interp(),16 ))
 
+#Random testing 
+s.testRandom(randomR0(7))
+s.testRandom(randomR0(6))
+s.testRandom(randomR0(5))
+s.testRandom(randomR0(4))
+s.testRandom(randomR0(3))
+s.testRandom(randomR0(2))
+s.testRandom(randomR0(1))
+s.testRandom(randomR0(0))
 
-r = randomR0(5)
-print(r.interp())
 s.endSuite()
