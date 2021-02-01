@@ -14,7 +14,7 @@ class Test:
         if(_actual == _expected):
             self.testPassed +=1
             return True
-        print("Test failed expected: "+ str(_actual))
+        print("Test failed expected "+ str(_expected) + " got "+ str(_actual))
         return False
 
 num_5 = RNum(5)
@@ -58,7 +58,7 @@ print(s.test(num_add_num_0_num_3.interp(), 3))
 print(s.test(num_add_num_3_num_0.interp(), 3))
 
 print(s.test(read_1.interp(),1))
-print(s.test(read_1.interp(1),1))    
+print(s.test(read_1.interp(),2))    
 print(s.test(read_1.interp(),3))    
 
 print(s.test(pow_3.pp(),"2^3"))
@@ -68,4 +68,7 @@ print(s.test(pow_5.interp(),32))
 print(s.test(pow_16.pp(),"2^16"))
 print(s.test(pow_16.interp(),65536))
 
+
+r = randomR0(5)
+print(r.interp())
 s.endSuite()
