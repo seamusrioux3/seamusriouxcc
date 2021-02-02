@@ -43,7 +43,7 @@ class RRead:
     def interp(self):
         inp = input("Read: ")
         if(inp == ""):
-            self.num = self.num+1
+            self.num = 1
         else:
             self.num = int(inp)
         return self.num
@@ -70,3 +70,44 @@ def randomR0(n):
     else:
         ret = random.choice([RAdd(randomR0(n-1),randomR0(n-1)),RNegate(randomR0(n-1))])
     return ret
+
+def optimizer(n):
+    if isinstance(n,RNum):
+        return n
+    elif isinstance(n,RRead):
+        return n
+    elif isinstance(n,RNegate):
+        return not_opt(n.num)
+    elif isinstance(n,RAdd):
+        l = n.left
+        r = n.right
+        if(isinstance(l,RNum) and isinstance(r,RNum)):
+            return RNum(l.interp() + r.interp())
+
+        elif(isinstance(l,RNum) and isinstance(r,RAdd) and isinstance(r.left,RNum)):
+            return RAdd(RNum(l.interp() + r.left.interp()),r.right)
+
+        elif(isinstance(l,RAdd) and isinstance(r,RNum) and isinstance(r.right,RNum)):
+            return RAdd(RNum(l.interp() + r.right.interp()),r.left)
+
+        elif(isinstance(l, RAdd) and isinstance(l.left, RNum) and isinstance(r,RAdd) and isinstance(r.left, RNum)):
+            return RAdd(RNum(l.left.interp() + r.left.interp()),RAdd(l.left,r.left))
+        elif(not isinstance(l,RNum) and isinstance(r,RNum)):
+            return RAdd(r,l)
+        else:
+            return RAdd(optimizer(l), optimizer(r))
+            
+def not_opt(e):
+    if(isinstance (e,RNum)):
+        return RNum(-1 * e.num)
+    elif(isinstance(e,RNegate)):
+        return optimizer(e.num)
+    elif(isinstance(e,RAdd)):
+        if(isinstance(e.left,RNum)):
+            return optimizer(RAdd(not_opt(e.left), not_opt(optimizer(e.right))))
+        else:
+            return RNegate(optimizer(e))
+    else:
+        return RNegate(e)
+    
+        
