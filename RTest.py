@@ -19,6 +19,19 @@ class Test:
     
     def testRandom(self, _r):
         print(_r.pp() + " value: " +str(_r.interp()))
+    
+    def testOpt(self):
+        testCompleted = 0
+        for i in range(100):
+            print("Test Number: " +str(i))
+            p = randomR0(6)
+            pprim = optimizer(p)
+            print(p.pp())
+            print(pprim.pp())
+            if(p.interp() == pprim.interp()):
+                print(True)
+                testCompleted+=1
+        print("Number of optimizer tests completed " + str(testCompleted))
 
 num_5 = RNum(5)
 num_6 = RNum(6)
@@ -93,4 +106,5 @@ print(optimizer(RAdd(RNegate(RNum(22)),RNum(23))).pp())
 print(optimizer(RAdd(RNum(22),RAdd(RNum(23),RRead()))).pp())
 print(optimizer(RAdd(RNum(22),RAdd(RNum(23),RNum(20)))).pp())
 
+s.testOpt()
 s.endSuite()
