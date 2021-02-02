@@ -68,6 +68,8 @@ class RVar:
         self.num = _num
         self.name = _name
     
+    def pp(self):
+        return str(self.name)+"-"+str(self.num)
     
 
 class RLet:
@@ -76,6 +78,8 @@ class RLet:
         self.l = _l
         self.r = _r
     
+    def pp(self):
+        return "Let" + self.var.pp() +" = " + self.l.pp() +" in " + self.r.pp()
 
 #Functions
 def randomR0(n):
