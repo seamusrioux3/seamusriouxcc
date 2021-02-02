@@ -61,8 +61,8 @@ print(s.test(num_add_num_0_num_3.interp(), 3))
 print(s.test(num_add_num_3_num_0.interp(), 3))
 
 print(s.test(read_1.interp(),1))
-print(s.test(read_1.interp(),2))    
-print(s.test(read_1.interp(),3))    
+print(s.test(read_1.interp(),1))    
+print(s.test(read_1.interp(),1))    
 
 print(s.test(pow_3.pp(),"2^3"))
 print(s.test(pow_3.interp(),8))
@@ -81,5 +81,16 @@ s.testRandom(randomR0(3))
 s.testRandom(randomR0(2))
 s.testRandom(randomR0(1))
 s.testRandom(randomR0(0))
+
+#Optimized Tests
+print("\nOptimizer Exs")
+print(optimizer(RNegate(RNegate(RNegate(RNegate(RNegate(RRead())))))).pp())
+print(optimizer(RNegate(RNegate(RNegate(RNegate(RNegate(RNegate(RRead()))))))).pp())
+print(optimizer(RNegate(RAdd(RNum(10),RAdd(RRead(),RNum(12))))).pp())
+print(optimizer(RNegate(RNegate(RNum(975)))).pp())
+print(optimizer(RAdd(RNum(22),RNum(23))).pp())
+print(optimizer(RAdd(RNegate(RNum(22)),RNum(23))).pp())
+print(optimizer(RAdd(RNum(22),RAdd(RNum(23),RRead()))).pp())
+print(optimizer(RAdd(RNum(22),RAdd(RNum(23),RNum(20)))).pp())
 
 s.endSuite()
