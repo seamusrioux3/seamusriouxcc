@@ -1,6 +1,7 @@
 import random
 from datetime import datetime
 
+#R0 Data types
 class RNum:
     def __init__(self, _num):
         self.num = _num
@@ -61,7 +62,22 @@ class Pow:
         else:
             return RAdd(Pow(RNum(self.num.interp()-1)),Pow(RNum(self.num.interp()-1))).interp()
 
+#R1 data types
+class RVar:
+    def __init__(self, _num, _name):
+        self.num = _num
+        self.name = _name
+    
+    
 
+class RLet:
+    def __init__(self, _var, _l, _r):
+        self.var = _var
+        self.l = _l
+        self.r = _r
+    
+
+#Functions
 def randomR0(n):
     random.seed(datetime.now())
     ret =0
