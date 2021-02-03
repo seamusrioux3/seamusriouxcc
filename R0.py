@@ -39,7 +39,7 @@ class RRead:
         self.num = 0
     
     def pp(self):
-        return " Read "
+        return "Read"
 
     def interp(self):
         inp = input("Read: ")
@@ -64,12 +64,11 @@ class Pow:
 
 #R1 data types
 class RVar:
-    def __init__(self, _num, _name):
-        self.num = _num
+    def __init__(self, _name):
         self.name = _name
     
     def pp(self):
-        return str(self.name)+"-"+str(self.num)
+        return str(self.name)
     
 
 class RLet:
@@ -79,7 +78,7 @@ class RLet:
         self.r = _r
     
     def pp(self):
-        return "Let" + self.var.pp() +" = " + self.l.pp() +" in " + self.r.pp()
+        return "Let " + self.var.pp() +" = " + self.l.pp() +" in " + self.r.pp()
 
 #Functions
 def randomR0(n):

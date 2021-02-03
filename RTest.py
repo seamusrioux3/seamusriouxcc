@@ -20,9 +20,9 @@ class Test:
     def testRandom(self, _r):
         print(_r.pp() + " value: " +str(_r.interp()))
     
-    def testOpt(self):
+    def testOpt(self,n):
         testCompleted = 0
-        for i in range(100):
+        for i in range(n):
             print("Test Number: " +str(i))
             p = randomR0(6)
             pprim = optimizer(p)
@@ -31,7 +31,10 @@ class Test:
             if(p.interp() == pprim.interp()):
                 print(True)
                 testCompleted+=1
-        print("Number of optimizer tests completed " + str(testCompleted))
+        print("Number of optimizer tests completed " + str(testCompleted) +" out of "+str(n))
+
+
+
 
 num_5 = RNum(5)
 num_6 = RNum(6)
@@ -86,14 +89,14 @@ print(s.test(pow_16.interp(),65536))
 print(s.test(Pow(RNum(4)).interp(),16 ))
 
 #Random testing 
-s.testRandom(randomR0(7))
-s.testRandom(randomR0(6))
-s.testRandom(randomR0(5))
-s.testRandom(randomR0(4))
-s.testRandom(randomR0(3))
-s.testRandom(randomR0(2))
-s.testRandom(randomR0(1))
-s.testRandom(randomR0(0))
+# s.testRandom(randomR0(7))
+# s.testRandom(randomR0(6))
+# s.testRandom(randomR0(5))
+# s.testRandom(randomR0(4))
+# s.testRandom(randomR0(3))
+# s.testRandom(randomR0(2))
+# s.testRandom(randomR0(1))
+# s.testRandom(randomR0(0))
 
 #Optimized Tests
 print("\nOptimizer Exs")
@@ -106,5 +109,12 @@ print(optimizer(RAdd(RNegate(RNum(22)),RNum(23))).pp())
 print(optimizer(RAdd(RNum(22),RAdd(RNum(23),RRead()))).pp())
 print(optimizer(RAdd(RNum(22),RAdd(RNum(23),RNum(20)))).pp())
 
-s.testOpt()
+#Variable and Let testing
+print("\nR1 Tests")
+print(RLet(RVar("x"),RNum(2),RAdd(RVar("x"), RNum(3))).pp())
+print(RLet(RVar("x"),RNum(2),RLet(RVar("y"),RNum(1),RAdd(RVar("x"),RVar("y")))).pp())
+print(RLet(RVar("x"),RNum(2),RLet(RVar("x"),RNum(1),RAdd(RVar("x"),RVar("x")))).pp())
+print(RLet(RVar("x"),RNum(3),RLet(RVar("y"),RNum(2),RLet(RVar("z"),RNum(1),RAdd(RVar("x"),RAdd(RVar("y"),RVar("z")))))).pp())
+print(RLet(RVar("x"),RRead(),RAdd(RVar("x"),RVar("x"))).pp())
+#s.testOpt(2)
 s.endSuite()
