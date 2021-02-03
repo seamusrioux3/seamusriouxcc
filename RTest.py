@@ -18,7 +18,8 @@ class Test:
         return False
     
     def testRandom(self, _r):
-        print(_r.pp() + " value: " +str(_r.interp()))
+        print(_r.pp() + " value: \n" +str(_r.interp()))
+        #print(_r.pp())
     
     def testOpt(self,n):
         testCompleted = 0
@@ -76,9 +77,9 @@ print(s.test(num_add_neg_6_num_6.interp(), 0))
 print(s.test(num_add_num_0_num_3.interp(), 3))
 print(s.test(num_add_num_3_num_0.interp(), 3))
 
-print(s.test(read_1.interp(),1))
-print(s.test(read_1.interp(),1))    
-print(s.test(read_1.interp(),1))    
+# print(s.test(read_1.interp(),1))
+# print(s.test(read_1.interp(),1))    
+# print(s.test(read_1.interp(),1))    
 
 print(s.test(pow_3.pp(),"2^3"))
 print(s.test(pow_3.interp(),8))
@@ -127,5 +128,17 @@ print(letTest5.pp() + " evals to: " + str(letTest5.interp()))
 print(letTest6.pp() + " evals to: " + str(letTest6.interp()))
 print(letTest7.pp() + " evals to: " + str(letTest7.interp()))
 print(letTest8.pp() + " evals to: " + str(letTest8.interp()))
+
+############# randomR1 Testing #################
+print("\nRandomR1 Tests")
+s.testRandom(randomR1(0,[]))
+s.testRandom(randomR1(1,[]))
+s.testRandom(randomR1(2,[]))
+s.testRandom(randomR1(3,[]))
+s.testRandom(randomR1(4,[]))
+s.testRandom(randomR1(5,[]))
+s.testRandom(randomR1(6,[]))
+s.testRandom(randomR1(7,[]))
+s.testRandom(randomR1(8,[]))
 #s.testOpt(2)
 s.endSuite()

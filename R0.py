@@ -46,7 +46,7 @@ class RRead:
     def pp(self):
         return "Read"
 
-    def interp(self):
+    def interp(self,  e = None):
         inp = input("Read: ")
         if(inp == ""):
             self.num = 1
@@ -77,7 +77,7 @@ class RVar:
     
     def interp(self, e = None):
         if(e[self.name]):
-            return e[self.name].interp()
+            return e[self.name].interp(e)
         return "ERROR"
     
 
@@ -106,10 +106,25 @@ def randomR0(n):
     random.seed(datetime.now())
     ret =0
     if(n == 0):
-        ret = random.choice([RNum(random.randint(0, 1024)),RRead()])
+        ret = random.choice([RNum(random.randint(0, 16)),RRead()])
     else:
         ret = random.choice([RAdd(randomR0(n-1),randomR0(n-1)),RNegate(randomR0(n-1))])
     return ret
+
+def randomR1(n,v):
+    random.seed(datetime.now())
+    ret =0
+    if(n == 0):
+        if(v):
+            chosenVar = random.choice(v)
+            ret = random.choice([RNum(random.randint(0, 16)), chosenVar , RRead()])
+        else:
+            ret = random.choice([RNum(random.randint(0, 16)), RRead()])
+    else:
+        newVar = RVar("V" + str(len(v)))
+        ret = random.choice([RAdd(randomR1(n-1, v),randomR1(n-1, v)),RNegate(randomR1(n-1, v)), RLet(newVar,randomR1(n-1,v),randomR1(n-1,v+[newVar]))])
+    return ret
+
 
 def optimizer(n):
     if isinstance(n,RNum):
