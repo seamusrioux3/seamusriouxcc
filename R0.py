@@ -9,7 +9,7 @@ class RNum:
     def pp(self):
         return str(self.num)
 
-    def interp(self):
+    def interp(self, e = None):
         return self.num
 
 class RNegate:
@@ -19,7 +19,9 @@ class RNegate:
     def pp(self):
         return "-(" + str(self.num.pp()) + ")"
     
-    def interp(self):
+    def interp(self, e = None):
+        if(e):
+            return -1*self.num.interp(e)
         return -1*self.num.interp()
 
 class RAdd:
@@ -30,9 +32,12 @@ class RAdd:
     def pp(self):
         return "(+ " + self.left.pp() +" " + self.right.pp() + ")"
     
-    def interp(self):
-        return self.left.interp() + self.right.interp() 
-
+    def interp(self, e = None):
+        if(e):
+            return self.left.interp(e) +  self.right.interp(e) 
+        else:
+            return self.left.interp() + self.right.interp() 
+    
 
 class RRead:
     def __init__(self):
@@ -70,6 +75,11 @@ class RVar:
     def pp(self):
         return str(self.name)
     
+    def interp(self, e = None):
+        if(e[self.name]):
+            return e[self.name].interp()
+        return "ERROR"
+    
 
 class RLet:
     def __init__(self, _var, _l, _r):
@@ -79,6 +89,17 @@ class RLet:
     
     def pp(self):
         return "Let " + self.var.pp() +" = " + self.l.pp() +" in " + self.r.pp()
+    
+    def interp(self, e = None):
+        if(e):
+            e[self.var.name] = self.l
+            return self.r.interp(e)
+        else:
+            env ={}
+            env[self.var.name] = self.l
+            return self.r.interp(env)
+
+
 
 #Functions
 def randomR0(n):
