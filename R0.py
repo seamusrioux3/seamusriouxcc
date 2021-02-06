@@ -194,6 +194,31 @@ def optimizer(n, env = None):
 
     
 
+############ X0 Programs ############
+class XVar:
+    def __init__(self, _name):
+        self.name = _name
 
+class XLabel:
+    def __init__(self, _string):
+        self.string = _string
 
-        
+class XRegister:
+    def __init__(self, _register):
+        self.register = _register
+
+class XArg:
+    def __init__(self, _value):
+        self.value = _value
+
+class XInstr:
+    def __init__(self, _instr):
+        self.instr = _instr
+
+class XBlock:
+    def __init__(self, _blk):
+        self.blk = _blk
+
+class XProgram:
+    def __init__(self, _p):
+        self.p = _p
