@@ -109,6 +109,8 @@ print(optimizer(RAdd(RNum(22),RNum(23))).pp())
 print(optimizer(RAdd(RNegate(RNum(22)),RNum(23))).pp())
 print(optimizer(RAdd(RNum(22),RAdd(RNum(23),RRead()))).pp())
 print(optimizer(RAdd(RNum(22),RAdd(RNum(23),RNum(20)))).pp())
+#s.testOpt(2)
+
 
 #Variable and Let testing
 print("\nR1 Tests")
@@ -131,14 +133,57 @@ print(letTest8.pp() + " evals to: " + str(letTest8.interp()))
 
 ############# randomR1 Testing #################
 print("\nRandomR1 Tests")
-s.testRandom(randomR1(0,[]))
-s.testRandom(randomR1(1,[]))
-s.testRandom(randomR1(2,[]))
-s.testRandom(randomR1(3,[]))
-s.testRandom(randomR1(4,[]))
-s.testRandom(randomR1(5,[]))
-s.testRandom(randomR1(6,[]))
-s.testRandom(randomR1(7,[]))
-s.testRandom(randomR1(8,[]))
-#s.testOpt(2)
+# s.testRandom(randomR1(0,[]))
+# s.testRandom(randomR1(1,[]))
+# s.testRandom(randomR1(2,[]))
+# s.testRandom(randomR1(3,[]))
+# s.testRandom(randomR1(4,[]))
+# s.testRandom(randomR1(5,[]))
+# s.testRandom(randomR1(6,[]))
+# s.testRandom(randomR1(7,[]))
+# s.testRandom(randomR1(8,[]))
+
+########### Optimizer Testing R1 ###############
+print("\nOptimizerR1 Tests")
+letTest1Opt = optimizer(letTest1)
+letTest2Opt = optimizer(letTest2)
+letTest3Opt = optimizer(letTest3)
+letTest4Opt = optimizer(letTest4)
+letTest5Opt = optimizer(letTest5)
+letTest6Opt = optimizer(letTest6)
+letTest7Opt = optimizer(letTest7)
+letTest8Opt = optimizer(letTest8)
+
+print("test1")
+print(letTest1.pp() + " --> " + letTest1Opt.pp() )
+print(str(letTest1.interp()) +" --> " + str(letTest1Opt.interp()))
+
+print("test2")
+print(letTest2.pp() + " --> " + letTest2Opt.pp() )
+print(str(letTest2.interp()) +" --> " + str(letTest2Opt.interp()))
+
+print("test3")
+print(letTest3.pp() + " --> " + letTest3Opt.pp() )
+print(str(letTest3.interp()) +" --> " + str(letTest3Opt.interp()))
+
+print("test4")
+print(letTest4.pp() + " --> " + letTest4Opt.pp() )
+print(str(letTest4.interp()) +" --> " + str(letTest4Opt.interp()))
+
+print("test5")
+print(letTest5.pp() + " --> " + letTest5Opt.pp() )
+print(str(letTest5.interp()) +" --> " + str(letTest5Opt.interp()))
+
+print("test6")
+print(letTest6.pp() + " --> " + letTest6Opt.pp() )
+print(str(letTest6.interp()) +" --> " + str(letTest6Opt.interp()))
+
+print("test7")
+print(letTest7.pp() + " --> " + letTest7Opt.pp() )
+print(str(letTest7.interp()) +" --> " + str(letTest7Opt.interp()))
+
+print("test8")
+print(letTest8.pp() + " --> " + letTest8Opt.pp() )
+print(str(letTest8.interp()) +" --> " + str(letTest8Opt.interp()))
+
 s.endSuite()
