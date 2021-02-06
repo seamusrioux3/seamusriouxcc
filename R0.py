@@ -126,43 +126,74 @@ def randomR1(n,v):
     return ret
 
 
-def optimizer(n):
+
+def optimizer(n, env = None):
     if isinstance(n,RNum):
         return n
     elif isinstance(n,RRead):
         return n
     elif isinstance(n,RNegate):
-        return not_opt(n.num)
+        e = n.num
+        if(isinstance (e,RNum)):
+            return RNum(-1 * e.interp(env))
+        elif(isinstance(e,RNegate)):
+            return optimizer(e, env)
+        elif(isinstance(e,RAdd)):
+            if(isinstance(e.left,RNum)):
+                return RAdd(RNum(-1*e.left.interp()), RNegate(optimizer(e.right)))
+            else:
+                return RNegate(optimizer(e, env))
+        elif( isinstance(e,RVar)):
+            return RNegate(optimizer(e,env))
+        else:
+            return n
     elif isinstance(n,RAdd):
         l = n.left
         r = n.right
         if(isinstance(l,RNum) and isinstance(r,RNum)):
-            return RNum(l.interp() + r.interp())
+            return RNum(l.interp(env) + r.interp(env))
 
         elif(isinstance(l,RNum) and isinstance(r,RAdd) and isinstance(r.left,RNum)):
-            return RAdd(RNum(l.interp() + r.left.interp()),r.right)
+            return RAdd(RNum(l.interp(env) + r.left.interp(env)),r.right)
 
         elif(isinstance(l,RAdd) and isinstance(r,RNum) and isinstance(r.right,RNum)):
-            return RAdd(RNum(l.interp() + r.right.interp()),r.left)
+            return RAdd(RNum(l.interp(env) + r.right.interp(env)),r.left)
 
         elif(isinstance(l, RAdd) and isinstance(l.left, RNum) and isinstance(r,RAdd) and isinstance(r.left, RNum)):
-            return RAdd(RNum(l.left.interp() + r.left.interp()),RAdd(l.left,r.left))
+            return RAdd(RNum(l.left.interp(env) + r.left.interp(env)),RAdd(l.left,r.left))
         elif(not isinstance(l,RNum) and isinstance(r,RNum)):
-            return RAdd(r,l)
+            return optimizer(RAdd(r,l), env)
         else:
-            return RAdd(optimizer(l), optimizer(r))
-            
-def not_opt(e):
-    if(isinstance (e,RNum)):
-        return RNum(-1 * e.num)
-    elif(isinstance(e,RNegate)):
-        return optimizer(e.num)
-    elif(isinstance(e,RAdd)):
-        if(isinstance(e.left,RNum)):
-            return optimizer(RAdd(not_opt(e.left), not_opt(optimizer(e.right))))
+            return RAdd(optimizer(l, env), optimizer(r, env))
+    elif(isinstance(n,RVar)):
+        if(env):
+            if(env[n.name]):
+                return env[n.name]
+            else:
+                print("ERROR UNBOUND VAR")
+                return n
+    elif(isinstance(n,RLet)):
+        xe =  optimizer(n.l)
+        if(isinstance(xe,RNum)):
+            if(env):
+                env[n.var.name] =xe
+            else:
+                env = {}
+                env[n.var.name] =xe
+            be = optimizer(n.r,env)
+            return be
         else:
-            return RNegate(optimizer(e))
-    else:
-        return RNegate(e)
+            if(env):
+                env[n.var.name] =xe
+            else:
+                env = {}
+                env[n.var.name] =xe
+            be = optimizer(n.r,env)
+        
+        return RLet(n.var, xe, be)
+
     
+
+
+
         
