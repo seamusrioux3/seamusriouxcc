@@ -199,26 +199,116 @@ class XVar:
     def __init__(self, _name):
         self.name = _name
 
+    def emit(self):
+        return "!" + self.name
+
 class XLabel:
     def __init__(self, _string):
         self.string = _string
+    
+    def emit(self):
+        return self.string
 
 class XRegister:
     def __init__(self, _register):
         self.register = _register
 
+    def emit(self):
+        return "%" + self.register
+
 class XArg:
     def __init__(self, _value):
         self.value = _value
 
-class XInstr:
-    def __init__(self, _instr):
-        self.instr = _instr
+class XCon:
+    def __init__(self, _value):
+        self.value = _value
+
+    def emit(self):
+        return "$" + str(self.value)
+
+class XMem:
+    def __init__(self, _reg, _num):
+        self.reg = _reg
+        self.num = _num
+
+    def emit(self):
+        return self.reg.emit() +" (" + str(self.num) + ")"
+
+############ Instructions ############
+class XIAdd:
+    def __init__(self, _src, _dst):
+        self.src = _src
+        self.dst = _dst
+
+    def emit(self):
+        return "addq" + " " + self.src.emit() + ", " + self.dst.emit()
+
+class XISub:
+    def __init__(self, _src, _dst):
+        self.src = _src
+        self.dst = _dst
+
+    def emit(self):
+        return "subq" + " " + self.src.emit() + ", " + self.dst.emit()
+
+class XIMov:
+    def __init__(self, _src, _dst):
+        self.src = _src
+        self.dst = _dst
+
+    def emit(self):
+        return "movq" + " " + self.src.emit() + ", " + self.dst.emit()
+
+class XIRet:
+    def emit():
+        return "retq"
+
+class XINeg:
+    def __init__(self, _src):
+        self.src = _src
+
+    def emit(self):
+        return "negq" + " " + self.src.emit()
+
+class XICall:
+    def __init__(self, _src):
+        self.src = _src
+
+    def emit(self):
+        return "callq" + " " + self.src.emit()
+
+class XIJmp:
+    def __init__(self, _src):
+        self.src = _src
+
+    def emit(self):
+        return "jmp" + " " + self.src.emit()
+
+class XIPush:
+    def __init__(self, _src):
+        self.src = _src
+
+    def emit(self):
+        return "pushq" + " " + self.src.emit()
+
+class XIPop:
+    def __init__(self, _src):
+        self.src = _src
+
+    def emit(self):
+        return "popq" + " " + self.src.emit()
 
 class XBlock:
     def __init__(self, _blk):
         self.blk = _blk
+    
+    def emit(self):
+        return "\n" + self.blk.emit()
 
 class XProgram:
     def __init__(self, _p):
         self.p = _p
+    
+    def emit(self):
+        return "\n\n" + "".join([x.emit() for x in self.p])
