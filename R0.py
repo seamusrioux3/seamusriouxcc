@@ -229,6 +229,7 @@ class XProgram:
         print(env.var)
         print(env.mem)
         print(env.blk)
+        print(env.cntr)
         return env.reg["RAX"]
 
 
@@ -337,7 +338,7 @@ class XIAdd:
         return "addq" + " " + self.src.emit() + ", " + self.dst.emit()
 
     def interp(self, env):
-        env = self.dst.set(env, self.src.interp(env) - self.dst.interp(env))
+        env = self.dst.set(env, self.src.interp(env) + self.dst.interp(env))
         return env
 
 
@@ -350,7 +351,7 @@ class XISub:
         return "subq" + " " + self.src.emit() + ", " + self.dst.emit()
 
     def interp(self, env):
-        env = self.dst.set(env, self.src.interp(env) - self.dst.interp(env))
+        env = self.dst.set(env, self.dst.interp(env) - self.src.interp(env))
         return env
 
 

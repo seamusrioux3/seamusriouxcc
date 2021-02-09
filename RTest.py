@@ -1,4 +1,6 @@
 from R0 import *
+import subprocess
+import os
 
 
 class Test:
@@ -13,6 +15,7 @@ class Test:
     def test(self, _actual, _expected):
         self.totalTests += 1
         if(_actual == _expected):
+            print("Test passed got actual: "+ str(_actual) +" and expected: "+ str(_expected))
             self.testPassed += 1
             return True
         print("Test failed expected " + str(_expected) + " got " + str(_actual))
@@ -20,7 +23,6 @@ class Test:
 
     def testRandom(self, _r):
         print(_r.pp() + " value: \n" + str(_r.interp()))
-        # print(_r.pp())
 
     def testOpt(self, n):
         testCompleted = 0
@@ -35,6 +37,36 @@ class Test:
                 testCompleted += 1
         print("Number of optimizer tests completed " +
               str(testCompleted) + " out of "+str(n))
+    
+    def testX0Programs(self,prog):
+        fileName = "c0.s"
+        binName = "c0.bin"
+        f = open(fileName, "w")
+        f.write(prog.emit()+"\n")
+        f.close()
+
+        p = subprocess.Popen(
+
+            ["cc",fileName,"runtime.c","-o","c0.bin"],
+
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        
+        stdout, stderr = p.communicate()
+        exit_code = p.wait()
+
+        p = subprocess.Popen(
+
+            ["./" + binName],
+
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+
+        stdout, stderr = p.communicate()
+        exit_code = p.wait()
+
+        if os.path.exists(binName):
+            os.remove(binName)
+
+        self.test(prog.interp(),exit_code)
 
 
 num_5 = RNum(5)
@@ -272,7 +304,6 @@ Xprog6 = XProgram([
         XLabel("l0"),
         XBlock([
             XISub(XRegister("R10"), XRegister("R8")),
-            XINeg(XRegister("R10")),
             XIMov(XRegister("R10"), XRegister("RAX")),
             XIRet()
         ])
@@ -330,6 +361,47 @@ Xprog9 = XProgram(
     ]
 )
 
+Xprog10 = XProgram(
+    [
+        (
+            XLabel("main"),
+            XBlock([
+                XIPush(XCon(33)),
+                XIPop(XRegister("RAX")),
+                XIPush(XCon(66)),
+                XIPop(XRegister("RAX")),
+                XIPush(XCon(99)),
+                XIPop(XRegister("RAX")),
+                XIRet()
+            ])
+        )
+    ]
+)
 
+Xprog11 = XProgram(
+    [
+        (
+            XLabel("main"),
+            XBlock([
+                XIPush(XCon(33)),
+                XIPop(XRegister("RAX")),
+                XIAdd(XCon(8),XRegister("R8")),
+                XIAdd(XRegister("R8"),XRegister("RAX")),
+                XIRet()
+            ])
+        )
+    ]
+)
 
+s.testX0Programs(Xprog1)
+s.testX0Programs(Xprog2)
+s.testX0Programs(Xprog3)
+s.testX0Programs(Xprog4)
+s.testX0Programs(Xprog5)
+s.testX0Programs(Xprog6)
+s.testX0Programs(Xprog7)
+s.testX0Programs(Xprog8)
+s.testX0Programs(Xprog9)
+s.testX0Programs(Xprog10)
+s.testX0Programs(Xprog11)
 s.endSuite()
