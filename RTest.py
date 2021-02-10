@@ -385,7 +385,7 @@ Xprog11 = XProgram(
             XBlock([
                 XIPush(XCon(33)),
                 XIPop(XRegister("RAX")),
-                XIAdd(XCon(8),XRegister("R8")),
+                XIMov(XCon(8),XRegister("R8")),
                 XIAdd(XRegister("R8"),XRegister("RAX")),
                 XIRet()
             ])
@@ -404,4 +404,92 @@ s.testX0Programs(Xprog8)
 s.testX0Programs(Xprog9)
 s.testX0Programs(Xprog10)
 s.testX0Programs(Xprog11)
+
+
+##### Testing C0 Programs ######
+Cprog1 = CProgram({
+    CLabel("main"):
+    [
+        CSet(CVar("i"),CNum(10)),
+        CSet(CVar("j"),CNum(5)),
+        CSet(CVar("k"),CAdd(CVar("i"),CVar("j"))),
+        CSet(CVar("l"),CAdd(CVar("i"),CVar("k"))),
+        CRet(CVar("l"))
+    ]
+})
+
+Cprog2 = CProgram({
+    CLabel("main"):
+    [
+        CSet(CVar("1"), CRead()),
+        CSet(CVar("2"), CRead()),
+        CSet(CVar("3"), CRead()),
+        CSet(CVar("4"), CAdd(CVar("1"),CVar("2"))),
+        CSet(CVar("5"), CAdd(CVar("3"),CVar("4"))),
+        CRet(CVar("5"))
+    ]
+})
+
+Cprog3 = CProgram({
+    CLabel("main"):
+    [
+        CSet(CVar("8"), CNum(10)),
+        CSet(CVar("9"), CNum(5)),
+        CSet(CVar("10"), CNeg(CVar("8"))),
+        CSet(CVar("11"), CAdd(CVar("10"), CVar("9"))),
+        CSet(CVar("12"), CAdd(CVar("8"),  CVar("11"))),
+        CRet(CVar("12"))
+    ]
+})
+
+Cprog4 = CProgram({
+    CLabel("main"):
+    [
+        CSet(CVar("0"), CNum(10)),
+        CSet(CVar("1"), CNum(5)),
+        CRet(CVar("1"))
+    ]
+})
+
+
+Cprog5 = CProgram({
+    CLabel("main"):
+    [
+        CSet(CVar("0"), CNum(200)),
+        CSet(CVar("0"), CNum(250)),
+        CRet(CVar("0")),
+    ]
+})
+
+Cprog6 = CProgram({
+    CLabel("main"):
+    [
+        CSet(CVar("8"),  CNum(200)),
+        CSet(CVar("10"), CNum(201)),
+        CSet(CVar("11"), CAdd(CNeg(CVar("10")), CVar("8"))),
+        CSet(CVar("12"), CVar("10")),
+        CRet(CVar("10"))
+    ]
+})
+
+Cprog7 = CProgram({
+    CLabel("main"):
+    [
+        CSet(CVar("A"), CNum(8)),
+        CSet(CVar("B"), CNum(10)),
+        CSet(CVar("C"), CAdd(CVar("A"), CVar("B"))),
+        CRet(CVar("C"))
+    ]
+})
+
+
+
+print(Cprog1.pp()+"\n")
+print(Cprog2.pp()+"\n")
+print(Cprog3.pp()+"\n")
+print(Cprog4.pp()+"\n")
+print(Cprog5.pp()+"\n")
+print(Cprog6.pp()+"\n")
+print(Cprog7.pp()+"\n")
+
 s.endSuite()
