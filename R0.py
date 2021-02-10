@@ -444,3 +444,41 @@ class XIPop:
         XIMov(XMem(XRegister("RSP"), 0), self.src).interp(env)
         XIAdd(XCon(8), XRegister("RSP")).interp(env)
         return
+
+###### C0 Program Data Types ########
+
+class CProgram:
+    def __init__(self, _p):
+        self.p = _p
+
+class CTail:
+    def __init__(self, _t):
+        self.t = _t
+
+class CNum:
+    def __init__(self, _n):
+        self.n = _n 
+
+class CVar:
+    def __init__(self, _var):
+        self.var = _var
+
+class CRead:
+    def __init__(self):
+        self.r = 0
+
+class CNeg:
+    def __init__(self, _n):
+        self.n = _n 
+
+class CAdd:
+    def __init__(self, _l, _r):
+        self.l = _l
+        self.r = _r
+
+class CStmt:
+    def __init__(self, _var, _exp):
+        self.var = _var
+        self.exp = _exp
+
+
