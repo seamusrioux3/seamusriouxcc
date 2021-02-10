@@ -451,34 +451,74 @@ class CProgram:
     def __init__(self, _p):
         self.p = _p
 
+    def pp(self):
+        return "".join([i.pp() + "\n"+ "\n".join([l.pp() for l in j])\
+             for i,j in self.p.items()])
+
+class CLabel:
+    def __init__(self, _label):
+        self.label = _label
+    
+    def pp(self):
+        return self.label
+
+
 class CTail:
     def __init__(self, _t):
         self.t = _t
+    
+    def pp(self):
+        return self.t.pp()
+
+class CRet:
+    def __init__(self, _var):
+        self.var = _var
+    
+    def pp(self):
+        return "return "+ self.var.pp()
 
 class CNum:
     def __init__(self, _n):
-        self.n = _n 
+        self.n = _n
+
+    def pp(self):
+        return str(self.n) 
 
 class CVar:
     def __init__(self, _var):
         self.var = _var
+    
+    def pp(self):
+        return "var: "+ self.var
 
 class CRead:
     def __init__(self):
         self.r = 0
+    
+    def pp(self):
+        return "Read"
 
 class CNeg:
     def __init__(self, _n):
         self.n = _n 
+    
+    def pp(self):
+        return "-("+self.n.pp() +")"
 
 class CAdd:
     def __init__(self, _l, _r):
         self.l = _l
         self.r = _r
+    
+    def pp(self):
+        return "(+ " + self.l.pp() + " " + self.r.pp() +")"
 
-class CStmt:
+class CSet:
     def __init__(self, _var, _exp):
         self.var = _var
         self.exp = _exp
+    
+    def pp(self):
+        return "(set! " + self.var.pp() + " " + self.exp.pp() + ")"
 
 
