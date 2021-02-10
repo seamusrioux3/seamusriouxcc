@@ -454,6 +454,30 @@ class CProgram:
     def pp(self):
         return "".join([i.pp() + "\n"+ "\n".join([l.pp() for l in j])\
              for i,j in self.p.items()])
+    
+    def interp(self):
+        tempBlks = {}
+        for i,j in self.p.items():
+            tempBlks.update({i.interp():j})
+        #print(tempBlks)
+        env = CEnv()
+        env.setBlk(tempBlks)
+        rtn = 0
+        for i in env.blk["main"]:
+            rtn = i.interp(env)
+        return rtn
+
+class CEnv:
+    def __init__(self):
+        self.var = {}
+        self.blk = {}
+        self.cntr = 0
+    
+    def setBlk(self,add):
+        self.blk.update(add)
+        
+    def setVar(self,add):
+        self.var.update(add)
 
 class CLabel:
     def __init__(self, _label):
@@ -461,14 +485,9 @@ class CLabel:
     
     def pp(self):
         return self.label
-
-
-class CTail:
-    def __init__(self, _t):
-        self.t = _t
     
-    def pp(self):
-        return self.t.pp()
+    def interp(self):
+        return self.label
 
 class CRet:
     def __init__(self, _var):
@@ -476,6 +495,9 @@ class CRet:
     
     def pp(self):
         return "return "+ self.var.pp()
+    
+    def interp(self,env):
+        return env.var[self.var.pp()]
 
 class CNum:
     def __init__(self, _n):
@@ -483,13 +505,19 @@ class CNum:
 
     def pp(self):
         return str(self.n) 
+    
+    def interp(self,env):
+        return self.n
 
 class CVar:
     def __init__(self, _var):
         self.var = _var
     
     def pp(self):
-        return "var: "+ self.var
+        return self.var
+    
+    def interp(self,env):
+        return env.var[self.var]
 
 class CRead:
     def __init__(self):
@@ -497,6 +525,10 @@ class CRead:
     
     def pp(self):
         return "Read"
+    
+    def interp(self,env):
+        env.cntr +=1
+        return env.cntr
 
 class CNeg:
     def __init__(self, _n):
@@ -504,6 +536,9 @@ class CNeg:
     
     def pp(self):
         return "-("+self.n.pp() +")"
+    
+    def interp(self,env):
+        return -1* self.n.interp(env)
 
 class CAdd:
     def __init__(self, _l, _r):
@@ -512,6 +547,9 @@ class CAdd:
     
     def pp(self):
         return "(+ " + self.l.pp() + " " + self.r.pp() +")"
+    
+    def interp(self,env):
+        return self.l.interp(env) + self.r.interp(env)
 
 class CSet:
     def __init__(self, _var, _exp):
@@ -520,5 +558,9 @@ class CSet:
     
     def pp(self):
         return "(set! " + self.var.pp() + " " + self.exp.pp() + ")"
+    
+    def interp(self,env):
+        env.setVar({self.var.pp():self.exp.interp(env)})
+        return 0
 
 

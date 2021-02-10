@@ -67,6 +67,9 @@ class Test:
             os.remove(binName)
 
         self.test(prog.interp(),exit_code)
+    
+   
+
 
 
 num_5 = RNum(5)
@@ -417,6 +420,8 @@ Cprog1 = CProgram({
         CRet(CVar("l"))
     ]
 })
+print(Cprog1.pp()+"\n")
+s.test(Cprog1.interp(),25)
 
 Cprog2 = CProgram({
     CLabel("main"):
@@ -430,6 +435,10 @@ Cprog2 = CProgram({
     ]
 })
 
+print(Cprog2.pp()+"\n")
+s.test(Cprog2.interp(),6)
+
+
 Cprog3 = CProgram({
     CLabel("main"):
     [
@@ -442,6 +451,9 @@ Cprog3 = CProgram({
     ]
 })
 
+print(Cprog3.pp()+"\n")
+s.test(Cprog3.interp(),5)
+
 Cprog4 = CProgram({
     CLabel("main"):
     [
@@ -451,6 +463,8 @@ Cprog4 = CProgram({
     ]
 })
 
+print(Cprog4.pp()+"\n")
+s.test(Cprog4.interp(),5)
 
 Cprog5 = CProgram({
     CLabel("main"):
@@ -460,6 +474,9 @@ Cprog5 = CProgram({
         CRet(CVar("0")),
     ]
 })
+
+print(Cprog5.pp()+"\n")
+s.test(Cprog5.interp(),250)
 
 Cprog6 = CProgram({
     CLabel("main"):
@@ -472,6 +489,9 @@ Cprog6 = CProgram({
     ]
 })
 
+print(Cprog6.pp()+"\n")
+s.test(Cprog6.interp(),201)
+
 Cprog7 = CProgram({
     CLabel("main"):
     [
@@ -482,14 +502,9 @@ Cprog7 = CProgram({
     ]
 })
 
-
-
-print(Cprog1.pp()+"\n")
-print(Cprog2.pp()+"\n")
-print(Cprog3.pp()+"\n")
-print(Cprog4.pp()+"\n")
-print(Cprog5.pp()+"\n")
-print(Cprog6.pp()+"\n")
 print(Cprog7.pp()+"\n")
+s.test(Cprog7.interp(),18)
+
+
 
 s.endSuite()
