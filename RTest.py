@@ -68,7 +68,10 @@ class Test:
 
         self.test(prog.interp(),exit_code)
     
-    
+    def testUniquify(self,p):
+        actual = uniquify(p).interp()
+        expected = p.interp()
+        self.test(actual,expected)
     
    
 
