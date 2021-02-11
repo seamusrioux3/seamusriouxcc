@@ -10,7 +10,7 @@ class Test:
         self.totalTests = 0
 
     def endSuite(self):
-        print(str(self.testPassed) + " tests passed out of " + str(self.totalTests))
+        print("\n" + str(self.testPassed) + " tests passed out of " + str(self.totalTests))
 
     def test(self, _actual, _expected):
         self.totalTests += 1
@@ -72,6 +72,23 @@ class Test:
         actual = uniquify(p).interp()
         expected = p.interp()
         self.test(actual,expected)
+
+    def testRCO(self,p):
+        actual = RCO(p).interp()
+        expected = p.interp()
+        self.test(actual,expected)
+
+    def testAll(self,p):
+        actual = 0
+        po = optimizer(p)
+        pu = uniquify(po)
+        pr = RCO(pu)
+        if (p.interp() == po.interp() == pu.interp() == pr.interp()):
+            actual = pr.interp()
+        else:
+            actual = False
+
+        self.test(actual,p.interp())
     
    
 
@@ -162,15 +179,7 @@ letTest7 = RLet(RVar("x"), RNum(7), RLet(RVar("y"), RNum(8),
 letTest8 = RLet(RVar("x"), RNum(7), RLet(RVar("x"), RNum(8),
                                          RAdd(RNegate(RVar("x")), RNegate(RVar("x")))))
 letTest9 = RLet(RVar("x"), RRead(), RNum(4))
-print(letTest1.pp() + " evals to: " + str(letTest1.interp()))
-print(letTest2.pp() + " evals to: " + str(letTest2.interp()))
-print(letTest3.pp() + " evals to: " + str(letTest3.interp()))
-print(letTest4.pp() + " evals to: " + str(letTest4.interp()))
-print(letTest5.pp() + " evals to: " + str(letTest5.interp()))
-print(letTest6.pp() + " evals to: " + str(letTest6.interp()))
-print(letTest7.pp() + " evals to: " + str(letTest7.interp()))
-print(letTest8.pp() + " evals to: " + str(letTest8.interp()))
-print(letTest9.pp() + " evals to: " + str(letTest9.interp()))
+
 
 ############# randomR1 Testing #################
 print("\nRandomR1 Tests")
@@ -183,50 +192,6 @@ s.testRandom(randomR1(5,[]))
 s.testRandom(randomR1(6,[]))
 s.testRandom(randomR1(7,[]))
 s.testRandom(randomR1(8,[]))
-
-########### Optimizer Testing R1 ###############
-print("\nOptimizerR1 Tests")
-letTest1Opt = optimizer(letTest1)
-letTest2Opt = optimizer(letTest2)
-letTest3Opt = optimizer(letTest3)
-letTest4Opt = optimizer(letTest4)
-letTest5Opt = optimizer(letTest5)
-letTest6Opt = optimizer(letTest6)
-letTest7Opt = optimizer(letTest7)
-letTest8Opt = optimizer(letTest8)
-
-print("test1")
-print(letTest1.pp() + " --> " + letTest1Opt.pp())
-print(str(letTest1.interp()) + " --> " + str(letTest1Opt.interp()))
-
-print("test2")
-print(letTest2.pp() + " --> " + letTest2Opt.pp())
-print(str(letTest2.interp()) + " --> " + str(letTest2Opt.interp()))
-
-print("test3")
-print(letTest3.pp() + " --> " + letTest3Opt.pp())
-print(str(letTest3.interp()) + " --> " + str(letTest3Opt.interp()))
-
-print("test4")
-print(letTest4.pp() + " --> " + letTest4Opt.pp())
-print(str(letTest4.interp()) + " --> " + str(letTest4Opt.interp()))
-
-print("test5")
-print(letTest5.pp() + " --> " + letTest5Opt.pp() )
-print(str(letTest5.interp()) +" --> " + str(letTest5Opt.interp()))
-
-print("test6")
-print(letTest6.pp() + " --> " + letTest6Opt.pp() )
-print(str(letTest6.interp()) +" --> " + str(letTest6Opt.interp()))
-
-print("test7")
-print(letTest7.pp() + " --> " + letTest7Opt.pp() )
-print(str(letTest7.interp()) +" --> " + str(letTest7Opt.interp()))
-
-print("test8")
-print(letTest8.pp() + " --> " + letTest8Opt.pp() )
-print(str(letTest8.interp()) +" --> " + str(letTest8Opt.interp()))
-
 
 ########## X0 Program Testing ################
 Xprog1 = XProgram([
@@ -505,7 +470,7 @@ print(Cprog7.pp()+"\n")
 s.test(Cprog7.interp(),18)
 
 ####### Uniquify Tests ###########
-
+print("\n Uniquify Tests\n")
 Uprog1 = RLet(RVar("A"), RNum(1),RLet(RVar("A"),RRead(),RVar("A")))
 Uprog2 = RLet(RVar("A"), RNum(1), RLet(RVar("A"),RNum(2),RAdd(RVar("A"),RVar("A"))))
 Uprog3 = RLet(RVar("A"), RNum(1), RVar("A"))
@@ -523,6 +488,8 @@ s.testUniquify(randomR1(5,[]))
 s.testUniquify(randomR1(4,[]))
 s.testUniquify(randomR1(3,[]))
 
+####### RCO Tests ###########
+print("\nRCO Tests\n")
 Rcoprog1 = RAdd(RAdd(RNum(2), RNum(3)), RLet(RVar("x"), RRead(), RAdd(RVar("x"), RVar("x"))))
 Rcoprog2 = RLet(RVar("R1"), RAdd(RNum(2), RNum(3)), RLet(RVar("R2"), RAdd(RNum(1), RVar("R1")), RLet(RVar("R3"), RAdd(RVar("R1"), RVar("R1")), RVar("R2"))))
 Rcoprog3 = RLet(RVar("R1"), RNegate(RNum(3)), RLet(RVar("R2"), RAdd(RNum(1), RVar("R1")), RLet(RVar("R3"), RAdd(RVar("R1"), RVar("R1")), RVar("R2"))))
@@ -530,5 +497,24 @@ Rcoprog4 = RCO(optimizer(RAdd(RAdd(RNum(2), RNum(3)), RLet(RVar("x"), RRead(), R
 Rcoprog5 = RLet(RVar("R1"), RAdd(RNum(1), RNum(1)), RLet(RVar("R2"), RAdd(RVar("R1"), RVar("R1")), RLet(RVar("R3"),RAdd(RVar("R2"),RVar("R2")), RVar("R3"))))
 Rcoprog6 = RLet(RVar("R1"), RAdd(RNegate(RNum(2)), RNegate(RNegate(RNum(2)))), RVar("R1"))
 
+s.testRCO(Rcoprog1)
+s.testRCO(Rcoprog2)
+s.testRCO(Rcoprog3)
+s.testRCO(Rcoprog4)
+s.testRCO(Rcoprog5)
+s.testRCO(Rcoprog6)
+
+
+####### Combined Testing ########
+print("\nCombined Tests\n")
+s.testAll(letTest1)
+s.testAll(letTest2)
+s.testAll(letTest3)
+s.testAll(letTest4)
+s.testAll(letTest5)
+s.testAll(letTest6)
+s.testAll(letTest7)
+s.testAll(letTest8)
+s.testAll(letTest9)
 
 s.endSuite()
