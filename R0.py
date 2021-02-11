@@ -3,13 +3,17 @@ from datetime import datetime
 
 # R0 Data types
 
+
 class REnv:
     def __init__(self):
-        self.env ={}
+        self.env = {}
+
     def getEnv(self):
         return self.env
+
     def setEnv(self, left, right):
         self.env[left] = right
+
 
 class RNum:
     def __init__(self, _num):
@@ -69,13 +73,13 @@ class Pow:
     def pp(self):
         return "2^" + str(self.num.pp())
 
-    def interp(self, e =None):
+    def interp(self, e=None):
         if(self.num.interp() == 0):
             return 1
         else:
             return RAdd(Pow(RNum(self.num.interp()-1)), Pow(RNum(self.num.interp()-1))).interp(e)
 
-# R1 data types
+###### R1 data types ######
 
 
 class RVar:
@@ -86,7 +90,7 @@ class RVar:
         return str(self.name)
 
     def interp(self, e=None):
-        if(e.getEnv()[self.name]):
+        if(self.name in e.getEnv()):
             return e.getEnv()[self.name]
         return "ERROR"
 
@@ -100,7 +104,7 @@ class RLet:
     def pp(self):
         return "Let " + self.var.pp() + " = " + self.l.pp() + " in " + self.r.pp()
 
-    def interp(self, e = None):
+    def interp(self, e=None):
         if(not e):
             e = REnv()
         e.setEnv(self.var.name, self.l.interp(e))
@@ -201,19 +205,23 @@ def optimizer(n, env=None):
 
         return RLet(n.var, xe, be)
 
+
 class UNEnv:
     def __init__(self):
-        self.varCntr =0
-        self.env ={}
+        self.varCntr = 0
+        self.env = {}
+
+
 def uniquify(e):
     env = UNEnv()
     e = uni(e, env)
     return e
 
-def uni(e = None, uenv = UNEnv()):
-    if(isinstance(e,RNum)):
+
+def uni(e=None, uenv=UNEnv()):
+    if(isinstance(e, RNum)):
         return e
-    elif(isinstance(e,RRead)):
+    elif(isinstance(e, RRead)):
         return e
     elif(isinstance(e, RNegate)):
         return RNegate(uni(e.num, uenv))
@@ -225,17 +233,18 @@ def uni(e = None, uenv = UNEnv()):
         else:
             print("VAR UNBOUND")
             return "FAILURE"
-    elif(isinstance(e,RLet)):
-         uenv.varCntr+=1
-         x = RVar("V"+str(uenv.varCntr))
-         l = uni(e.l,uenv)
-         uenv.env[e.var.pp()] = x.pp()
-         r = uni(e.r,uenv)
-         return RLet(x,l,r)
-         
+    elif(isinstance(e, RLet)):
+        uenv.varCntr += 1
+        x = RVar("U"+str(uenv.varCntr))
+        l = uni(e.l, uenv)
+        uenv.env[e.var.pp()] = x.pp()
+        r = uni(e.r, uenv)
+        return RLet(x, l, r)
+
     return 0
 
 ############ X0 Programs ############
+
 
 class XEnv:
     def __init__(self):
@@ -243,7 +252,7 @@ class XEnv:
         self.var = {}
         self.mem = {}
         self.blk = {}
-        self.cntr =0
+        self.cntr = 0
 
 
 class XProgram:
@@ -435,7 +444,7 @@ class XICall:
         temp = self.src.interp(env)
         if(temp == "read_int"):
             env.cntr = env.cntr+1
-            XIMov(XCon(env.cntr),XRegister("RAX")).interp(env)
+            XIMov(XCon(env.cntr), XRegister("RAX")).interp(env)
         else:
             env = env.blk[temp].interp(env)
         return env
@@ -480,19 +489,20 @@ class XIPop:
 
 ###### C0 Program Data Types ########
 
+
 class CProgram:
     def __init__(self, _p):
         self.p = _p
 
     def pp(self):
-        return "".join([i.pp() + "\n"+ "\n".join([l.pp() for l in j])\
-             for i,j in self.p.items()])
-    
+        return "".join([i.pp() + "\n" + "\n".join([l.pp() for l in j])
+                        for i, j in self.p.items()])
+
     def interp(self):
         tempBlks = {}
-        for i,j in self.p.items():
-            tempBlks.update({i.interp():j})
-        #print(tempBlks)
+        for i, j in self.p.items():
+            tempBlks.update({i.interp(): j})
+        # print(tempBlks)
         env = CEnv()
         env.setBlk(tempBlks)
         rtn = 0
@@ -500,98 +510,177 @@ class CProgram:
             rtn = i.interp(env)
         return rtn
 
+
 class CEnv:
     def __init__(self):
         self.var = {}
         self.blk = {}
         self.cntr = 0
-    
-    def setBlk(self,add):
+
+    def setBlk(self, add):
         self.blk.update(add)
-        
-    def setVar(self,add):
+
+    def setVar(self, add):
         self.var.update(add)
+
 
 class CLabel:
     def __init__(self, _label):
         self.label = _label
-    
+
     def pp(self):
         return self.label
-    
+
     def interp(self):
         return self.label
+
 
 class CRet:
     def __init__(self, _var):
         self.var = _var
-    
+
     def pp(self):
-        return "return "+ self.var.pp()
-    
-    def interp(self,env):
+        return "return " + self.var.pp()
+
+    def interp(self, env):
         return env.var[self.var.pp()]
+
 
 class CNum:
     def __init__(self, _n):
         self.n = _n
 
     def pp(self):
-        return str(self.n) 
-    
-    def interp(self,env):
+        return str(self.n)
+
+    def interp(self, env):
         return self.n
+
 
 class CVar:
     def __init__(self, _var):
         self.var = _var
-    
+
     def pp(self):
         return self.var
-    
-    def interp(self,env):
+
+    def interp(self, env):
         return env.var[self.var]
+
 
 class CRead:
     def __init__(self):
         self.r = 0
-    
+
     def pp(self):
         return "Read"
-    
-    def interp(self,env):
-        env.cntr +=1
+
+    def interp(self, env):
+        env.cntr += 1
         return env.cntr
+
 
 class CNeg:
     def __init__(self, _n):
-        self.n = _n 
-    
+        self.n = _n
+
     def pp(self):
-        return "-("+self.n.pp() +")"
-    
-    def interp(self,env):
-        return -1* self.n.interp(env)
+        return "-("+self.n.pp() + ")"
+
+    def interp(self, env):
+        return -1 * self.n.interp(env)
+
 
 class CAdd:
     def __init__(self, _l, _r):
         self.l = _l
         self.r = _r
-    
+
     def pp(self):
-        return "(+ " + self.l.pp() + " " + self.r.pp() +")"
-    
-    def interp(self,env):
+        return "(+ " + self.l.pp() + " " + self.r.pp() + ")"
+
+    def interp(self, env):
         return self.l.interp(env) + self.r.interp(env)
+
 
 class CSet:
     def __init__(self, _var, _exp):
         self.var = _var
         self.exp = _exp
-    
+
     def pp(self):
         return "(set! " + self.var.pp() + " " + self.exp.pp() + ")"
-    
-    def interp(self,env):
-        env.setVar({self.var.pp():self.exp.interp(env)})
+
+    def interp(self, env):
+        env.setVar({self.var.pp(): self.exp.interp(env)})
         return 0
+
+########### Resolve Complex ###########
+
+
+class RCOEnv:
+    def __init__(self):
+        self.varCntr = 0
+        self.lifts =[]
+        self.env = {}
+    def getEnv(self):
+        return self.env
+
+    def setEnv(self,add):
+        self.env.update(add)
+
+    def getLift(self):
+        return self.lifts
+
+    def setLift(self,add):
+        self.lifts.insert(0,add)
+
+    def incCntr(self):
+        self.varCntr+=1
+        return self.varCntr
+
+def RCO(e):
+    env = RCOEnv()
+    rtn = _rco(env,e)
+    return letStar(rtn, env)
+
+def _rcoLift(env, e):
+    indx = env.incCntr()
+    nv = "R" +str(indx)
+    env.setLift((RVar(nv),e))
+    return RVar(nv)
+
+def _rco(env, e):
+    if(isinstance(e,RNum)):
+        return e
+    elif(isinstance(e,RRead)):
+        return _rcoLift(env, e)
+
+    elif(isinstance(e,RNegate)):
+        ep = _rco(env, e.num)
+        return _rcoLift(env, RNegate(ep))
+
+    elif(isinstance(e,RAdd)):
+        lp = _rco(env, e.left)
+        rp = _rco(env, e.right)
+        return _rcoLift(env, RAdd(lp,rp))
+
+    elif(isinstance(e,RVar)):
+        if(e.name in env.getEnv()):
+            return env.getEnv()[e.name]
+        else:
+            print("RCO UNBOUND")
+            return "FAILURE"
+
+    elif(isinstance(e,RLet)):
+        lp = _rco(env, e.l)
+        env.setEnv({e.var.name: lp})
+        return _rco(env, e.r)
+
+
+def letStar(fa, env):
+    if not env.getLift():
+        return fa
+    else:
+        var, eq = env.getLift().pop()
+        return RLet(var, eq, letStar(fa,env))
