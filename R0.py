@@ -139,8 +139,26 @@ def randomR1(n, v):
             randomR1(n-1, v)), RLet(newVar, randomR1(n-1, v), randomR1(n-1, v+[newVar]))])
     return ret
 
+######## Optimizer Function ########
 
-def optimizer(n, env=None):
+
+class OptEnv:
+    def __init__(self):
+        self.env = {}
+
+    def getEnv(self):
+        return self.env
+
+    def setEnv(self, add):
+        self.env.update(add)
+
+
+def optimizer(n):
+    env = OptEnv()
+    return _optimizer(n, env)
+
+
+def _optimizer(n, env):
     if isinstance(n, RNum):
         return n
     elif isinstance(n, RRead):
@@ -148,16 +166,16 @@ def optimizer(n, env=None):
     elif isinstance(n, RNegate):
         e = n.num
         if(isinstance(e, RNum)):
-            return RNum(-1 * e.interp(env))
+            return RNum(-1 * e.num)
         elif(isinstance(e, RNegate)):
-            return optimizer(e, env)
+            return _optimizer(e.num, env)
         elif(isinstance(e, RAdd)):
             if(isinstance(e.left, RNum)):
-                return RAdd(RNum(-1*e.left.interp()), RNegate(optimizer(e.right)))
+                return RAdd(RNum(-1*e.left.interp()), RNegate(_optimizer(e.right, env)))
             else:
-                return RNegate(optimizer(e, env))
+                return RNegate(_optimizer(e, env))
         elif(isinstance(e, RVar)):
-            return RNegate(optimizer(e, env))
+            return RNegate(_optimizer(e, env))
         else:
             return n
     elif isinstance(n, RAdd):
@@ -175,34 +193,24 @@ def optimizer(n, env=None):
         elif(isinstance(l, RAdd) and isinstance(l.left, RNum) and isinstance(r, RAdd) and isinstance(r.left, RNum)):
             return RAdd(RNum(l.left.interp(env) + r.left.interp(env)), RAdd(l.left, r.left))
         elif(not isinstance(l, RNum) and isinstance(r, RNum)):
-            return optimizer(RAdd(r, l), env)
+            return _optimizer(RAdd(r, l), env)
         else:
-            return RAdd(optimizer(l, env), optimizer(r, env))
+            return RAdd(_optimizer(l, env), _optimizer(r, env))
     elif(isinstance(n, RVar)):
-        if(env):
-            if(env[n.name]):
-                return env[n.name]
-            else:
-                print("ERROR UNBOUND VAR")
-                return n
+        if(n.name in env.getEnv()):
+            return env.getEnv()[n.name]
+        else:
+            print("ERROR UNBOUND VAR")
+            return "FAILURE"
     elif(isinstance(n, RLet)):
-        xe = optimizer(n.l)
-        if(isinstance(xe, RNum)):
-            if(env):
-                env[n.var.name] = xe
-            else:
-                env = {}
-                env[n.var.name] = xe
-            be = optimizer(n.r, env)
+        xe = _optimizer(n.l, env)
+        if(isinstance(xe, RNum) or isinstance(xe, RVar)):
+            env.setEnv({n.var.name: xe})
+            be = _optimizer(n.r, env)
             return be
         else:
-            if(env):
-                env[n.var.name] = xe
-            else:
-                env = {}
-                env[n.var.name] = xe
-            be = optimizer(n.r, env)
-
+            env.setEnv({n.var.name: xe})
+            be = _optimizer(n.r, env)
         return RLet(n.var, xe, be)
 
 
@@ -576,6 +584,7 @@ class CRead:
         return "Read"
 
     def interp(self, env):
+        return 1
         env.cntr += 1
         return env.cntr
 
@@ -621,58 +630,62 @@ class CSet:
 class RCOEnv:
     def __init__(self):
         self.varCntr = 0
-        self.lifts =[]
+        self.lifts = []
         self.env = {}
+
     def getEnv(self):
         return self.env
 
-    def setEnv(self,add):
+    def setEnv(self, add):
         self.env.update(add)
 
     def getLift(self):
         return self.lifts
 
-    def setLift(self,add):
-        self.lifts.insert(0,add)
+    def setLift(self, add):
+        self.lifts.insert(0, add)
 
     def incCntr(self):
-        self.varCntr+=1
+        self.varCntr += 1
         return self.varCntr
+
 
 def RCO(e):
     env = RCOEnv()
-    rtn = _rco(env,e)
+    rtn = _rco(env, e)
     return letStar(rtn, env)
+
 
 def _rcoLift(env, e):
     indx = env.incCntr()
-    nv = "R" +str(indx)
-    env.setLift((RVar(nv),e))
+    nv = "R" + str(indx)
+    env.setLift((RVar(nv), e))
     return RVar(nv)
 
+
 def _rco(env, e):
-    if(isinstance(e,RNum)):
+    if(isinstance(e, RNum)):
         return _rcoLift(env, e)
-    elif(isinstance(e,RRead)):
+    elif(isinstance(e, RRead)):
         return _rcoLift(env, e)
 
-    elif(isinstance(e,RNegate)):
+    elif(isinstance(e, RNegate)):
         ep = _rco(env, e.num)
         return _rcoLift(env, RNegate(ep))
 
-    elif(isinstance(e,RAdd)):
+    elif(isinstance(e, RAdd)):
         lp = _rco(env, e.left)
         rp = _rco(env, e.right)
-        return _rcoLift(env, RAdd(lp,rp))
+        return _rcoLift(env, RAdd(lp, rp))
 
-    elif(isinstance(e,RVar)):
+    elif(isinstance(e, RVar)):
         if(e.name in env.getEnv()):
             return env.getEnv()[e.name]
         else:
             print("RCO UNBOUND")
             return "FAILURE"
 
-    elif(isinstance(e,RLet)):
+    elif(isinstance(e, RLet)):
         lp = _rco(env, e.l)
         env.setEnv({e.var.name: lp})
         return _rco(env, e.r)
@@ -683,17 +696,20 @@ def letStar(fa, env):
         return fa
     else:
         var, eq = env.getLift().pop()
-        return RLet(var, eq, letStar(fa,env))
+        return RLet(var, eq, letStar(fa, env))
 
 
 ######## Explicate Control Pass ########
 class EconEnv:
     def __init__(self):
         self.p = []
+
     def addEnv(self, a):
         self.p.append(a)
+
     def getEnv(self):
         return self.p
+
 
 def econ(r):
     env = EconEnv()
@@ -701,6 +717,8 @@ def econ(r):
     env.addEnv(rtn)
     p = CProgram({CLabel("main"): env.getEnv()})
     return p
+
+
 def econArgs(r):
     if(isinstance(r, RNum)):
         return CNum(r.num)
@@ -708,6 +726,8 @@ def econArgs(r):
         return CVar(r.name)
     else:
         return "ERROR"
+
+
 def econExp(r):
     if(isinstance(r, RRead)):
         return CRead()
@@ -718,13 +738,13 @@ def econExp(r):
     else:
         return econArgs(r)
 
+
 def econHelper(r, env):
-    if(isinstance(r,RLet)):
+    if(isinstance(r, RLet)):
         a = CSet(econArgs(r.var), econExp(r.l))
         env.addEnv(a)
         return econHelper(r.r, env)
-    elif(isinstance(r,RVar)):
+    elif(isinstance(r, RVar)):
         return CRet(econArgs(r))
     else:
         return CRet(r)
-

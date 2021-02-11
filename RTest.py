@@ -85,84 +85,19 @@ class Test:
         po = optimizer(p)
         pu = uniquify(po)
         pr = RCO(pu)
-        if (p.interp() == po.interp() and p.interp() == pu.interp() and p.interp() == pr.interp()):
-            actual = pr.interp()
+        pe = econ(pr)
+        if (p.interp() == po.interp() and p.interp() == pu.interp() and p.interp() == pr.interp() and p.interp() == pe.interp()):
+            actual = pe.interp()
         else:
-            actual = False
+            print(str(p.interp())+" "+str(po.interp()) + " " +
+                  str(pu.interp()) + " " + str(pr.interp()) + " " + str(pe.interp()))
+            print(pe.pp())
+            actual = not p.interp()
 
         self.test(actual, p.interp())
 
 
-num_5 = RNum(5)
-num_6 = RNum(6)
-num_3 = RNum(3)
-num_16 = RNum(16)
-num_add_6_5 = RAdd(num_6, num_5)
-num_neg_6 = RNegate(num_6)
-num_add_neg_6_num_6 = RAdd(num_neg_6, num_6)
-num_add_num_0_num_3 = RAdd(num_add_neg_6_num_6, num_3)
-num_add_num_3_num_0 = RAdd(num_add_num_0_num_3, num_add_neg_6_num_6)
-read_1 = RRead()
-pow_3 = Pow(num_3)
-pow_5 = Pow(num_5)
-pow_16 = Pow(num_16)
-
-print(RNum(5).pp())
-print(RNegate(RNum(5)).pp())
-print(RAdd(RNum(5), RNum(6)).pp())
-print(RAdd(RNegate(RNum(5)), RNum(6)).pp())
-print(RAdd(RAdd(RNum(5), RNum(6)), RNum(6)).pp())
-
 s = Test()
-
-s.test(num_5.pp(), "5")
-s.test(num_6.pp(), "6")
-s.test(num_3.pp(), "3")
-s.test(num_add_6_5.pp(), "(+ 6 5)")
-s.test(num_neg_6.pp(), "-(6)")
-s.test(num_add_neg_6_num_6.pp(), "(+ -(6) 6)")
-s.test(num_add_num_0_num_3.pp(), "(+ (+ -(6) 6) 3)")
-s.test(num_add_num_3_num_0.pp(), "(+ (+ (+ -(6) 6) 3) (+ -(6) 6))")
-
-s.test(num_5.interp(), 5)
-s.test(num_6.interp(), 6)
-s.test(num_3.interp(), 3)
-s.test(num_add_6_5.interp(), 11)
-s.test(num_neg_6.interp(), -6)
-s.test(num_add_neg_6_num_6.interp(), 0)
-s.test(num_add_num_0_num_3.interp(), 3)
-s.test(num_add_num_3_num_0.interp(), 3)
-s.test(pow_3.pp(), "2^3")
-s.test(pow_3.interp(), 8)
-s.test(pow_5.pp(), "2^5")
-s.test(pow_5.interp(), 32)
-s.test(pow_16.pp(), "2^16")
-s.test(pow_16.interp(), 65536)
-s.test(Pow(RNum(4)).interp(), 16)
-
-# Random testing
-print("\nRandom R0 Testing\n")
-s.testRandom(randomR0(7))
-s.testRandom(randomR0(6))
-s.testRandom(randomR0(5))
-s.testRandom(randomR0(4))
-s.testRandom(randomR0(3))
-s.testRandom(randomR0(2))
-s.testRandom(randomR0(1))
-s.testRandom(randomR0(0))
-
-# Optimized Tests
-print("\nOptimizer Exs")
-print(optimizer(RNegate(RNegate(RNegate(RNegate(RNegate(RRead())))))).pp())
-print(optimizer(RNegate(RNegate(RNegate(RNegate(RNegate(RNegate(RRead()))))))).pp())
-print(optimizer(RNegate(RAdd(RNum(10), RAdd(RRead(), RNum(12))))).pp())
-print(optimizer(RNegate(RNegate(RNum(975)))).pp())
-print(optimizer(RAdd(RNum(22), RNum(23))).pp())
-print(optimizer(RAdd(RNegate(RNum(22)), RNum(23))).pp())
-print(optimizer(RAdd(RNum(22), RAdd(RNum(23), RRead()))).pp())
-print(optimizer(RAdd(RNum(22), RAdd(RNum(23), RNum(20)))).pp())
-# s.testOpt(2)
-
 
 # Variable and Let testing
 print("\nR1 Tests")
@@ -385,8 +320,6 @@ Cprog1 = CProgram({
         CRet(CVar("l"))
     ]
 })
-print(Cprog1.pp()+"\n")
-s.test(Cprog1.interp(), 25)
 
 Cprog2 = CProgram({
     CLabel("main"):
@@ -400,10 +333,6 @@ Cprog2 = CProgram({
     ]
 })
 
-print(Cprog2.pp()+"\n")
-s.test(Cprog2.interp(), 6)
-
-
 Cprog3 = CProgram({
     CLabel("main"):
     [
@@ -416,9 +345,6 @@ Cprog3 = CProgram({
     ]
 })
 
-print(Cprog3.pp()+"\n")
-s.test(Cprog3.interp(), 5)
-
 Cprog4 = CProgram({
     CLabel("main"):
     [
@@ -428,9 +354,6 @@ Cprog4 = CProgram({
     ]
 })
 
-print(Cprog4.pp()+"\n")
-s.test(Cprog4.interp(), 5)
-
 Cprog5 = CProgram({
     CLabel("main"):
     [
@@ -439,9 +362,6 @@ Cprog5 = CProgram({
         CRet(CVar("0")),
     ]
 })
-
-print(Cprog5.pp()+"\n")
-s.test(Cprog5.interp(), 250)
 
 Cprog6 = CProgram({
     CLabel("main"):
@@ -454,9 +374,6 @@ Cprog6 = CProgram({
     ]
 })
 
-print(Cprog6.pp()+"\n")
-s.test(Cprog6.interp(), 201)
-
 Cprog7 = CProgram({
     CLabel("main"):
     [
@@ -466,9 +383,6 @@ Cprog7 = CProgram({
         CRet(CVar("C"))
     ]
 })
-
-print(Cprog7.pp()+"\n")
-s.test(Cprog7.interp(), 18)
 
 ####### Uniquify Tests ###########
 print("\n Uniquify Tests\n")
@@ -482,16 +396,6 @@ Uprog5 = RAdd(RLet(RVar("x"), RNum(7), RVar("x")), RLet(RVar("x"), RNum(
     8), RLet(RVar("x"), RAdd(RNum(1), RVar("x")), RAdd(RVar("x"), RVar("x")))))
 Uprog6 = RLet(RVar("A"), RLet(RVar("A"), RLet(RVar("A"), RNum(2), RAdd(
     RVar("A"), RVar("A"))), RAdd(RVar("A"), RVar("A"))), RAdd(RVar("A"), RVar("A")))
-
-s.testUniquify(Uprog1)
-s.testUniquify(Uprog2)
-s.testUniquify(Uprog3)
-s.testUniquify(Uprog4)
-s.testUniquify(Uprog5)
-s.testUniquify(Uprog6)
-s.testUniquify(randomR1(5, []))
-s.testUniquify(randomR1(4, []))
-s.testUniquify(randomR1(3, []))
 
 ####### RCO Tests ###########
 print("\nRCO Tests\n")
@@ -509,16 +413,7 @@ Rcoprog6 = RLet(RVar("R1"), RAdd(RNegate(RNum(2)),
                                  RNegate(RNegate(RNum(2)))), RVar("R1"))
 Rcoprog7 = RLet(RVar("R1"), RNum(4), RVar("R1"))
 
-
-s.testRCO(Rcoprog1)
-s.testRCO(Rcoprog2)
-s.testRCO(Rcoprog3)
-s.testRCO(Rcoprog4)
-s.testRCO(Rcoprog5)
-s.testRCO(Rcoprog6)
-
-####### Econ Tests ###########
-print("\nEcon Tests\n")
+####### Econ Examples ###########
 Econprog1R = RLet(RVar("x"), RNum(2), RAdd(RVar("x"), RNum(3)))
 Econprog1C = CProgram({
     CLabel("main"):
@@ -529,6 +424,7 @@ Econprog1C = CProgram({
 })
 Econprog2R = RLet(RVar("R1"), RAdd(RNum(2), RNum(3)), RLet(RVar("R2"), RAdd(
     RNum(1), RVar("R1")), RLet(RVar("R3"), RAdd(RVar("R1"), RVar("R1")), RVar("R3"))))
+
 Econprog2C = CProgram({
     CLabel("main"):
     [
@@ -582,13 +478,6 @@ Econprog6C = CProgram({
     ]
 })
 
-s.test(econ(RCO(Econprog1R)).interp(), Econprog1C.interp())
-s.test(econ(RCO(Econprog2R)).interp(), Econprog2C.interp())
-s.test(econ(RCO(Econprog3R)).interp(), Econprog3C.interp())
-s.test(econ(RCO(Econprog4R)).interp(), Econprog4C.interp())
-s.test(econ(RCO(Econprog5R)).interp(), Econprog5C.interp())
-s.test(econ(RCO(Econprog6R)).interp(), Econprog6C.interp())
-
 ####### Combined Testing ########
 print("\nCombined Tests\n")
 s.testAll(letTest1)
@@ -600,5 +489,39 @@ s.testAll(letTest6)
 s.testAll(letTest7)
 s.testAll(letTest8)
 s.testAll(letTest9)
+s.testAll(Econprog1R)
+s.testAll(Econprog2R)
+s.testAll(Econprog3R)
+s.testAll(Econprog4R)
+s.testAll(Econprog5R)
+s.testAll(Econprog6R)
+s.testAll(Rcoprog1)
+s.testAll(Rcoprog2)
+s.testAll(Rcoprog3)
+s.testAll(Rcoprog4)
+s.testAll(Rcoprog5)
+s.testAll(Rcoprog6)
+s.testAll(Uprog1)
+s.testAll(Uprog2)
+s.testAll(Uprog3)
+s.testAll(Uprog4)
+s.testAll(Uprog5)
+s.testAll(Uprog6)
+s.testAll(RAdd(RNum(22), RAdd(RNum(23), RRead())))
+s.testAll(RAdd(RNegate(RNum(22)), RNum(23)))
+s.testAll(RAdd(RNum(22), RNum(23)))
+s.testAll(RNegate(RNegate(RNum(975))))
+s.testAll(RNegate(RAdd(RNum(10), RAdd(RRead(), RNum(12)))))
+s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RNegate(RRead())))))))
+s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RRead()))))))
+s.testAll(RAdd(RNum(22), RAdd(RNum(23), RNum(20))))
+# s.testAll(randomR0(7))
+# s.testAll(randomR0(6))
+# s.testAll(randomR0(5))
+# s.testAll(randomR0(4))
+# s.testAll(randomR0(3))
+# s.testAll(randomR0(2))
+# s.testAll(randomR0(1))
+# s.testAll(randomR0(0))
 
 s.endSuite()
