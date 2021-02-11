@@ -3,6 +3,13 @@ from datetime import datetime
 
 # R0 Data types
 
+class REnv:
+    def __init__(self):
+        self.env ={}
+    def getEnv(self):
+        return self.env
+    def setEnv(self, left, right):
+        self.env[left] = right
 
 class RNum:
     def __init__(self, _num):
@@ -23,9 +30,7 @@ class RNegate:
         return "-(" + str(self.num.pp()) + ")"
 
     def interp(self, e=None):
-        if(e):
-            return -1*self.num.interp(e)
-        return -1*self.num.interp()
+        return -1*self.num.interp(e)
 
 
 class RAdd:
@@ -37,10 +42,7 @@ class RAdd:
         return "(+ " + self.left.pp() + " " + self.right.pp() + ")"
 
     def interp(self, e=None):
-        if(e):
-            return self.left.interp(e) + self.right.interp(e)
-        else:
-            return self.left.interp() + self.right.interp()
+        return self.left.interp(e) + self.right.interp(e)
 
 
 class RRead:
@@ -51,6 +53,7 @@ class RRead:
         return "Read"
 
     def interp(self,  e=None):
+        return 1
         inp = input("Read: ")
         if(inp == ""):
             self.num = 1
@@ -66,11 +69,11 @@ class Pow:
     def pp(self):
         return "2^" + str(self.num.pp())
 
-    def interp(self):
+    def interp(self, e =None):
         if(self.num.interp() == 0):
             return 1
         else:
-            return RAdd(Pow(RNum(self.num.interp()-1)), Pow(RNum(self.num.interp()-1))).interp()
+            return RAdd(Pow(RNum(self.num.interp()-1)), Pow(RNum(self.num.interp()-1))).interp(e)
 
 # R1 data types
 
@@ -83,8 +86,8 @@ class RVar:
         return str(self.name)
 
     def interp(self, e=None):
-        if(e[self.name]):
-            return e[self.name].interp(e)
+        if(e.getEnv()[self.name]):
+            return e.getEnv()[self.name]
         return "ERROR"
 
 
@@ -97,14 +100,11 @@ class RLet:
     def pp(self):
         return "Let " + self.var.pp() + " = " + self.l.pp() + " in " + self.r.pp()
 
-    def interp(self, e=None):
-        if(e):
-            e[self.var.name] = self.l
-            return self.r.interp(e)
-        else:
-            env = {}
-            env[self.var.name] = self.l
-            return self.r.interp(env)
+    def interp(self, e = None):
+        if(not e):
+            e = REnv()
+        e.setEnv(self.var.name, self.l.interp(e))
+        return self.r.interp(e)
 
 
 # Functions
@@ -201,6 +201,39 @@ def optimizer(n, env=None):
 
         return RLet(n.var, xe, be)
 
+class UNEnv:
+    def __init__(self):
+        self.varCntr =0
+        self.env ={}
+def uniquify(e):
+    env = UNEnv()
+    e = uni(e, env)
+    return e
+
+def uni(e = None, uenv = UNEnv()):
+    if(isinstance(e,RNum)):
+        return e
+    elif(isinstance(e,RRead)):
+        return e
+    elif(isinstance(e, RNegate)):
+        return RNegate(uni(e.num, uenv))
+    elif(isinstance(e, RAdd)):
+        return RAdd(uni(e.left, uenv), uni(e.right, uenv))
+    elif(isinstance(e, RVar)):
+        if e.pp() in uenv.env:
+            return RVar(uenv.env[e.pp()])
+        else:
+            print("VAR UNBOUND")
+            return "FAILURE"
+    elif(isinstance(e,RLet)):
+         uenv.varCntr+=1
+         x = RVar("V"+str(uenv.varCntr))
+         l = uni(e.l,uenv)
+         uenv.env[e.var.pp()] = x.pp()
+         r = uni(e.r,uenv)
+         return RLet(x,l,r)
+         
+    return 0
 
 ############ X0 Programs ############
 
@@ -562,5 +595,3 @@ class CSet:
     def interp(self,env):
         env.setVar({self.var.pp():self.exp.interp(env)})
         return 0
-
-
