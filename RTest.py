@@ -10,12 +10,14 @@ class Test:
         self.totalTests = 0
 
     def endSuite(self):
-        print("\n" + str(self.testPassed) + " tests passed out of " + str(self.totalTests))
+        print("\n" + str(self.testPassed) +
+              " tests passed out of " + str(self.totalTests))
 
     def test(self, _actual, _expected):
         self.totalTests += 1
         if(_actual == _expected):
-            print("Test passed got actual: "+ str(_actual) +" and expected: "+ str(_expected))
+            print("Test passed got actual: " + str(_actual) +
+                  " and expected: " + str(_expected))
             self.testPassed += 1
             return True
         print("Test failed expected " + str(_expected) + " got " + str(_actual))
@@ -37,8 +39,8 @@ class Test:
                 testCompleted += 1
         print("Number of optimizer tests completed " +
               str(testCompleted) + " out of "+str(n))
-    
-    def testX0Programs(self,prog):
+
+    def testX0Programs(self, prog):
         fileName = "c0.s"
         binName = "c0.bin"
         f = open(fileName, "w")
@@ -47,10 +49,10 @@ class Test:
 
         p = subprocess.Popen(
 
-            ["cc",fileName,"runtime.c","-o","c0.bin"],
+            ["cc", fileName, "runtime.c", "-o", "c0.bin"],
 
             stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        
+
         stdout, stderr = p.communicate()
         exit_code = p.wait()
 
@@ -66,31 +68,30 @@ class Test:
         if os.path.exists(binName):
             os.remove(binName)
 
-        self.test(prog.interp(),exit_code)
-    
-    def testUniquify(self,p):
+        self.test(prog.interp(), exit_code)
+
+    def testUniquify(self, p):
         actual = uniquify(p).interp()
         expected = p.interp()
-        self.test(actual,expected)
+        self.test(actual, expected)
 
-    def testRCO(self,p):
+    def testRCO(self, p):
         actual = RCO(p).interp()
         expected = p.interp()
-        self.test(actual,expected)
+        self.test(actual, expected)
 
-    def testAll(self,p):
+    def testAll(self, p):
         actual = 0
         po = optimizer(p)
         pu = uniquify(po)
         pr = RCO(pu)
-        if (p.interp() == po.interp() == pu.interp() == pr.interp()):
+        if (p.interp() == po.interp() and p.interp() == pu.interp() and p.interp() == pr.interp()):
             actual = pr.interp()
         else:
             actual = False
 
-        self.test(actual,p.interp())
-    
-   
+        self.test(actual, p.interp())
+
 
 num_5 = RNum(5)
 num_6 = RNum(6)
@@ -183,15 +184,15 @@ letTest9 = RLet(RVar("x"), RRead(), RNum(4))
 
 ############# randomR1 Testing #################
 print("\nRandomR1 Tests")
-s.testRandom(randomR1(0,[]))
-s.testRandom(randomR1(1,[]))
-s.testRandom(randomR1(2,[]))
-s.testRandom(randomR1(3,[]))
-s.testRandom(randomR1(4,[]))
-s.testRandom(randomR1(5,[]))
-s.testRandom(randomR1(6,[]))
-s.testRandom(randomR1(7,[]))
-s.testRandom(randomR1(8,[]))
+# s.testRandom(randomR1(0,[]))
+# s.testRandom(randomR1(1,[]))
+# s.testRandom(randomR1(2,[]))
+# s.testRandom(randomR1(3,[]))
+# s.testRandom(randomR1(4,[]))
+# s.testRandom(randomR1(5,[]))
+# s.testRandom(randomR1(6,[]))
+# s.testRandom(randomR1(7,[]))
+# s.testRandom(randomR1(8,[]))
 
 ########## X0 Program Testing ################
 Xprog1 = XProgram([
@@ -352,8 +353,8 @@ Xprog11 = XProgram(
             XBlock([
                 XIPush(XCon(33)),
                 XIPop(XRegister("RAX")),
-                XIMov(XCon(8),XRegister("R8")),
-                XIAdd(XRegister("R8"),XRegister("RAX")),
+                XIMov(XCon(8), XRegister("R8")),
+                XIAdd(XRegister("R8"), XRegister("RAX")),
                 XIRet()
             ])
         )
@@ -377,15 +378,15 @@ s.testX0Programs(Xprog11)
 Cprog1 = CProgram({
     CLabel("main"):
     [
-        CSet(CVar("i"),CNum(10)),
-        CSet(CVar("j"),CNum(5)),
-        CSet(CVar("k"),CAdd(CVar("i"),CVar("j"))),
-        CSet(CVar("l"),CAdd(CVar("i"),CVar("k"))),
+        CSet(CVar("i"), CNum(10)),
+        CSet(CVar("j"), CNum(5)),
+        CSet(CVar("k"), CAdd(CVar("i"), CVar("j"))),
+        CSet(CVar("l"), CAdd(CVar("i"), CVar("k"))),
         CRet(CVar("l"))
     ]
 })
 print(Cprog1.pp()+"\n")
-s.test(Cprog1.interp(),25)
+s.test(Cprog1.interp(), 25)
 
 Cprog2 = CProgram({
     CLabel("main"):
@@ -393,14 +394,14 @@ Cprog2 = CProgram({
         CSet(CVar("1"), CRead()),
         CSet(CVar("2"), CRead()),
         CSet(CVar("3"), CRead()),
-        CSet(CVar("4"), CAdd(CVar("1"),CVar("2"))),
-        CSet(CVar("5"), CAdd(CVar("3"),CVar("4"))),
+        CSet(CVar("4"), CAdd(CVar("1"), CVar("2"))),
+        CSet(CVar("5"), CAdd(CVar("3"), CVar("4"))),
         CRet(CVar("5"))
     ]
 })
 
 print(Cprog2.pp()+"\n")
-s.test(Cprog2.interp(),6)
+s.test(Cprog2.interp(), 6)
 
 
 Cprog3 = CProgram({
@@ -416,7 +417,7 @@ Cprog3 = CProgram({
 })
 
 print(Cprog3.pp()+"\n")
-s.test(Cprog3.interp(),5)
+s.test(Cprog3.interp(), 5)
 
 Cprog4 = CProgram({
     CLabel("main"):
@@ -428,7 +429,7 @@ Cprog4 = CProgram({
 })
 
 print(Cprog4.pp()+"\n")
-s.test(Cprog4.interp(),5)
+s.test(Cprog4.interp(), 5)
 
 Cprog5 = CProgram({
     CLabel("main"):
@@ -440,7 +441,7 @@ Cprog5 = CProgram({
 })
 
 print(Cprog5.pp()+"\n")
-s.test(Cprog5.interp(),250)
+s.test(Cprog5.interp(), 250)
 
 Cprog6 = CProgram({
     CLabel("main"):
@@ -454,7 +455,7 @@ Cprog6 = CProgram({
 })
 
 print(Cprog6.pp()+"\n")
-s.test(Cprog6.interp(),201)
+s.test(Cprog6.interp(), 201)
 
 Cprog7 = CProgram({
     CLabel("main"):
@@ -467,16 +468,20 @@ Cprog7 = CProgram({
 })
 
 print(Cprog7.pp()+"\n")
-s.test(Cprog7.interp(),18)
+s.test(Cprog7.interp(), 18)
 
 ####### Uniquify Tests ###########
 print("\n Uniquify Tests\n")
-Uprog1 = RLet(RVar("A"), RNum(1),RLet(RVar("A"),RRead(),RVar("A")))
-Uprog2 = RLet(RVar("A"), RNum(1), RLet(RVar("A"),RNum(2),RAdd(RVar("A"),RVar("A"))))
+Uprog1 = RLet(RVar("A"), RNum(1), RLet(RVar("A"), RRead(), RVar("A")))
+Uprog2 = RLet(RVar("A"), RNum(1), RLet(
+    RVar("A"), RNum(2), RAdd(RVar("A"), RVar("A"))))
 Uprog3 = RLet(RVar("A"), RNum(1), RVar("A"))
-Uprog4 = RLet(RVar("A"), RNegate(RLet(RVar("A"),RNum(2),RAdd(RVar("A"),RVar("A")))), RAdd(RVar("A"),RVar("A")))
-Uprog5 = RAdd(RLet(RVar("x"), RNum(7), RVar("x")), RLet(RVar("x"), RNum(8), RLet(RVar("x"),RAdd(RNum(1),RVar("x")), RAdd(RVar("x"), RVar("x")))))
-Uprog6 = RLet(RVar("A"), RLet(RVar("A"), RLet(RVar("A"), RNum(2), RAdd(RVar("A"),RVar("A"))), RAdd(RVar("A"), RVar("A"))), RAdd(RVar("A"), RVar("A")))
+Uprog4 = RLet(RVar("A"), RNegate(RLet(RVar("A"), RNum(2), RAdd(
+    RVar("A"), RVar("A")))), RAdd(RVar("A"), RVar("A")))
+Uprog5 = RAdd(RLet(RVar("x"), RNum(7), RVar("x")), RLet(RVar("x"), RNum(
+    8), RLet(RVar("x"), RAdd(RNum(1), RVar("x")), RAdd(RVar("x"), RVar("x")))))
+Uprog6 = RLet(RVar("A"), RLet(RVar("A"), RLet(RVar("A"), RNum(2), RAdd(
+    RVar("A"), RVar("A"))), RAdd(RVar("A"), RVar("A"))), RAdd(RVar("A"), RVar("A")))
 
 s.testUniquify(Uprog1)
 s.testUniquify(Uprog2)
@@ -484,18 +489,26 @@ s.testUniquify(Uprog3)
 s.testUniquify(Uprog4)
 s.testUniquify(Uprog5)
 s.testUniquify(Uprog6)
-s.testUniquify(randomR1(5,[]))
-s.testUniquify(randomR1(4,[]))
-s.testUniquify(randomR1(3,[]))
+s.testUniquify(randomR1(5, []))
+s.testUniquify(randomR1(4, []))
+s.testUniquify(randomR1(3, []))
 
 ####### RCO Tests ###########
 print("\nRCO Tests\n")
-Rcoprog1 = RAdd(RAdd(RNum(2), RNum(3)), RLet(RVar("x"), RRead(), RAdd(RVar("x"), RVar("x"))))
-Rcoprog2 = RLet(RVar("R1"), RAdd(RNum(2), RNum(3)), RLet(RVar("R2"), RAdd(RNum(1), RVar("R1")), RLet(RVar("R3"), RAdd(RVar("R1"), RVar("R1")), RVar("R2"))))
-Rcoprog3 = RLet(RVar("R1"), RNegate(RNum(3)), RLet(RVar("R2"), RAdd(RNum(1), RVar("R1")), RLet(RVar("R3"), RAdd(RVar("R1"), RVar("R1")), RVar("R2"))))
-Rcoprog4 = RCO(optimizer(RAdd(RAdd(RNum(2), RNum(3)), RLet(RVar("x"), RRead(), RAdd(RVar("x"), RVar("x"))))))
-Rcoprog5 = RLet(RVar("R1"), RAdd(RNum(1), RNum(1)), RLet(RVar("R2"), RAdd(RVar("R1"), RVar("R1")), RLet(RVar("R3"),RAdd(RVar("R2"),RVar("R2")), RVar("R3"))))
-Rcoprog6 = RLet(RVar("R1"), RAdd(RNegate(RNum(2)), RNegate(RNegate(RNum(2)))), RVar("R1"))
+Rcoprog1 = RAdd(RAdd(RNum(2), RNum(3)), RLet(
+    RVar("x"), RRead(), RAdd(RVar("x"), RVar("x"))))
+Rcoprog2 = RLet(RVar("R1"), RAdd(RNum(2), RNum(3)), RLet(RVar("R2"), RAdd(RNum(
+    1), RVar("R1")), RLet(RVar("R3"), RAdd(RVar("R1"), RVar("R1")), RVar("R2"))))
+Rcoprog3 = RLet(RVar("R1"), RNegate(RNum(3)), RLet(RVar("R2"), RAdd(RNum(
+    1), RVar("R1")), RLet(RVar("R3"), RAdd(RVar("R1"), RVar("R1")), RVar("R2"))))
+Rcoprog4 = RCO(optimizer(RAdd(RAdd(RNum(2), RNum(3)), RLet(
+    RVar("x"), RRead(), RAdd(RVar("x"), RVar("x"))))))
+Rcoprog5 = RLet(RVar("R1"), RAdd(RNum(1), RNum(1)), RLet(RVar("R2"), RAdd(RVar(
+    "R1"), RVar("R1")), RLet(RVar("R3"), RAdd(RVar("R2"), RVar("R2")), RVar("R3"))))
+Rcoprog6 = RLet(RVar("R1"), RAdd(RNegate(RNum(2)),
+                                 RNegate(RNegate(RNum(2)))), RVar("R1"))
+Rcoprog7 = RLet(RVar("R1"), RNum(4), RVar("R1"))
+
 
 s.testRCO(Rcoprog1)
 s.testRCO(Rcoprog2)
@@ -504,6 +517,77 @@ s.testRCO(Rcoprog4)
 s.testRCO(Rcoprog5)
 s.testRCO(Rcoprog6)
 
+####### Econ Tests ###########
+print("\nEcon Tests\n")
+Econprog1R = RLet(RVar("x"), RNum(2), RAdd(RVar("x"), RNum(3)))
+Econprog1C = CProgram({
+    CLabel("main"):
+    [
+        CSet(CVar("R1"), CAdd(CNum(2), CNum(3))),
+        CRet(CVar("R1")),
+    ]
+})
+Econprog2R = RLet(RVar("R1"), RAdd(RNum(2), RNum(3)), RLet(RVar("R2"), RAdd(
+    RNum(1), RVar("R1")), RLet(RVar("R3"), RAdd(RVar("R1"), RVar("R1")), RVar("R3"))))
+Econprog2C = CProgram({
+    CLabel("main"):
+    [
+        CSet(CVar("R1"), CAdd(CNum(2), CNum(3))),
+        CSet(CVar("R2"), CAdd(CNum(1), CVar("R1"))),
+        CSet(CVar("R3"), CAdd(CVar("R1"), CVar("R1"))),
+        CRet(CVar("R3")),
+    ]
+})
+Econprog3R = RLet(RVar("R1"), RNegate(RNum(3)), RLet(RVar("R2"), RAdd(RNum(
+    1), RVar("R1")), RLet(RVar("R3"), RAdd(RVar("R1"), RVar("R1")), RVar("R3"))))
+Econprog3C = CProgram({
+    CLabel("main"):
+    [
+        CSet(CVar("R1"), CNeg(CNum(3))),
+        CSet(CVar("R2"), CAdd(CNum(1), CVar("R1"))),
+        CSet(CVar("R3"), CAdd(CVar("R1"), CVar("R1"))),
+        CRet(CVar("R3")),
+    ]
+})
+Econprog4R = RLet(RVar("R1"), RAdd(RNum(1), RNum(1)), RLet(RVar("R2"), RAdd(RVar(
+    "R1"), RVar("R1")), RLet(RVar("R3"), RAdd(RVar("R2"), RVar("R2")), RVar("R3"))))
+Econprog4C = CProgram({
+    CLabel("main"):
+    [
+        CSet(CVar("R1"), CAdd(CNum(1), CNum(1))),
+        CSet(CVar("R2"), CAdd(CVar("R1"), CVar("R1"))),
+        CSet(CVar("R3"), CAdd(CVar("R2"), CVar("R2"))),
+        CRet(CVar("R3")),
+    ]
+})
+
+Econprog5R = RLet(RVar("R1"), RAdd(RNegate(RNum(2)),
+                                   RNegate(RNegate(RNum(2)))), RVar("R1"))
+Econprog5C = CProgram({
+    CLabel("main"):
+    [
+        CSet(CVar("R1"), CNeg(CNum(2))),
+        CSet(CVar("R2"), CNeg(CNum(2))),
+        CSet(CVar("R3"), CNeg(CVar("R2"))),
+        CSet(CVar("R4"), CAdd(CVar("R1"), CVar("R3"))),
+        CRet(CVar("R4")),
+    ]
+})
+Econprog6R = RLet(RVar("R1"), RNum(4), RVar("R1"))
+Econprog6C = CProgram({
+    CLabel("main"):
+    [
+        CSet(CVar("R1"), CNum(4)),
+        CRet(CVar("R1")),
+    ]
+})
+
+s.test(econ(RCO(Econprog1R)).interp(), Econprog1C.interp())
+s.test(econ(RCO(Econprog2R)).interp(), Econprog2C.interp())
+s.test(econ(RCO(Econprog3R)).interp(), Econprog3C.interp())
+s.test(econ(RCO(Econprog4R)).interp(), Econprog4C.interp())
+s.test(econ(RCO(Econprog5R)).interp(), Econprog5C.interp())
+s.test(econ(RCO(Econprog6R)).interp(), Econprog6C.interp())
 
 ####### Combined Testing ########
 print("\nCombined Tests\n")
