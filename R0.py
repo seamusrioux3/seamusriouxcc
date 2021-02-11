@@ -652,7 +652,7 @@ def _rcoLift(env, e):
 
 def _rco(env, e):
     if(isinstance(e,RNum)):
-        return e
+        return _rcoLift(env, e)
     elif(isinstance(e,RRead)):
         return _rcoLift(env, e)
 
@@ -684,3 +684,47 @@ def letStar(fa, env):
     else:
         var, eq = env.getLift().pop()
         return RLet(var, eq, letStar(fa,env))
+
+
+######## Explicate Control Pass ########
+class EconEnv:
+    def __init__(self):
+        self.p = []
+    def addEnv(self, a):
+        self.p.append(a)
+    def getEnv(self):
+        return self.p
+
+def econ(r):
+    env = EconEnv()
+    rtn = econHelper(r, env)
+    env.addEnv(rtn)
+    p = CProgram({CLabel("main"): env.getEnv()})
+    return p
+def econArgs(r):
+    if(isinstance(r, RNum)):
+        return CNum(r.num)
+    elif(isinstance(r, RVar)):
+        return CVar(r.name)
+    else:
+        return "ERROR"
+def econExp(r):
+    if(isinstance(r, RRead)):
+        return CRead()
+    elif(isinstance(r, RNegate)):
+        return CNeg(econArgs(r.num))
+    elif(isinstance(r, RAdd)):
+        return CAdd(econArgs(r.left), econArgs(r.right))
+    else:
+        return econArgs(r)
+
+def econHelper(r, env):
+    if(isinstance(r,RLet)):
+        a = CSet(econArgs(r.var), econExp(r.l))
+        env.addEnv(a)
+        return econHelper(r.r, env)
+    elif(isinstance(r,RVar)):
+        return CRet(econArgs(r))
+    else:
+        return CRet(r)
+
