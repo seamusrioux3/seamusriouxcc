@@ -523,4 +523,12 @@ s.testUniquify(randomR1(5,[]))
 s.testUniquify(randomR1(4,[]))
 s.testUniquify(randomR1(3,[]))
 
+Rcoprog1 = RAdd(RAdd(RNum(2), RNum(3)), RLet(RVar("x"), RRead(), RAdd(RVar("x"), RVar("x"))))
+Rcoprog2 = RLet(RVar("R1"), RAdd(RNum(2), RNum(3)), RLet(RVar("R2"), RAdd(RNum(1), RVar("R1")), RLet(RVar("R3"), RAdd(RVar("R1"), RVar("R1")), RVar("R2"))))
+Rcoprog3 = RLet(RVar("R1"), RNegate(RNum(3)), RLet(RVar("R2"), RAdd(RNum(1), RVar("R1")), RLet(RVar("R3"), RAdd(RVar("R1"), RVar("R1")), RVar("R2"))))
+Rcoprog4 = RCO(optimizer(RAdd(RAdd(RNum(2), RNum(3)), RLet(RVar("x"), RRead(), RAdd(RVar("x"), RVar("x"))))))
+Rcoprog5 = RLet(RVar("R1"), RAdd(RNum(1), RNum(1)), RLet(RVar("R2"), RAdd(RVar("R1"), RVar("R1")), RLet(RVar("R3"),RAdd(RVar("R2"),RVar("R2")), RVar("R3"))))
+Rcoprog6 = RLet(RVar("R1"), RAdd(RNegate(RNum(2)), RNegate(RNegate(RNum(2)))), RVar("R1"))
+
+
 s.endSuite()
