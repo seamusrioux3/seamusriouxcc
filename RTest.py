@@ -126,171 +126,146 @@ letTest8 = RLet(RVar("x"), RNum(7), RLet(RVar("x"), RNum(8),
 letTest9 = RLet(RVar("x"), RRead(), RNum(4))
 
 ########## X0 Program Testing ################
-Xprog1 = XProgram([
-    (XLabel("main"),
-     XBlock([
-         XIMov(XCon(10), XRegister("R8")),
-         XIMov(XCon(5), XRegister("R9")),
-         XIJmp(XLabel("l0"))
-     ])),
-    (XLabel("l0"),
-     XBlock([
-         XIAdd(XRegister("R8"), XRegister("R9")),
-         XIAdd(XRegister("R8"), XRegister("R9")),
-         XIMov(XRegister("R9"), XRegister("RAX")),
-         XIRet()
-     ])),
-])
+Xprog1 = XProgram([], {
+    XLabel("main"):
+    [
+        XIMov(XCon(10), XRegister("R8")),
+        XIMov(XCon(5), XRegister("R9")),
+        XIJmp(XLabel("l0"))
+    ],
+    XLabel("l0"):
+    [
+        XIAdd(XRegister("R8"), XRegister("R9")),
+        XIAdd(XRegister("R8"), XRegister("R9")),
+        XIMov(XRegister("R9"), XRegister("RAX")),
+        XIRet()
+     ],
+})
 
-Xprog2 = XProgram([
-    (XLabel("main"),
-     XBlock([XIMov(XCon(10), XRegister("R8")),
-             XIMov(XCon(5), XRegister("R9")),
-             XIJmp(XLabel("l0"))])),
-    (XLabel("l0"),
-     XBlock([
+Xprog2 = XProgram([],{
+    XLabel("main"):
+    [
+        XIMov(XCon(10), XRegister("R8")),
+        XIMov(XCon(5), XRegister("R9")),
+        XIJmp(XLabel("l0"))
+    ],
+    XLabel("l0"):
+    [
          XISub(XRegister("R8"), XRegister("R9")),
          XIAdd(XRegister("R8"), XRegister("R9")),
          XIMov(XRegister("R9"), XRegister("RAX")),
          XIRet()
-     ])),
-])
+    ],
+})
 
-Xprog3 = XProgram([(
-    XLabel("main"),
-    XBlock([XIMov(XCon(10), XRegister("R8")),
-            XIMov(XCon(5), XRegister("RAX")),
-            XIRet()
-            ])
-)])
+Xprog3 = XProgram([],{
+    XLabel("main"):
+    [
+        XIMov(XCon(10), XRegister("R8")),
+        XIMov(XCon(5), XRegister("RAX")),
+        XIRet()
+    ]
+})
 
-Xprog4 = XProgram([
-    (
-        XLabel("l0"),
-        XBlock([
-            XIMov(XCon(250), XRegister("RAX")),
-            XIRet()
-        ])
-    ),
-    (
-        XLabel("main"),
-        XBlock([
-            XIMov(XCon(200), XRegister("RAX")),
-            XIJmp(XLabel("l0"))
-        ])),
-])
+Xprog4 = XProgram([], {
+    XLabel("l0"):
+    [
+        XIMov(XCon(250), XRegister("RAX")),
+        XIRet()
+    ],
+    XLabel("main"):
+    [
+        XIMov(XCon(200), XRegister("RAX")),
+        XIJmp(XLabel("l0"))
+    ]
+})
 
-Xprog5 = XProgram([
-    (
-        XLabel("l0"),
-        XBlock([
+Xprog5 = XProgram([], {
+    XLabel("l0"):
+    [
+        XISub(XRegister("R10"), XRegister("R8")),
+        XIMov(XRegister("R10"), XRegister("RAX")),
+        XIRet()
+    ],
+    XLabel("main"):
+    [
+        XIMov(XCon(200), XRegister("R8")),
+        XIMov(XCon(201), XRegister("R10")),
+        XIJmp(XLabel("l0"))
+    ]
+})
+
+Xprog6 = XProgram([], {
+        XLabel("l0"):
+        [
             XISub(XRegister("R10"), XRegister("R8")),
             XIMov(XRegister("R10"), XRegister("RAX")),
             XIRet()
-        ])
-    ),
-    (
-        XLabel("main"),
-        XBlock([
+        ],
+        XLabel("main"):
+        [
             XIMov(XCon(200), XRegister("R8")),
             XIMov(XCon(201), XRegister("R10")),
             XIJmp(XLabel("l0"))
-        ])),
-])
+        ],
+})
 
-Xprog6 = XProgram([
-    (
-        XLabel("l0"),
-        XBlock([
-            XISub(XRegister("R10"), XRegister("R8")),
-            XIMov(XRegister("R10"), XRegister("RAX")),
-            XIRet()
-        ])
-    ),
-    (
-        XLabel("main"),
-        XBlock([
-            XIMov(XCon(200), XRegister("R8")),
-            XIMov(XCon(201), XRegister("R10")),
-            XIJmp(XLabel("l0"))
-        ])),
-])
-
-Xprog7 = XProgram(
-    [(
-        XLabel("main"),
-        XBlock([
-            XIMov(XCon(8), XRegister("RAX")),
-            XIMov(XCon(10), XRegister("RBX")),
-            XIAdd(XRegister("RAX"), XRegister("RBX")),
-            XIRet(),
-        ])
-    )]
-)
-
-Xprog8 = XProgram(
+Xprog7 = XProgram([], {
+    XLabel("main"):
     [
-        (
-            XLabel("main"),
-            XBlock([
-                XIPush(XCon(33)),
-                XIPop(XRegister("RAX")),
-                XIRet()
-            ])
-        )
+        XIMov(XCon(8), XRegister("RAX")),
+        XIMov(XCon(10), XRegister("RBX")),
+        XIAdd(XRegister("RAX"), XRegister("RBX")),
+        XIRet(),
     ]
-)
+})
 
-Xprog9 = XProgram(
+Xprog8 = XProgram([], {
+    XLabel("main"):
     [
-        (
-            XLabel("main"),
-            XBlock([
-                XIMov(XCon(0), XRegister("R8")),
-                XICall(XLabel("read_int")),
-                XIAdd(XRegister("RAX"), XRegister("R8")),
-                XICall(XLabel("read_int")),
-                XIAdd(XRegister("RAX"), XRegister("R8")),
-                XICall(XLabel("read_int")),
-                XIAdd(XRegister("RAX"), XRegister("R8")),
-                XIMov(XRegister("R8"), XRegister("RAX")),
-                XIRet(),
-            ])
-        )
+        XIPush(XCon(33)),
+        XIPop(XRegister("RAX")),
+        XIRet()
     ]
-)
+})
 
-Xprog10 = XProgram(
+Xprog9 = XProgram([], {
+    XLabel("main"):
     [
-        (
-            XLabel("main"),
-            XBlock([
-                XIPush(XCon(33)),
-                XIPop(XRegister("RAX")),
-                XIPush(XCon(66)),
-                XIPop(XRegister("RAX")),
-                XIPush(XCon(99)),
-                XIPop(XRegister("RAX")),
-                XIRet()
-            ])
-        )
+        XIMov(XCon(0), XRegister("R8")),
+        XICall(XLabel("read_int")),
+        XIAdd(XRegister("RAX"), XRegister("R8")),
+        XICall(XLabel("read_int")),
+        XIAdd(XRegister("RAX"), XRegister("R8")),
+        XICall(XLabel("read_int")),
+        XIAdd(XRegister("RAX"), XRegister("R8")),
+        XIMov(XRegister("R8"), XRegister("RAX")),
+        XIRet(),
     ]
-)
+})
 
-Xprog11 = XProgram(
-    [
-        (
-            XLabel("main"),
-            XBlock([
-                XIPush(XCon(33)),
-                XIPop(XRegister("RAX")),
-                XIMov(XCon(8), XRegister("R8")),
-                XIAdd(XRegister("R8"), XRegister("RAX")),
-                XIRet()
-            ])
-        )
+Xprog10 = XProgram([], {
+    XLabel("main"):[
+        XIPush(XCon(33)),
+        XIPop(XRegister("RAX")),
+        XIPush(XCon(66)),
+        XIPop(XRegister("RAX")),
+        XIPush(XCon(99)),
+        XIPop(XRegister("RAX")),
+        XIRet()
     ]
-)
+})
+
+Xprog11 = XProgram([], {
+    XLabel("main"):
+    [
+        XIPush(XCon(33)),
+        XIPop(XRegister("RAX")),
+        XIMov(XCon(8), XRegister("R8")),
+        XIAdd(XRegister("R8"), XRegister("RAX")),
+        XIRet()
+    ]
+})
 
 s.testX0Programs(Xprog1)
 s.testX0Programs(Xprog2)
@@ -380,7 +355,7 @@ Cprog7 = CProgram({
     ]
 })
 
-####### Uniquify Tests ###########
+# ####### Uniquify Tests ###########
 print("\n Uniquify Tests\n")
 Uprog1 = RLet(RVar("A"), RNum(1), RLet(RVar("A"), RRead(), RVar("A")))
 Uprog2 = RLet(RVar("A"), RNum(1), RLet(
@@ -393,7 +368,7 @@ Uprog5 = RAdd(RLet(RVar("x"), RNum(7), RVar("x")), RLet(RVar("x"), RNum(
 Uprog6 = RLet(RVar("A"), RLet(RVar("A"), RLet(RVar("A"), RNum(2), RAdd(
     RVar("A"), RVar("A"))), RAdd(RVar("A"), RVar("A"))), RAdd(RVar("A"), RVar("A")))
 
-####### RCO Tests ###########
+# ####### RCO Tests ###########
 print("\nRCO Tests\n")
 Rcoprog1 = RAdd(RAdd(RNum(2), RNum(3)), RLet(
     RVar("x"), RRead(), RAdd(RVar("x"), RVar("x"))))
@@ -409,7 +384,7 @@ Rcoprog6 = RLet(RVar("R1"), RAdd(RNegate(RNum(2)),
                                  RNegate(RNegate(RNum(2)))), RVar("R1"))
 Rcoprog7 = RLet(RVar("R1"), RNum(4), RVar("R1"))
 
-####### Econ Examples ###########
+# ####### Econ Examples ###########
 Econprog1R = RLet(RVar("x"), RNum(2), RAdd(RVar("x"), RNum(3)))
 Econprog1C = CProgram({
     CLabel("main"):
@@ -481,6 +456,7 @@ uncprog1 = CProgram(["R1"], {
         CRet(CVar("R1")),
     ]
 })
+
 uncprog2 = CProgram(["R1", "R2", "R3"], {
     CLabel("main"):
     [
@@ -490,6 +466,7 @@ uncprog2 = CProgram(["R1", "R2", "R3"], {
         CRet(CVar("R3")),
     ]
 })
+
 uncprog3 = CProgram(["R1", "R2", "R3"], {
     CLabel("main"):
     [
@@ -508,6 +485,7 @@ uncprog4 = CProgram(["R1", "R2", "R3"], {
         CRet(CVar("R3")),
     ]
 })
+
 uncprog5 = CProgram(["R1", "R2", "R3", "R4"], {
     CLabel("main"):
     [
@@ -518,6 +496,7 @@ uncprog5 = CProgram(["R1", "R2", "R3", "R4"], {
         CRet(CVar("R4")),
     ]
 })
+
 uncprog6 = CProgram(["R1"], {
     CLabel("main"):
     [
@@ -525,71 +504,135 @@ uncprog6 = CProgram(["R1"], {
         CRet(CVar("R1")),
     ]
 })
-print(uncprog1.pp())
-print(uncprog2.pp())
-print(uncprog3.pp())
-print(uncprog4.pp())
-print(uncprog5.pp())
-print(uncprog6.pp())
-######## Select Instr Exs ########
+# ######## Select Instr Exs Based On Uncover Locals ########
+selProg1 = XProgram([], {
+    XLabel("main"):
+    [
+        XIMov(XCon(2), XRegister("R13")),
+        XIMov(XCon(3), XRegister("R14")),
+        XIAdd(XRegister("R13"), XRegister("R14")),
+        XIMov(XRegister("R14"), XRegister("RAX")),
+        XIRet()
+    ]
+})
+selProg2 = XProgram([], {
+    XLabel("main"):
+    [
+        XIMov(XCon(2), XRegister("R13")),
+        XIMov(XCon(3), XRegister("R14")),
+        XIAdd(XRegister("R13"), XRegister("R14")),
+        XIAdd(XCon(1), XRegister("R12")),
+        XIAdd(XRegister("R14"), XRegister("R14")),
+        XIMov(XRegister("R14"), XRegister("RAX")),
+        XIRet()
+    ]
+})
+selProg3 = XProgram([], {
+    XLabel("main"):
+    [
+        XIMov(XCon(3), XRegister("R13")),
+        XIMov(XCon(3), XRegister("R14")),
+        XIAdd(XRegister("R13"), XRegister("R14")),
+        XIAdd(XCon(1), XRegister("R12")),
+        XIAdd(XRegister("R14"), XRegister("R14")),
+        XIMov(XRegister("R14"), XRegister("RAX")),
+        XIRet()
+    ]
+})
+selProg4 = XProgram([], {
+    XLabel("main"):
+    [
+        XIMov(XCon(2), XRegister("R13")),
+        XIAdd(XRegister("R13"), XRegister("R13")),
+        XIAdd(XRegister("R13"), XRegister("R13")),
+        XIMov(XRegister("R13"), XRegister("RAX")),
+        XIRet()
+    ]
+})
+selProg5 = XProgram([], {
+    XLabel("main"):
+    [
+        XIMov(XCon(2), XRegister("R13")),
+        XIMov(XCon(2), XRegister("R14")),
+        XINeg(XRegister("R14")),
+        XIAdd(XRegister("R13"), XRegister("R14")),
+        XIMov(XRegister("R14"), XRegister("RAX")),
+        XIRet()
+    ]
+})
+selProg6 = XProgram([], {
+    XLabel("main"):
+    [
+        XIMov(XCon(4), XRegister("RAX")),
+        XIRet()
+    ]
+})
 
 
-####### Combined Testing ########
-print("\nCombined Tests\n")
-s.testAll(letTest1)
-s.testAll(letTest2)
-s.testAll(letTest3)
-s.testAll(letTest4)
-s.testAll(letTest5)
-s.testAll(letTest6)
-s.testAll(letTest7)
-s.testAll(letTest8)
-s.testAll(letTest9)
-s.testAll(Econprog1R)
-s.testAll(Econprog2R)
-s.testAll(Econprog3R)
-s.testAll(Econprog4R)
-s.testAll(Econprog5R)
-s.testAll(Econprog6R)
-s.testAll(Rcoprog1)
-s.testAll(Rcoprog2)
-s.testAll(Rcoprog3)
-s.testAll(Rcoprog4)
-s.testAll(Rcoprog5)
-s.testAll(Rcoprog6)
-s.testAll(Uprog1)
-s.testAll(Uprog2)
-s.testAll(Uprog3)
-s.testAll(Uprog4)
-s.testAll(Uprog5)
-s.testAll(Uprog6)
-s.testAll(RAdd(RNum(22), RAdd(RNum(23), RRead())))
-s.testAll(RAdd(RNegate(RNum(22)), RNum(23)))
-s.testAll(RAdd(RNum(22), RNum(23)))
-s.testAll(RNegate(RNegate(RNum(975))))
-s.testAll(RNegate(RAdd(RNum(10), RAdd(RRead(), RNum(12)))))
-s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RNegate(RRead())))))))
-s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RRead()))))))
-s.testAll(RAdd(RNum(22), RAdd(RNum(23), RNum(20))))
-s.testAll(RNegate(RLet(RVar("V0"), RNegate(RLet(RVar("V0"), RNum(2), RVar("V0"))), RAdd(RAdd(RNum(2), RRead()), RAdd(RNum(4), RVar("V0"))))))
+s.testX0Programs(selProg1)
+s.testX0Programs(selProg2)
+s.testX0Programs(selProg3)
+s.testX0Programs(selProg4)
+s.testX0Programs(selProg5)
+s.testX0Programs(selProg6)
+
+
+# ####### Combined Testing ########
+# print("\nCombined Tests\n")
+# s.testAll(letTest1)
+# s.testAll(letTest2)
+# s.testAll(letTest3)
+# s.testAll(letTest4)
+# s.testAll(letTest5)
+# s.testAll(letTest6)
+# s.testAll(letTest7)
+# s.testAll(letTest8)
+# s.testAll(letTest9)
+# s.testAll(Econprog1R)
+# s.testAll(Econprog2R)
+# s.testAll(Econprog3R)
+# s.testAll(Econprog4R)
+# s.testAll(Econprog5R)
+# s.testAll(Econprog6R)
+# s.testAll(Rcoprog1)
+# s.testAll(Rcoprog2)
+# s.testAll(Rcoprog3)
+# s.testAll(Rcoprog4)
+# s.testAll(Rcoprog5)
+# s.testAll(Rcoprog6)
+# s.testAll(Uprog1)
+# s.testAll(Uprog2)
+# s.testAll(Uprog3)
+# s.testAll(Uprog4)
+# s.testAll(Uprog5)
+# s.testAll(Uprog6)
+# s.testAll(RAdd(RNum(22), RAdd(RNum(23), RRead())))
+# s.testAll(RAdd(RNegate(RNum(22)), RNum(23)))
+# s.testAll(RAdd(RNum(22), RNum(23)))
+# s.testAll(RNegate(RNegate(RNum(975))))
+# s.testAll(RNegate(RAdd(RNum(10), RAdd(RRead(), RNum(12)))))
+# s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RNegate(RRead())))))))
+# s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RRead()))))))
+# s.testAll(RAdd(RNum(22), RAdd(RNum(23), RNum(20))))
+# s.testAll(RNegate(RLet(RVar("V0"), RNegate(RLet(RVar("V0"), RNum(2), RVar("V0"))), RAdd(RAdd(RNum(2), RRead()), RAdd(RNum(4), RVar("V0"))))))
+# # for i in range(100):
+# #     s.testAll(randomR1(8))
+# # for i in range(100):
+# #     s.testAll(randomR1(7))
+# # for i in range(100):
+# #     s.testAll(randomR1(6))
+# # for i in range(100):
+# #     s.testAll(randomR1(5))
 # for i in range(100):
-#     s.testAll(randomR1(8))
+#    s.testAll(randomR1(4))
 # for i in range(100):
-#     s.testAll(randomR1(7))
-# for i in range(100):
-#     s.testAll(randomR1(6))
-# for i in range(100):
-#     s.testAll(randomR1(5))
-for i in range(100):
-   s.testAll(randomR1(4))
-for i in range(100):
-    s.testAll(randomR1(3))
-for i in range(15000):
-    s.testAll(randomR1(2))
-for i in range(15000):
-    s.testAll(randomR1(1))
-for i in range(15000):
-    s.testAll(randomR1(0))
+#     s.testAll(randomR1(3))
+# for i in range(15000):
+#     s.testAll(randomR1(2))
+# for i in range(15000):
+#     s.testAll(randomR1(1))
+# for i in range(15000):
+#     s.testAll(randomR1(0))
 
 
 s.endSuite()
