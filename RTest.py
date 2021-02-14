@@ -86,19 +86,20 @@ class Test:
         pu = uniquify(po)
         pr = RCO(pu)
         pe = econ(pr)
-        print("original: " + p.pp())
-        print("original ans: " + str(p.interp()))
-        print("optimized: " + po.pp())
-        print("optimized ans: " + str(po.interp()))
-        print("uniquify: " + pu.pp())
-        print("uniquify ans: " + str(pu.interp()))
-        print("rco: " + pr.pp())
-        print("rco ans: " + str(pr.interp()))
-        print("econ: " + pe.pp())
-        print("econ ans: " + str(pe.interp()))
+        punc = uncover(pe)
+        # print("original: " + p.pp())
+        # print("original ans: " + str(p.interp()))
+        # print("optimized: " + po.pp())
+        # print("optimized ans: " + str(po.interp()))
+        # print("uniquify: " + pu.pp())
+        # print("uniquify ans: " + str(pu.interp()))
+        # print("rco: " + pr.pp())
+        # print("rco ans: " + str(pr.interp()))
+        # print("econ: " + pe.pp())
+        # print("econ ans: " + str(pe.interp()))
 
-        if (p.interp() == po.interp() and p.interp() == pu.interp() and p.interp() == pr.interp() and p.interp() == pe.interp()):
-            actual = pe.interp()
+        if (p.interp() == po.interp() and p.interp() == pu.interp() and p.interp() == pr.interp() and p.interp() == pe.interp() and p.interp() == punc.interp()):
+            actual = punc.interp()
         else:
             actual = not p.interp()
 
