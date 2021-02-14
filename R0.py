@@ -111,146 +111,6 @@ class RLet:
         return self.r.interp(e)
 
 
-# Functions
-def randomR0(n):
-    random.seed(datetime.now())
-    ret = 0
-    if(n == 0):
-        ret = random.choice([RNum(random.randint(0, 16)), RRead()])
-    else:
-        ret = random.choice(
-            [RAdd(randomR0(n-1), randomR0(n-1)), RNegate(randomR0(n-1))])
-    return ret
-
-
-def randomR1(n, v):
-    random.seed(datetime.now())
-    ret = 0
-    if(n == 0):
-        if(v):
-            chosenVar = random.choice(v)
-            ret = random.choice(
-                [RNum(random.randint(0, 16)), chosenVar, RRead()])
-        else:
-            ret = random.choice([RNum(random.randint(0, 16)), RRead()])
-    else:
-        newVar = RVar("V" + str(len(v)))
-        ret = random.choice([RAdd(randomR1(n-1, v), randomR1(n-1, v)), RNegate(
-            randomR1(n-1, v)), RLet(newVar, randomR1(n-1, v), randomR1(n-1, v+[newVar]))])
-    return ret
-
-######## Optimizer Function ########
-
-
-class OptEnv:
-    def __init__(self):
-        self.env = {}
-
-    def getEnv(self):
-        return self.env
-
-    def setEnv(self, add):
-        self.env.update(add)
-
-
-def optimizer(n):
-    env = OptEnv()
-    return _optimizer(n, env)
-
-
-def _optimizer(n, env):
-    if isinstance(n, RNum):
-        return n
-    elif isinstance(n, RRead):
-        return n
-    elif isinstance(n, RNegate):
-        e = n.num
-        if(isinstance(e, RNum)):
-            return RNum(-1 * e.num)
-        elif(isinstance(e, RNegate)):
-            return _optimizer(e.num, env)
-        elif(isinstance(e, RAdd)):
-            if(isinstance(e.left, RNum)):
-                return RAdd(RNum(-1*e.left.interp()), RNegate(_optimizer(e.right, env)))
-            else:
-                return RNegate(_optimizer(e, env))
-        elif(isinstance(e, RVar)):
-            return RNegate(_optimizer(e, env))
-        else:
-            return n
-    elif isinstance(n, RAdd):
-        l = n.left
-        r = n.right
-        if(isinstance(l, RNum) and isinstance(r, RNum)):
-            return RNum(l.interp(env) + r.interp(env))
-
-        elif(isinstance(l, RNum) and isinstance(r, RAdd) and isinstance(r.left, RNum)):
-            return RAdd(RNum(l.interp(env) + r.left.interp(env)), r.right)
-
-        elif(isinstance(l, RAdd) and isinstance(r, RNum) and isinstance(r.right, RNum)):
-            return RAdd(RNum(l.interp(env) + r.right.interp(env)), r.left)
-
-        elif(isinstance(l, RAdd) and isinstance(l.left, RNum) and isinstance(r, RAdd) and isinstance(r.left, RNum)):
-            return RAdd(RNum(l.left.interp(env) + r.left.interp(env)), RAdd(l.left, r.left))
-        elif(not isinstance(l, RNum) and isinstance(r, RNum)):
-            return _optimizer(RAdd(r, l), env)
-        else:
-            return RAdd(_optimizer(l, env), _optimizer(r, env))
-    elif(isinstance(n, RVar)):
-        if(n.name in env.getEnv()):
-            return env.getEnv()[n.name]
-        else:
-            print("ERROR UNBOUND VAR")
-            return "FAILURE"
-    elif(isinstance(n, RLet)):
-        xe = _optimizer(n.l, env)
-        if(isinstance(xe, RNum) or isinstance(xe, RVar)):
-            env.setEnv({n.var.name: xe})
-            be = _optimizer(n.r, env)
-            return be
-        else:
-            env.setEnv({n.var.name: xe})
-            be = _optimizer(n.r, env)
-        return RLet(n.var, xe, be)
-
-
-class UNEnv:
-    def __init__(self):
-        self.varCntr = 0
-        self.env = {}
-
-
-def uniquify(e):
-    env = UNEnv()
-    e = uni(e, env)
-    return e
-
-
-def uni(e=None, uenv=UNEnv()):
-    if(isinstance(e, RNum)):
-        return e
-    elif(isinstance(e, RRead)):
-        return e
-    elif(isinstance(e, RNegate)):
-        return RNegate(uni(e.num, uenv))
-    elif(isinstance(e, RAdd)):
-        return RAdd(uni(e.left, uenv), uni(e.right, uenv))
-    elif(isinstance(e, RVar)):
-        if e.pp() in uenv.env:
-            return RVar(uenv.env[e.pp()])
-        else:
-            print("VAR UNBOUND")
-            return "FAILURE"
-    elif(isinstance(e, RLet)):
-        uenv.varCntr += 1
-        x = RVar("U"+str(uenv.varCntr))
-        l = uni(e.l, uenv)
-        uenv.env[e.var.pp()] = x.pp()
-        r = uni(e.r, uenv)
-        return RLet(x, l, r)
-
-    return 0
-
 ############ X0 Programs ############
 
 
@@ -499,18 +359,21 @@ class XIPop:
 
 
 class CProgram:
-    def __init__(self, _p):
+    def __init__(self, _info = None, _p = None):
         self.p = _p
+        self.info = _info
 
     def pp(self):
-        return "".join([i.pp() + "\n" + "\n".join([l.pp() for l in j])
-                        for i, j in self.p.items()])
-
+        if(self.info):
+            return str(self.info)+"\n" + "".join([i.pp() + "\n" + "\n".join([l.pp() for l in j])
+                            for i, j in self.p.items()])
+        else:
+            return "".join([i.pp() + "\n" + "\n".join([l.pp() for l in j])
+                            for i, j in self.p.items()])
     def interp(self):
         tempBlks = {}
         for i, j in self.p.items():
             tempBlks.update({i.interp(): j})
-        # print(tempBlks)
         env = CEnv()
         env.setBlk(tempBlks)
         rtn = 0
@@ -624,6 +487,164 @@ class CSet:
         env.setVar({self.var.pp(): self.exp.interp(env)})
         return 0
 
+
+###################### Functions ######################
+
+
+def randomR1(n):
+    r = _randomR1(n, [])
+    return r
+
+
+def _randomR1(n, v):
+    random.seed(datetime.now())
+    ret = 0
+    if(n == 0):
+        if(v):
+            chosenVar = random.choice(v)
+            ret = random.choice(
+                [RNum(random.randint(0, 16)), chosenVar, RRead()])
+        else:
+            ret = random.choice([RNum(random.randint(0, 16)), RRead()])
+    else:
+        newVar = RVar("V" + str(len(v)))
+        ret = random.choice([RAdd(_randomR1(n-1, v), _randomR1(n-1, v)), RNegate(
+            _randomR1(n-1, v)), RLet(newVar, _randomR1(n-1, v), _randomR1(n-1, [newVar]))])
+    return ret
+
+
+######## Optimizer Function ########
+
+
+class OptEnv:
+    def __init__(self):
+        self.env = {}
+
+    def getEnv(self):
+        return self.env
+
+    def setEnv(self, add):
+        self.env.update(add)
+
+def simple(n):
+    if(isinstance(n,RNum)):
+        return True
+    elif(isinstance(n,RRead)):
+        return False
+    elif(isinstance(n,RNegate)):
+        return simple(n.num)
+    elif(isinstance(n,RAdd)):
+        return simple(n.left) and simple(n.right)
+    elif(isinstance(n,RVar)):
+        return True
+    elif(isinstance(n,RLet)):
+        return simple(n.l) and simple(n.r)
+    
+def optimizer(n):
+    env = OptEnv()
+    return _optimizer(n, env)
+
+def _optimizer(n, env):
+    if isinstance(n, RNum):
+        return n
+    elif isinstance(n, RRead):
+        return n
+    elif isinstance(n, RNegate):
+        e = n.num
+        if(isinstance(e, RNum)):
+            return RNum(-1 * e.num)
+        elif(isinstance(e, RNegate)):
+            return _optimizer(e.num, env)
+        elif(isinstance(e, RAdd)):
+            if(isinstance(e.left, RNum)):
+                return RAdd(RNum(-1*e.left.num), RNegate(_optimizer(e.right, env)))
+            else:
+                return RNegate(_optimizer(e, env))
+        else:
+            return RNegate(_optimizer(e,env))
+    elif isinstance(n, RAdd):
+        l = n.left
+        r = n.right
+        if(isinstance(l, RNum) and isinstance(r, RNum)):
+            return RNum(l.interp() + r.interp())
+
+        elif(isinstance(l, RNum) and isinstance(r, RAdd) and isinstance(r.left, RNum)):
+            return RAdd(RNum(l.interp() + r.left.interp()), _optimizer(r.right,env))
+
+        elif(isinstance(l, RAdd) and isinstance(r, RNum) and isinstance(r.right, RNum)):
+            return RAdd(RNum(l.interp() + r.right.interp()), _optimizer(r.left,env))
+
+        elif(isinstance(l, RAdd) and isinstance(l.left, RNum) and isinstance(r, RAdd) and isinstance(r.left, RNum)):
+            return RAdd(RNum(l.left.interp() + r.left.interp()), RAdd(_optimizer(l.right, env), _optimizer(r.right, env)))
+        elif(not isinstance(l,RNum) and isinstance(r,RNum)):
+            return RAdd(r,_optimizer(l,env))
+        else:
+            return RAdd(_optimizer(l, env), _optimizer(r, env))
+    elif(isinstance(n, RVar)):
+        if(n.name in env.getEnv()):
+            return env.getEnv()[n.name]
+        else:
+            return n
+    elif(isinstance(n, RLet)):
+        xe = _optimizer(n.l, env)
+        print(xe.pp())
+        for i,j in env.getEnv().items():
+            print(i +":"+ j.pp())
+        if(simple(xe)):
+            env.setEnv({n.var.name: xe})
+            return _optimizer(n.r, env)
+        else:
+            env.setEnv({n.var.name: xe})
+            be = _optimizer(n.r, env)
+            return RLet(n.var, xe, be)
+
+
+######## Uniquify Function ########
+
+
+class UNEnv:
+    def __init__(self):
+        self.varCntr = 0
+        self.env = {}
+
+    def setEnv(self, add):
+        self.env.update(add)
+    
+    def getEnv(self):
+        return self.env
+
+def uniquify(e):
+    env = UNEnv()
+    e = uni(e, env)
+    return e
+
+
+def uni(e, uenv):
+    if(isinstance(e, RNum)):
+        return e
+    elif(isinstance(e, RRead)):
+        return e
+    elif(isinstance(e, RNegate)):
+        return RNegate(uni(e.num, uenv))
+    elif(isinstance(e, RAdd)):
+        return RAdd(uni(e.left, uenv), uni(e.right, uenv))
+    elif(isinstance(e, RVar)):
+        if e.pp() in uenv.getEnv():
+            return RVar(uenv.getEnv()[e.pp()])
+        else:
+            print("UNI VAR UNBOUND")
+            return "FAILURE"
+    elif(isinstance(e, RLet)):
+        uenv.varCntr += 1
+        x = RVar("U"+str(uenv.varCntr))
+        l = uni(e.l, uenv)
+        uenv.setEnv({e.var.pp(): x.pp()}) 
+        r = uni(e.r, uenv)
+        return RLet(x, l, r)
+
+    return 0
+
+
 ########### Resolve Complex ###########
 
 
@@ -715,7 +736,7 @@ def econ(r):
     env = EconEnv()
     rtn = econHelper(r, env)
     env.addEnv(rtn)
-    p = CProgram({CLabel("main"): env.getEnv()})
+    p = CProgram(None, {CLabel("main"): env.getEnv()})
     return p
 
 
@@ -748,3 +769,22 @@ def econHelper(r, env):
         return CRet(econArgs(r))
     else:
         return CRet(r)
+
+######## Uncover Locals ########
+
+def uncover(cp = CProgram()):
+    progs = cp.p
+    info = []
+    for i,blks in progs.items():
+        for seq in blks:
+            if(isinstance(seq,CSet)):
+                info.append(seq.var.var)
+    return CProgram(info, progs)
+
+
+######## Select Instr Pass ########
+
+
+def select():
+    pass
+#def uncover
