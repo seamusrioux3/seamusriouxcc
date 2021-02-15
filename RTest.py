@@ -89,6 +89,7 @@ class Test:
         punc = uncover(pe)
         xz = select(punc)
         az = assign(xz)
+        #ptch = patch(az)
         #print("original: " + p.pp())
         #print("original ans: " + str(p.interp()))
         #print("optimized: " + po.pp())
@@ -105,6 +106,8 @@ class Test:
         #print("sel ans: " + str(xz.interp()))
         # print("asn: " + az.emit())
         # print("asn: " + str(az.interp()))
+        # print("patch: " + ptch.emit())
+        # print("patch: " + str(ptch.interp()))
         if (p.interp() == po.interp() == pu.interp() == pr.interp() == pe.interp() == punc.interp() == xz.interp() == az.interp()):
             actual = az.interp()
         else:
@@ -573,7 +576,6 @@ asnhome1 = XProgram([], {
         XIRet()
     ]
 })
-print(asnhome1.interp())
 asnhome2 = XProgram([], {
     XLabel("main"):
     [
@@ -598,7 +600,6 @@ asnhome2 = XProgram([], {
         XIRet()
     ]
 })
-print(asnhome2.interp())
 asnhome3 = XProgram([], {
     XLabel("main"):
     [
@@ -623,7 +624,91 @@ asnhome3 = XProgram([], {
         XIRet()
     ]
 })
-print(asnhome3.interp())
+######## Patch Instructions Testing ########
+patch1 = XProgram([], {
+    XLabel("main"):
+    [
+        XIPush(XRegister("RBP")),
+        XIMov(XRegister("RSP"), XRegister("RBP")),
+        XISub(XCon(32), XRegister("RSP")),
+        XIJmp(XLabel("body"))
+    ],
+    XLabel("body"):
+    [
+        XIMov(XCon(3), XRegister("RAX")),
+        XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 0)),
+        XIMov(XCon(2), XRegister("RAX")),
+        XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 8)),
+        XIMov(XMem(XRegister("RBP"), 0),XRegister("RAX")),
+        XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 16)),
+        XIMov(XMem(XRegister("RBP"), 8),XRegister("RAX")),
+        XIAdd(XRegister("RAX"), XMem(XRegister("RBP"), 16)),
+        XIMov(XMem(XRegister("RBP"), 16), XRegister("RAX")),
+        XIJmp(XLabel("end"))
+    ],
+    XLabel("end"):
+    [
+        XIAdd(XCon(32), XRegister("RSP")),
+        XIPop(XRegister("RBP")),
+        XIRet()
+    ]
+})
+patch2 = XProgram([], {
+    XLabel("main"):
+    [
+        XIPush(XRegister("RBP")),
+        XIMov(XRegister("RSP"), XRegister("RBP")),
+        XISub(XCon(32), XRegister("RSP")),
+        XIJmp(XLabel("body"))
+    ],
+    XLabel("body"):
+    [
+        XIMov(XCon(2), XRegister("RAX")),
+        XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 0)),
+        XIMov(XCon(1), XRegister("RAX")),
+        XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 8)),
+        XIMov(XMem(XRegister("RBP"), 0),XRegister("RAX")),
+        XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 16)),
+        XIAdd(XRegister("RAX"), XMem(XRegister("RBP"), 16)),
+        XIMov(XMem(XRegister("RBP"), 16), XRegister("RAX")),
+        XIMov(XRegister("RAX"), XRegister("RAX")),
+        XIJmp(XLabel("end"))
+    ],
+    XLabel("end"):
+    [
+        XIAdd(XCon(32), XRegister("RSP")),
+        XIPop(XRegister("RBP")),
+        XIRet()
+    ]
+})
+patch3 = XProgram([], {
+    XLabel("main"):
+    [
+        XIPush(XRegister("RBP")),
+        XIMov(XRegister("RSP"), XRegister("RBP")),
+        XISub(XCon(32), XRegister("RSP")),
+        XIJmp(XLabel("body"))
+    ],
+    XLabel("body"):
+    [
+        XIMov(XCon(1), XRegister("RAX")),
+        XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 0)),
+        XIMov(XCon(1), XRegister("RAX")),
+        XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 8)),
+        XIMov(XMem(XRegister("RBP"), 0),XRegister("RAX")),
+        XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 16)),
+        XIAdd(XRegister("RAX"), XMem(XRegister("RBP"), 16)),
+        XIMov(XMem(XRegister("RBP"), 16), XRegister("RAX")),
+        XIMov(XRegister("RAX"), XRegister("RAX")),
+        XIJmp(XLabel("end"))
+    ],
+    XLabel("end"):
+    [
+        XIAdd(XCon(32), XRegister("RSP")),
+        XIPop(XRegister("RBP")),
+        XIRet()
+    ]
+})
 
 ######## Combined Testing ########
 print("\nCombined Tests\n")
