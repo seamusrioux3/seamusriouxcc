@@ -87,19 +87,24 @@ class Test:
         pr = RCO(pu)
         pe = econ(pr)
         punc = uncover(pe)
-        # print("original: " + p.pp())
-        # print("original ans: " + str(p.interp()))
-        # print("optimized: " + po.pp())
-        # print("optimized ans: " + str(po.interp()))
-        # print("uniquify: " + pu.pp())
-        # print("uniquify ans: " + str(pu.interp()))
-        # print("rco: " + pr.pp())
-        # print("rco ans: " + str(pr.interp()))
-        # print("econ: " + pe.pp())
-        # print("econ ans: " + str(pe.interp()))
+        xz = select(punc)
+        print("original: " + p.pp())
+        print("original ans: " + str(p.interp()))
+        print("optimized: " + po.pp())
+        print("optimized ans: " + str(po.interp()))
+        print("uniquify: " + pu.pp())
+        print("uniquify ans: " + str(pu.interp()))
+        print("rco: " + pr.pp())
+        print("rco ans: " + str(pr.interp()))
+        print("econ: " + pe.pp())
+        print("econ ans: " + str(pe.interp()))
+        print("uncover: " + punc.pp())
+        print("uncover ans: " + str(punc.interp()))
+        print("sel: " + xz.emit())
+        print("sel ans: " + str(xz.interp()))
 
-        if (p.interp() == po.interp() and p.interp() == pu.interp() and p.interp() == pr.interp() and p.interp() == pe.interp() and p.interp() == punc.interp()):
-            actual = punc.interp()
+        if (p.interp() == po.interp() and p.interp() == pu.interp() and p.interp() == pr.interp() and p.interp() == pe.interp() and p.interp() == punc.interp() and p.interp() == xz.interp()):
+            actual = xz.interp()
         else:
             actual = not p.interp()
 
@@ -267,32 +272,22 @@ Xprog11 = XProgram([], {
     ]
 })
 
-s.testX0Programs(Xprog1)
-s.testX0Programs(Xprog2)
-s.testX0Programs(Xprog3)
-s.testX0Programs(Xprog4)
-s.testX0Programs(Xprog5)
-s.testX0Programs(Xprog6)
-s.testX0Programs(Xprog7)
-s.testX0Programs(Xprog8)
-s.testX0Programs(Xprog9)
-s.testX0Programs(Xprog10)
-s.testX0Programs(Xprog11)
+# s.testX0Programs(Xprog1)
+# s.testX0Programs(Xprog2)
+# s.testX0Programs(Xprog3)
+# s.testX0Programs(Xprog4)
+# s.testX0Programs(Xprog5)
+# s.testX0Programs(Xprog6)
+# s.testX0Programs(Xprog7)
+# s.testX0Programs(Xprog8)
+# s.testX0Programs(Xprog9)
+# s.testX0Programs(Xprog10)
+# s.testX0Programs(Xprog11)
 
 
 ##### Testing C0 Programs ######
-Cprog1 = CProgram({
-    CLabel("main"):
-    [
-        CSet(CVar("i"), CNum(10)),
-        CSet(CVar("j"), CNum(5)),
-        CSet(CVar("k"), CAdd(CVar("i"), CVar("j"))),
-        CSet(CVar("l"), CAdd(CVar("i"), CVar("k"))),
-        CRet(CVar("l"))
-    ]
-})
 
-Cprog2 = CProgram({
+Cprog2 = CProgram([], {
     CLabel("main"):
     [
         CSet(CVar("1"), CRead()),
@@ -304,7 +299,7 @@ Cprog2 = CProgram({
     ]
 })
 
-Cprog3 = CProgram({
+Cprog3 = CProgram([],{
     CLabel("main"):
     [
         CSet(CVar("8"), CNum(10)),
@@ -316,7 +311,7 @@ Cprog3 = CProgram({
     ]
 })
 
-Cprog4 = CProgram({
+Cprog4 = CProgram([],{
     CLabel("main"):
     [
         CSet(CVar("0"), CNum(10)),
@@ -325,7 +320,7 @@ Cprog4 = CProgram({
     ]
 })
 
-Cprog5 = CProgram({
+Cprog5 = CProgram([],{
     CLabel("main"):
     [
         CSet(CVar("0"), CNum(200)),
@@ -334,7 +329,7 @@ Cprog5 = CProgram({
     ]
 })
 
-Cprog6 = CProgram({
+Cprog6 = CProgram([], {
     CLabel("main"):
     [
         CSet(CVar("8"),  CNum(200)),
@@ -345,7 +340,7 @@ Cprog6 = CProgram({
     ]
 })
 
-Cprog7 = CProgram({
+Cprog7 = CProgram([], {
     CLabel("main"):
     [
         CSet(CVar("A"), CNum(8)),
@@ -569,70 +564,69 @@ selProg6 = XProgram([], {
 })
 
 
-s.testX0Programs(selProg1)
-s.testX0Programs(selProg2)
-s.testX0Programs(selProg3)
-s.testX0Programs(selProg4)
-s.testX0Programs(selProg5)
-s.testX0Programs(selProg6)
-
+# s.testX0Programs(selProg1)
+# s.testX0Programs(selProg2)
+# s.testX0Programs(selProg3)
+# s.testX0Programs(selProg4)
+# s.testX0Programs(selProg5)
+# s.testX0Programs(selProg6)
 
 # ####### Combined Testing ########
-# print("\nCombined Tests\n")
-# s.testAll(letTest1)
-# s.testAll(letTest2)
-# s.testAll(letTest3)
-# s.testAll(letTest4)
-# s.testAll(letTest5)
-# s.testAll(letTest6)
-# s.testAll(letTest7)
-# s.testAll(letTest8)
-# s.testAll(letTest9)
-# s.testAll(Econprog1R)
-# s.testAll(Econprog2R)
-# s.testAll(Econprog3R)
-# s.testAll(Econprog4R)
-# s.testAll(Econprog5R)
-# s.testAll(Econprog6R)
-# s.testAll(Rcoprog1)
-# s.testAll(Rcoprog2)
-# s.testAll(Rcoprog3)
-# s.testAll(Rcoprog4)
-# s.testAll(Rcoprog5)
-# s.testAll(Rcoprog6)
-# s.testAll(Uprog1)
-# s.testAll(Uprog2)
-# s.testAll(Uprog3)
-# s.testAll(Uprog4)
-# s.testAll(Uprog5)
-# s.testAll(Uprog6)
-# s.testAll(RAdd(RNum(22), RAdd(RNum(23), RRead())))
-# s.testAll(RAdd(RNegate(RNum(22)), RNum(23)))
-# s.testAll(RAdd(RNum(22), RNum(23)))
-# s.testAll(RNegate(RNegate(RNum(975))))
-# s.testAll(RNegate(RAdd(RNum(10), RAdd(RRead(), RNum(12)))))
-# s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RNegate(RRead())))))))
-# s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RRead()))))))
-# s.testAll(RAdd(RNum(22), RAdd(RNum(23), RNum(20))))
-# s.testAll(RNegate(RLet(RVar("V0"), RNegate(RLet(RVar("V0"), RNum(2), RVar("V0"))), RAdd(RAdd(RNum(2), RRead()), RAdd(RNum(4), RVar("V0"))))))
-# # for i in range(100):
-# #     s.testAll(randomR1(8))
-# # for i in range(100):
-# #     s.testAll(randomR1(7))
-# # for i in range(100):
-# #     s.testAll(randomR1(6))
-# # for i in range(100):
-# #     s.testAll(randomR1(5))
-# for i in range(100):
-#    s.testAll(randomR1(4))
-# for i in range(100):
-#     s.testAll(randomR1(3))
-# for i in range(15000):
-#     s.testAll(randomR1(2))
-# for i in range(15000):
-#     s.testAll(randomR1(1))
-# for i in range(15000):
-#     s.testAll(randomR1(0))
+print("\nCombined Tests\n")
+s.testAll(letTest1)
+s.testAll(letTest2)
+s.testAll(letTest3)
+s.testAll(letTest4)
+s.testAll(letTest5)
+s.testAll(letTest6)
+s.testAll(letTest7)
+s.testAll(letTest8)
+s.testAll(letTest9)
+s.testAll(Econprog1R)
+s.testAll(Econprog2R)
+s.testAll(Econprog3R)
+s.testAll(Econprog4R)
+s.testAll(Econprog5R)
+s.testAll(Econprog6R)
+s.testAll(Rcoprog1)
+s.testAll(Rcoprog2)
+s.testAll(Rcoprog3)
+s.testAll(Rcoprog4)
+s.testAll(Rcoprog5)
+s.testAll(Rcoprog6)
+s.testAll(Uprog1)
+s.testAll(Uprog2)
+s.testAll(Uprog3)
+s.testAll(Uprog4)
+s.testAll(Uprog5)
+s.testAll(Uprog6)
+s.testAll(RAdd(RNum(22), RAdd(RNum(23), RRead())))
+s.testAll(RAdd(RNegate(RNum(22)), RNum(23)))
+s.testAll(RAdd(RNum(22), RNum(23)))
+s.testAll(RNegate(RNegate(RNum(975))))
+s.testAll(RNegate(RAdd(RNum(10), RAdd(RRead(), RNum(12)))))
+s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RNegate(RRead())))))))
+s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RRead()))))))
+s.testAll(RAdd(RNum(22), RAdd(RNum(23), RNum(20))))
+s.testAll(RNegate(RLet(RVar("V0"), RNegate(RLet(RVar("V0"), RNum(2), RVar("V0"))), RAdd(RAdd(RNum(2), RRead()), RAdd(RNum(4), RVar("V0"))))))
+# for i in range(10):
+#     s.testAll(randomR1(8))
+# for i in range(10):
+#     s.testAll(randomR1(7))
+# for i in range(10):
+#    s.testAll(randomR1(6))
+for i in range(10):
+    s.testAll(randomR1(5))
+for i in range(10):
+   s.testAll(randomR1(4))
+for i in range(10):
+    s.testAll(randomR1(3))
+for i in range(15000):
+    s.testAll(randomR1(2))
+for i in range(15000):
+    s.testAll(randomR1(1))
+for i in range(15000):
+    s.testAll(randomR1(0))
 
 
 s.endSuite()
