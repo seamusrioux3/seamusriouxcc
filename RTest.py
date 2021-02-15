@@ -88,22 +88,24 @@ class Test:
         pe = econ(pr)
         punc = uncover(pe)
         xz = select(punc)
-        print("original: " + p.pp())
-        print("original ans: " + str(p.interp()))
-        print("optimized: " + po.pp())
-        print("optimized ans: " + str(po.interp()))
-        print("uniquify: " + pu.pp())
-        print("uniquify ans: " + str(pu.interp()))
-        print("rco: " + pr.pp())
-        print("rco ans: " + str(pr.interp()))
-        print("econ: " + pe.pp())
-        print("econ ans: " + str(pe.interp()))
-        print("uncover: " + punc.pp())
-        print("uncover ans: " + str(punc.interp()))
-        print("sel: " + xz.emit())
-        print("sel ans: " + str(xz.interp()))
-
-        if (p.interp() == po.interp() and p.interp() == pu.interp() and p.interp() == pr.interp() and p.interp() == pe.interp() and p.interp() == punc.interp() and p.interp() == xz.interp()):
+        #az = assign(xz)
+        #print("original: " + p.pp())
+        #print("original ans: " + str(p.interp()))
+        #print("optimized: " + po.pp())
+        #print("optimized ans: " + str(po.interp()))
+        #print("uniquify: " + pu.pp())
+        #print("uniquify ans: " + str(pu.interp()))
+        #print("rco: " + pr.pp())
+        #print("rco ans: " + str(pr.interp()))
+        #print("econ: " + pe.pp())
+        #print("econ ans: " + str(pe.interp()))
+        #print("uncover: " + punc.pp())
+        #print("uncover ans: " + str(punc.interp()))
+        #print("sel: " + xz.emit())
+        #print("sel ans: " + str(xz.interp()))
+        # print("asn: " + az.emit())
+        # print("asn: " + str(az.interp()))
+        if (p.interp() == po.interp() == pu.interp() == pr.interp() == pe.interp() == punc.interp() == xz.interp()):
             actual = xz.interp()
         else:
             actual = not p.interp()
@@ -499,7 +501,7 @@ uncprog6 = CProgram(["R1"], {
         CRet(CVar("R1")),
     ]
 })
-# ######## Select Instr Exs Based On Uncover Locals ########
+######### Select Instr Exs Based On Uncover Locals ########
 selProg1 = XProgram([], {
     XLabel("main"):
     [
@@ -570,63 +572,139 @@ selProg6 = XProgram([], {
 # s.testX0Programs(selProg4)
 # s.testX0Programs(selProg5)
 # s.testX0Programs(selProg6)
+######### Assign Homes Example########
+asnhome1 = XProgram([], {
+    XLabel("main"):
+    [
+        XIPush(XRegister("RBP")),
+        XIMov(XRegister("RSP"), XRegister("RBP")),
+        XISub(XCon(32), XRegister("RSP")),
+        XIJmp(XLabel("body"))
+    ],
+    XLabel("body"):
+    [
+        XIMov(XCon(3), XMem(XRegister("RBP"), 0)),
+        XIMov(XCon(2), XMem(XRegister("RBP"), 8)),
+        XIMov(XMem(XRegister("RBP"), 0), XMem(XRegister("RBP"), 16)),
+        XIAdd(XMem(XRegister("RBP"), 8), XMem(XRegister("RBP"), 16)),
+        XIMov(XMem(XRegister("RBP"), 16), XRegister("RAX")),
+        XIJmp(XLabel("end"))
+    ],
+    XLabel("end"):
+    [
+        XIAdd(XCon(32), XRegister("RSP")),
+        XIPop(XRegister("RBP")),
+        XIRet()
+    ]
+})
+print(asnhome1.interp())
+asnhome2 = XProgram([], {
+    XLabel("main"):
+    [
+        XIPush(XRegister("RBP")),
+        XIMov(XRegister("RSP"), XRegister("RBP")),
+        XISub(XCon(32), XRegister("RSP")),
+        XIJmp(XLabel("body"))
+    ],
+    XLabel("body"):
+    [
+        XIMov(XCon(2), XMem(XRegister("RBP"), 0)),
+        XIMov(XCon(1), XMem(XRegister("RBP"), 8)),
+        XIMov(XMem(XRegister("RBP"), 0), XMem(XRegister("RBP"), 16)),
+        XIAdd(XMem(XRegister("RBP"), 8), XMem(XRegister("RBP"), 16)),
+        XIMov(XMem(XRegister("RBP"), 16), XRegister("RAX")),
+        XIJmp(XLabel("end"))
+    ],
+    XLabel("end"):
+    [
+        XIAdd(XCon(32), XRegister("RSP")),
+        XIPop(XRegister("RBP")),
+        XIRet()
+    ]
+})
+print(asnhome2.interp())
+asnhome3 = XProgram([], {
+    XLabel("main"):
+    [
+        XIPush(XRegister("RBP")),
+        XIMov(XRegister("RSP"), XRegister("RBP")),
+        XISub(XCon(32), XRegister("RSP")),
+        XIJmp(XLabel("body"))
+    ],
+    XLabel("body"):
+    [
+        XIMov(XCon(1), XMem(XRegister("RBP"), 0)),
+        XIMov(XCon(1), XMem(XRegister("RBP"), 8)),
+        XIMov(XMem(XRegister("RBP"), 0), XMem(XRegister("RBP"), 16)),
+        XIAdd(XMem(XRegister("RBP"), 8), XMem(XRegister("RBP"), 16)),
+        XIMov(XMem(XRegister("RBP"), 16), XRegister("RAX")),
+        XIJmp(XLabel("end"))
+    ],
+    XLabel("end"):
+    [
+        XIAdd(XCon(32), XRegister("RSP")),
+        XIPop(XRegister("RBP")),
+        XIRet()
+    ]
+})
+print(asnhome3.interp())
 
-# ####### Combined Testing ########
+######## Combined Testing ########
 print("\nCombined Tests\n")
-s.testAll(letTest1)
-s.testAll(letTest2)
-s.testAll(letTest3)
-s.testAll(letTest4)
-s.testAll(letTest5)
-s.testAll(letTest6)
-s.testAll(letTest7)
-s.testAll(letTest8)
-s.testAll(letTest9)
-s.testAll(Econprog1R)
-s.testAll(Econprog2R)
-s.testAll(Econprog3R)
-s.testAll(Econprog4R)
-s.testAll(Econprog5R)
-s.testAll(Econprog6R)
-s.testAll(Rcoprog1)
-s.testAll(Rcoprog2)
-s.testAll(Rcoprog3)
-s.testAll(Rcoprog4)
-s.testAll(Rcoprog5)
-s.testAll(Rcoprog6)
-s.testAll(Uprog1)
-s.testAll(Uprog2)
-s.testAll(Uprog3)
-s.testAll(Uprog4)
-s.testAll(Uprog5)
-s.testAll(Uprog6)
-s.testAll(RAdd(RNum(22), RAdd(RNum(23), RRead())))
-s.testAll(RAdd(RNegate(RNum(22)), RNum(23)))
-s.testAll(RAdd(RNum(22), RNum(23)))
-s.testAll(RNegate(RNegate(RNum(975))))
-s.testAll(RNegate(RAdd(RNum(10), RAdd(RRead(), RNum(12)))))
-s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RNegate(RRead())))))))
-s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RRead()))))))
-s.testAll(RAdd(RNum(22), RAdd(RNum(23), RNum(20))))
-s.testAll(RNegate(RLet(RVar("V0"), RNegate(RLet(RVar("V0"), RNum(2), RVar("V0"))), RAdd(RAdd(RNum(2), RRead()), RAdd(RNum(4), RVar("V0"))))))
+#s.testAll(letTest1)
+#s.testAll(letTest2)
+#s.testAll(letTest3)
+# s.testAll(letTest4)
+# s.testAll(letTest5)
+# s.testAll(letTest6)
+# s.testAll(letTest7)
+# s.testAll(letTest8)
+# s.testAll(letTest9)
+# s.testAll(Econprog1R)
+# s.testAll(Econprog2R)
+# s.testAll(Econprog3R)
+# s.testAll(Econprog4R)
+# s.testAll(Econprog5R)
+# s.testAll(Econprog6R)
+# s.testAll(Rcoprog1)
+# s.testAll(Rcoprog2)
+# s.testAll(Rcoprog3)
+# s.testAll(Rcoprog4)
+# s.testAll(Rcoprog5)
+# s.testAll(Rcoprog6)
+# s.testAll(Uprog1)
+# s.testAll(Uprog2)
+# s.testAll(Uprog3)
+# s.testAll(Uprog4)
+# s.testAll(Uprog5)
+# s.testAll(Uprog6)
+# s.testAll(RAdd(RNum(22), RAdd(RNum(23), RRead())))
+# s.testAll(RAdd(RNegate(RNum(22)), RNum(23)))
+# s.testAll(RAdd(RNum(22), RNum(23)))
+# s.testAll(RNegate(RNegate(RNum(975))))
+# s.testAll(RNegate(RAdd(RNum(10), RAdd(RRead(), RNum(12)))))
+# s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RNegate(RRead())))))))
+# s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RRead()))))))
+# s.testAll(RAdd(RNum(22), RAdd(RNum(23), RNum(20))))
+# s.testAll(RNegate(RLet(RVar("V0"), RNegate(RLet(RVar("V0"), RNum(2), RVar("V0"))), RAdd(RAdd(RNum(2), RRead()), RAdd(RNum(4), RVar("V0"))))))
 # for i in range(10):
 #     s.testAll(randomR1(8))
 # for i in range(10):
 #     s.testAll(randomR1(7))
 # for i in range(10):
 #    s.testAll(randomR1(6))
-for i in range(10):
-    s.testAll(randomR1(5))
-for i in range(10):
-   s.testAll(randomR1(4))
-for i in range(10):
-    s.testAll(randomR1(3))
-for i in range(15000):
-    s.testAll(randomR1(2))
-for i in range(15000):
-    s.testAll(randomR1(1))
-for i in range(15000):
-    s.testAll(randomR1(0))
+# for i in range(10):
+#     s.testAll(randomR1(5))
+# for i in range(10):
+#    s.testAll(randomR1(4))
+# for i in range(10):
+#     s.testAll(randomR1(3))
+# for i in range(15000):
+#     s.testAll(randomR1(2))
+# for i in range(15000):
+#     s.testAll(randomR1(1))
+# for i in range(15000):
+#     s.testAll(randomR1(0))
 
 
 s.endSuite()
