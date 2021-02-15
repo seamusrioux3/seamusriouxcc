@@ -23,9 +23,6 @@ class Test:
         print("Test failed expected " + str(_expected) + " got " + str(_actual))
         return False
 
-    def testRandom(self, _r):
-        print(_r.pp() + " value: \n" + str(_r.interp()))
-
     def testOpt(self, n):
         testCompleted = 0
         for i in range(n):
@@ -40,7 +37,7 @@ class Test:
         print("Number of optimizer tests completed " +
               str(testCompleted) + " out of "+str(n))
 
-    def testX0Programs(self, prog):
+    def testX0OnHardware(self, prog):
         fileName = "c0.s"
         binName = "c0.bin"
         f = open(fileName, "w")
@@ -68,17 +65,7 @@ class Test:
         if os.path.exists(binName):
             os.remove(binName)
 
-        self.test(prog.interp(), exit_code)
-
-    def testUniquify(self, p):
-        actual = uniquify(p).interp()
-        expected = p.interp()
-        self.test(actual, expected)
-
-    def testRCO(self, p):
-        actual = RCO(p).interp()
-        expected = p.interp()
-        self.test(actual, expected)
+        return int(stdout)
 
     def testAll(self, p):
         actual = 0
@@ -90,6 +77,8 @@ class Test:
         xz = select(punc)
         az = assign(xz)
         ptch = patch(az)
+        m = mainpass(ptch)
+        rl = self.testX0OnHardware(m)
         #print("original: " + p.pp())
         #print("original ans: " + str(p.interp()))
         #print("optimized: " + po.pp())
@@ -106,10 +95,11 @@ class Test:
         #print("sel ans: " + str(xz.interp()))
         #print("asn: " + az.emit())
         #print("asn: " + str(az.interp()))
-        print("patch: " + ptch.emit())
+        #print("patch: " + ptch.emit())
         #print("patch: " + str(ptch.interp()))
-        if (p.interp() == po.interp() == pu.interp() == pr.interp() == pe.interp() == punc.interp() == xz.interp() == az.interp() == ptch.interp()):
-            actual = ptch.interp()
+
+        if (p.interp() == po.interp() == pu.interp() == pr.interp() == pe.interp() == punc.interp() == xz.interp() == az.interp() == ptch.interp() == m.interp() == rl):
+            actual = m.interp()
         else:
             actual = not p.interp()
 
@@ -117,7 +107,6 @@ class Test:
 
 
 s = Test()
-
 # Variable and Let testing
 print("\nR1 Tests")
 letTest1 = RLet(RVar("x"), RNum(2), RAdd(RVar("x"), RNum(3)))
@@ -639,9 +628,9 @@ patch1 = XProgram([], {
         XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 0)),
         XIMov(XCon(2), XRegister("RAX")),
         XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 8)),
-        XIMov(XMem(XRegister("RBP"), 0),XRegister("RAX")),
+        XIMov(XMem(XRegister("RBP"), 0), XRegister("RAX")),
         XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 16)),
-        XIMov(XMem(XRegister("RBP"), 8),XRegister("RAX")),
+        XIMov(XMem(XRegister("RBP"), 8), XRegister("RAX")),
         XIAdd(XRegister("RAX"), XMem(XRegister("RBP"), 16)),
         XIMov(XMem(XRegister("RBP"), 16), XRegister("RAX")),
         XIJmp(XLabel("end"))
@@ -667,7 +656,7 @@ patch2 = XProgram([], {
         XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 0)),
         XIMov(XCon(1), XRegister("RAX")),
         XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 8)),
-        XIMov(XMem(XRegister("RBP"), 0),XRegister("RAX")),
+        XIMov(XMem(XRegister("RBP"), 0), XRegister("RAX")),
         XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 16)),
         XIAdd(XRegister("RAX"), XMem(XRegister("RBP"), 16)),
         XIMov(XMem(XRegister("RBP"), 16), XRegister("RAX")),
@@ -695,7 +684,7 @@ patch3 = XProgram([], {
         XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 0)),
         XIMov(XCon(1), XRegister("RAX")),
         XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 8)),
-        XIMov(XMem(XRegister("RBP"), 0),XRegister("RAX")),
+        XIMov(XMem(XRegister("RBP"), 0), XRegister("RAX")),
         XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 16)),
         XIAdd(XRegister("RAX"), XMem(XRegister("RBP"), 16)),
         XIMov(XMem(XRegister("RBP"), 16), XRegister("RAX")),
@@ -749,20 +738,20 @@ s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RRead()))))))
 s.testAll(RAdd(RNum(22), RAdd(RNum(23), RNum(20))))
 s.testAll(RNegate(RLet(RVar("V0"), RNegate(RLet(RVar("V0"), RNum(2), RVar(
     "V0"))), RAdd(RAdd(RNum(2), RRead()), RAdd(RNum(4), RVar("V0"))))))
-s.testAll(randomR1(8))
-s.testAll(randomR1(7))
-s.testAll(randomR1(6))
-s.testAll(randomR1(5))
+
+
 for i in range(10):
     s.testAll(randomR1(4))
-for i in range(1000):
+for i in range(100):
     s.testAll(randomR1(3))
-for i in range(15000):
+for i in range(100):
     s.testAll(randomR1(2))
-for i in range(15000):
+for i in range(100):
     s.testAll(randomR1(1))
-for i in range(15000):
+for i in range(100):
     s.testAll(randomR1(0))
-
-
+s.testAll(randomR1(5))
+s.testAll(randomR1(6))
+s.testAll(randomR1(7))
+s.testAll(randomR1(8))
 s.endSuite()
