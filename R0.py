@@ -129,7 +129,7 @@ class XProgram:
         self.info = _info
 
     def emit(self):
-        return ".global main\n\n" + "".join(["\n"+x.emit() + ":\n" + "".join(["\n"+lin.emit() for lin in y]) for x, y in self.p.items()])
+        return ".global main\n\n" + "".join(["\n"+x.emit() + ":" + "".join(["\n"+lin.emit() for lin in y]) for x, y in self.p.items()])
 
     def interp(self):
         env = XEnv()
@@ -600,9 +600,9 @@ def _optimizer(n, env):
             return n
     elif(isinstance(n, RLet)):
         xe = _optimizer(n.l, env)
-        print(xe.pp())
-        for i, j in env.getEnv().items():
-            print(i + ":" + j.pp())
+        # print(xe.pp())
+        # for i, j in env.getEnv().items():
+        #     print(i + ":" + j.pp())
         if(simple(xe)):
             env.setEnv({n.var.name: xe})
             return _optimizer(n.r, env)
@@ -826,7 +826,7 @@ def select(cp):
             else:
                 tempBlk.append(rtn)
         blk.update({tempLabel: tempBlk})
-    return XProgram(env.getEnv(), blk)
+    return XProgram(cp.info, blk)
 
 
 def _selectT(cp, env):
@@ -854,3 +854,56 @@ def _selectA(cp, env):
         return XCon(cp.n)
     elif(isinstance(cp, CVar)):
         return XVar(cp.pp())
+
+
+######## Assign Home Pass ########
+def assign(xp):
+    def isEven(x): return x if (x % 2) == 0 else x+1
+    stackSize = 8*isEven(len(xp.info))
+    begin = {XLabel("main"): [XIPush(XRegister("RBP")), XIMov(XRegister(
+        "RSP"), XRegister("RBP")), XISub(XCon(stackSize), XRegister("RSP")), XIJmp(XLabel("body")),
+    ]}
+
+    originalMain = []
+    body = []
+    for lab, blk in xp.p.items():
+        if(lab.emit() == "main"):
+            originalMain = blk
+
+    for instr in originalMain:
+        body.append(_assign(instr, xp.info))
+    body = body[:-1]
+    body.append(XIJmp(XLabel("end")))
+    bdy = {XLabel("body"): body}
+    end = {XLabel("end"): [XIAdd(XCon(stackSize), XRegister(
+        "RSP")), XIPop(XRegister("RBP")), XIRet()]}
+    progm = {}
+    progm.update(begin)
+    progm.update(bdy)
+    progm.update(end)
+    return XProgram(xp.info, progm)
+
+
+def _assign(xp, v):
+    if(isinstance(xp, XIAdd)):
+        return XIAdd(_assignA(xp.src, v), _assignA(xp.dst, v))
+    elif(isinstance(xp, XISub)):
+        return XISub(_assignA(xp.src, v), _assignA(xp.dst, v))
+    elif(isinstance(xp, XIMov)):
+        return XIMov(_assignA(xp.src, v), _assignA(xp.dst, v))
+    elif(isinstance(xp, XINeg)):
+        return XINeg(_assignA(xp.src, v))
+    elif(isinstance(xp, XIPush)):
+        return XIPush(_assignA(xp.src, v))
+    elif(isinstance(xp, XIPop)):
+        return XIPush(_assignA(xp.src, v))
+    else:
+        return xp
+
+
+def _assignA(a, v):
+    if(isinstance(a, XVar)):
+        sub = v.index(a.name) * 8
+        return XMem(XRegister("RBP"), sub)
+    else:
+        return a
