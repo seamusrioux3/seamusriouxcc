@@ -124,22 +124,24 @@ class XEnv:
 
 
 class XProgram:
-    def __init__(self, _p):
+    def __init__(self, _info, _p):
         self.p = _p
+        self.info = _info
 
     def emit(self):
-        return ".global main\n\n" + "".join(["\n"+x.emit() + ":\n" + y.emit() for x, y in self.p])
+        return ".global main\n\n" + "".join(["\n"+x.emit() + ":\n" + "".join(["\n"+lin.emit() for lin in y]) for x, y in self.p.items()])
 
     def interp(self):
         env = XEnv()
-        for a, b in self.p:
+        for a, b in self.p.items():
             env.blk[a.interp(env)] = b
-        env = env.blk["main"].interp(env)
-        print(env.reg)
-        print(env.var)
-        print(env.mem)
-        print(env.blk)
-        print(env.cntr)
+        for l in env.blk["main"]:
+            l.interp(env)
+        # print(env.reg)
+        # print(env.var)
+        # print(env.mem)
+        # print(env.blk)
+        # print(env.cntr)
         return env.reg["RAX"]
 
 
@@ -175,6 +177,12 @@ class XVar:
         return "!" + self.name
 
     def interp(self, env):
+        return env.var[self.name]
+
+    def set(self, env, val):
+        env.var[self.name] = val
+
+    def getName(self):
         return self.name
 
 
@@ -311,7 +319,7 @@ class XICall:
     def interp(self, env):
         temp = self.src.interp(env)
         if(temp == "read_int"):
-            env.cntr = env.cntr+1
+            env.cntr = 1
             XIMov(XCon(env.cntr), XRegister("RAX")).interp(env)
         else:
             env = env.blk[temp].interp(env)
@@ -326,7 +334,8 @@ class XIJmp:
         return "jmp" + " " + self.src.emit()
 
     def interp(self, env):
-        env = env.blk[self.src.interp(env)].interp(env)
+        for lin in env.blk[self.src.interp(env)]:
+            lin.interp(env)
         return env
 
 
@@ -358,30 +367,6 @@ class XIPop:
 ###### C0 Program Data Types ########
 
 
-class CProgram:
-    def __init__(self, _info = None, _p = None):
-        self.p = _p
-        self.info = _info
-
-    def pp(self):
-        if(self.info):
-            return str(self.info)+"\n" + "".join([i.pp() + "\n" + "\n".join([l.pp() for l in j])
-                            for i, j in self.p.items()])
-        else:
-            return "".join([i.pp() + "\n" + "\n".join([l.pp() for l in j])
-                            for i, j in self.p.items()])
-    def interp(self):
-        tempBlks = {}
-        for i, j in self.p.items():
-            tempBlks.update({i.interp(): j})
-        env = CEnv()
-        env.setBlk(tempBlks)
-        rtn = 0
-        for i in env.blk["main"]:
-            rtn = i.interp(env)
-        return rtn
-
-
 class CEnv:
     def __init__(self):
         self.var = {}
@@ -393,6 +378,31 @@ class CEnv:
 
     def setVar(self, add):
         self.var.update(add)
+
+
+class CProgram:
+    def __init__(self, _info=None, _p=None):
+        self.p = _p
+        self.info = _info
+
+    def pp(self):
+        if(self.info):
+            return str(self.info)+"\n" + "".join([i.pp() + "\n" + "\n".join([l.pp() for l in j])
+                                                  for i, j in self.p.items()])
+        else:
+            return "".join([i.pp() + "\n" + "\n".join([l.pp() for l in j])
+                            for i, j in self.p.items()])
+
+    def interp(self):
+        tempBlks = {}
+        for i, j in self.p.items():
+            tempBlks.update({i.interp(): j})
+        env = CEnv()
+        env.setBlk(tempBlks)
+        rtn = 0
+        for i in env.blk["main"]:
+            rtn = i.interp(env)
+        return rtn
 
 
 class CLabel:
@@ -526,23 +536,26 @@ class OptEnv:
     def setEnv(self, add):
         self.env.update(add)
 
+
 def simple(n):
-    if(isinstance(n,RNum)):
+    if(isinstance(n, RNum)):
         return True
-    elif(isinstance(n,RRead)):
+    elif(isinstance(n, RRead)):
         return False
-    elif(isinstance(n,RNegate)):
+    elif(isinstance(n, RNegate)):
         return simple(n.num)
-    elif(isinstance(n,RAdd)):
+    elif(isinstance(n, RAdd)):
         return simple(n.left) and simple(n.right)
-    elif(isinstance(n,RVar)):
+    elif(isinstance(n, RVar)):
         return True
-    elif(isinstance(n,RLet)):
+    elif(isinstance(n, RLet)):
         return simple(n.l) and simple(n.r)
-    
+
+
 def optimizer(n):
     env = OptEnv()
     return _optimizer(n, env)
+
 
 def _optimizer(n, env):
     if isinstance(n, RNum):
@@ -561,7 +574,7 @@ def _optimizer(n, env):
             else:
                 return RNegate(_optimizer(e, env))
         else:
-            return RNegate(_optimizer(e,env))
+            return RNegate(_optimizer(e, env))
     elif isinstance(n, RAdd):
         l = n.left
         r = n.right
@@ -569,15 +582,15 @@ def _optimizer(n, env):
             return RNum(l.interp() + r.interp())
 
         elif(isinstance(l, RNum) and isinstance(r, RAdd) and isinstance(r.left, RNum)):
-            return RAdd(RNum(l.interp() + r.left.interp()), _optimizer(r.right,env))
+            return RAdd(RNum(l.interp() + r.left.interp()), _optimizer(r.right, env))
 
         elif(isinstance(l, RAdd) and isinstance(r, RNum) and isinstance(r.right, RNum)):
-            return RAdd(RNum(l.interp() + r.right.interp()), _optimizer(r.left,env))
+            return RAdd(RNum(l.interp() + r.right.interp()), _optimizer(r.left, env))
 
         elif(isinstance(l, RAdd) and isinstance(l.left, RNum) and isinstance(r, RAdd) and isinstance(r.left, RNum)):
             return RAdd(RNum(l.left.interp() + r.left.interp()), RAdd(_optimizer(l.right, env), _optimizer(r.right, env)))
-        elif(not isinstance(l,RNum) and isinstance(r,RNum)):
-            return RAdd(r,_optimizer(l,env))
+        elif(not isinstance(l, RNum) and isinstance(r, RNum)):
+            return RAdd(r, _optimizer(l, env))
         else:
             return RAdd(_optimizer(l, env), _optimizer(r, env))
     elif(isinstance(n, RVar)):
@@ -588,8 +601,8 @@ def _optimizer(n, env):
     elif(isinstance(n, RLet)):
         xe = _optimizer(n.l, env)
         print(xe.pp())
-        for i,j in env.getEnv().items():
-            print(i +":"+ j.pp())
+        for i, j in env.getEnv().items():
+            print(i + ":" + j.pp())
         if(simple(xe)):
             env.setEnv({n.var.name: xe})
             return _optimizer(n.r, env)
@@ -609,9 +622,10 @@ class UNEnv:
 
     def setEnv(self, add):
         self.env.update(add)
-    
+
     def getEnv(self):
         return self.env
+
 
 def uniquify(e):
     env = UNEnv()
@@ -638,7 +652,7 @@ def uni(e, uenv):
         uenv.varCntr += 1
         x = RVar("U"+str(uenv.varCntr))
         l = uni(e.l, uenv)
-        uenv.setEnv({e.var.pp(): x.pp()}) 
+        uenv.setEnv({e.var.pp(): x.pp()})
         r = uni(e.r, uenv)
         return RLet(x, l, r)
 
@@ -772,19 +786,71 @@ def econHelper(r, env):
 
 ######## Uncover Locals ########
 
-def uncover(cp = CProgram()):
+
+def uncover(cp=CProgram()):
     progs = cp.p
     info = []
-    for i,blks in progs.items():
+    for i, blks in progs.items():
         for seq in blks:
-            if(isinstance(seq,CSet)):
+            if(isinstance(seq, CSet)):
                 info.append(seq.var.var)
     return CProgram(info, progs)
 
 
 ######## Select Instr Pass ########
 
+class SelEnv:
+    def __init__(self):
+        self.vars = []
 
-def select():
-    pass
-#def uncover
+    def setEnv(self, add):
+        self.vars(add)
+
+    def getEnvInd(self, name):
+        return self.vars[name]
+
+    def getEnv(self):
+        return self.vars
+
+
+def select(cp):
+    env = SelEnv()
+    blk = {}
+    for lab, lin in cp.p.items():
+        tempBlk = []
+        tempLabel = XLabel(lab.interp())
+        for l in lin:
+            rtn = _selectT(l, env)
+            if(isinstance(rtn, list)):
+                tempBlk = tempBlk + rtn
+            else:
+                tempBlk.append(rtn)
+        blk.update({tempLabel: tempBlk})
+    return XProgram(env.getEnv(), blk)
+
+
+def _selectT(cp, env):
+    if isinstance(cp, CRet):
+        return [XIMov(_selectA(cp.var, env), XRegister("RAX")), XIRet()]
+    if(isinstance(cp, CSet)):
+        src = cp.exp
+        dst = cp.var
+        return _selectE(src, dst, env)
+
+
+def _selectE(cp, dst, env):
+    if(isinstance(cp, CRead)):
+        return [XICall(XLabel("read_int")), XIMov(XRegister("RAX"), _selectA(dst, env))]
+    elif(isinstance(cp, CNeg)):
+        return [XIMov(_selectA(cp.n, env), _selectA(dst, env)), XINeg(_selectA(dst, env))]
+    elif(isinstance(cp, CAdd)):
+        return [XIMov(_selectA(cp.l, env), _selectA(dst, env)), XIAdd(_selectA(cp.r, env), _selectA(dst, env))]
+    else:
+        return XIMov(_selectA(cp, env), _selectA(dst, env))
+
+
+def _selectA(cp, env):
+    if(isinstance(cp, CNum)):
+        return XCon(cp.n)
+    elif(isinstance(cp, CVar)):
+        return XVar(cp.pp())
