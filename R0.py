@@ -907,3 +907,31 @@ def _assignA(a, v):
         return XMem(XRegister("RBP"), sub)
     else:
         return a
+
+######## Patch Instr ########
+
+
+def patch(xp):
+    if(isinstance(xp, XProgram)):
+        progs = xp.p
+        newP = {}
+        for lab, blks in progs.items():
+            newBlks = []
+            for i in blks:
+                newBlks = newBlks + _patch(i)
+            newP.update({lab: newBlks})
+
+        return XProgram(xp.info, newP)
+
+
+def _patch(i):
+    if(isinstance(i, XIAdd)):
+        if(isinstance(i.src, XMem) and isinstance(i.dst, XMem)):
+            return [XIMov(i.src, XRegister("RAX")), XIAdd(XRegister("RAX"), i.dst)]
+    elif(isinstance(i, XISub)):
+        if(isinstance(i.src, XMem) and isinstance(i.dst, XMem)):
+            return [XIMov(i.src, XRegister("RAX")), XISub(XRegister("RAX"), i.dst)]
+    elif(isinstance(i, XIMov)):
+        if(isinstance(i.src, XMem) and isinstance(i.dst, XMem)):
+            return [XIMov(i.src, XRegister("RAX")), XIMov(XRegister("RAX"), i.dst)]
+    return [i]
