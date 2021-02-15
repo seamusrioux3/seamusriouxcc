@@ -135,8 +135,12 @@ class XProgram:
         env = XEnv()
         for a, b in self.p.items():
             env.blk[a.interp(env)] = b
-        for l in env.blk["main"]:
-            l.interp(env)
+        if("main" in env.blk):
+            for l in env.blk["main"]:
+                l.interp(env)
+        else:
+            for l in env.blk[next(iter(env.blk))]:
+                l.interp(env)
         # print(env.reg)
         # print(env.var)
         # print(env.mem)
@@ -229,7 +233,7 @@ class XMem:
         self.num = _num
 
     def emit(self):
-        return self.reg.emit() + " (" + str(self.num) + ")"
+        return str(self.num) + "(" + str(self.reg.emit()) + ")"
 
     def interp(self, env):
         if(self.reg.interp(env) + self.num in env.mem.keys()):
@@ -321,8 +325,12 @@ class XICall:
         if(temp == "read_int"):
             env.cntr = 1
             XIMov(XCon(env.cntr), XRegister("RAX")).interp(env)
+        elif(temp == "print_int"):
+            pass
+            #print(env.reg["RDI"])
         else:
-            env = env.blk[temp].interp(env)
+            for i in env.blk[temp]:
+                i.interp(env)
         return env
 
 
@@ -860,7 +868,7 @@ def _selectA(cp, env):
 def assign(xp):
     def isEven(x): return x if (x % 2) == 0 else x+1
     stackSize = 8*isEven(len(xp.info))
-    begin = {XLabel("main"): [XIPush(XRegister("RBP")), XIMov(XRegister(
+    begin = {XLabel("begin"): [XIPush(XRegister("RBP")), XIMov(XRegister(
         "RSP"), XRegister("RBP")), XISub(XCon(stackSize), XRegister("RSP")), XIJmp(XLabel("body")),
     ]}
 
@@ -903,7 +911,7 @@ def _assign(xp, v):
 
 def _assignA(a, v):
     if(isinstance(a, XVar)):
-        sub = v.index(a.name) * 8
+        sub = v.index(a.name) * -8
         return XMem(XRegister("RBP"), sub)
     else:
         return a
@@ -935,3 +943,12 @@ def _patch(i):
         if(isinstance(i.src, XMem) and isinstance(i.dst, XMem)):
             return [XIMov(i.src, XRegister("RAX")), XIMov(XRegister("RAX"), i.dst)]
     return [i]
+
+
+######## Main Pass ########
+
+def mainpass(xp):
+    if(isinstance(xp, XProgram)):
+        prg = {XLabel("main"): [XICall(XLabel("begin")), XIMov(XRegister("RAX"), XRegister("RDI")), XICall(XLabel("print_int")), XIRet()]}
+        prg.update(xp.p)
+        return XProgram(xp.info, prg)
