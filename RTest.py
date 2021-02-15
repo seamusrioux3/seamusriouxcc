@@ -89,7 +89,7 @@ class Test:
         punc = uncover(pe)
         xz = select(punc)
         az = assign(xz)
-        #ptch = patch(az)
+        ptch = patch(az)
         #print("original: " + p.pp())
         #print("original ans: " + str(p.interp()))
         #print("optimized: " + po.pp())
@@ -104,12 +104,12 @@ class Test:
         #print("uncover ans: " + str(punc.interp()))
         #print("sel: " + xz.emit())
         #print("sel ans: " + str(xz.interp()))
-        # print("asn: " + az.emit())
-        # print("asn: " + str(az.interp()))
-        # print("patch: " + ptch.emit())
-        # print("patch: " + str(ptch.interp()))
-        if (p.interp() == po.interp() == pu.interp() == pr.interp() == pe.interp() == punc.interp() == xz.interp() == az.interp()):
-            actual = az.interp()
+        #print("asn: " + az.emit())
+        #print("asn: " + str(az.interp()))
+        print("patch: " + ptch.emit())
+        #print("patch: " + str(ptch.interp()))
+        if (p.interp() == po.interp() == pu.interp() == pr.interp() == pe.interp() == punc.interp() == xz.interp() == az.interp() == ptch.interp()):
+            actual = ptch.interp()
         else:
             actual = not p.interp()
 
@@ -755,7 +755,7 @@ s.testAll(randomR1(6))
 s.testAll(randomR1(5))
 for i in range(10):
     s.testAll(randomR1(4))
-for i in range(10):
+for i in range(1000):
     s.testAll(randomR1(3))
 for i in range(15000):
     s.testAll(randomR1(2))
