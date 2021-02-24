@@ -105,7 +105,7 @@ class Test:
 
         self.test(actual, p.interp())
     
-
+    
 s = Test()
 # Variable and Let testing
 print("\nR1 Tests")
@@ -708,7 +708,7 @@ uncoverLiveTest1 = XProgram([], {XLabel("main"): XBlock({4: set(), 3: {'B', 'C'}
     XIMov(XVar("A"), XVar("C")),
     XIMov(XCon(10), XVar("B")),
     XIAdd(XVar("B"), XVar("C")),
-    #XIRet()
+    XIRet()
 ])})
 
 uncoverLiveTest2 = XProgram([], {XLabel("main"): XBlock({6: set(), 5: {'D'}, 4: set(), 3: {'B', 'C'}, 2: {'C'}, 1: {'A'}, 0: {'A'}}, [
@@ -719,7 +719,7 @@ uncoverLiveTest2 = XProgram([], {XLabel("main"): XBlock({6: set(), 5: {'D'}, 4: 
     XIAdd(XVar("B"), XVar("C")),
     XIMov(XCon(1), XVar("D")),
     XIMov(XVar("D"), XVar("C")),
-    #XIRet()
+    XIRet()
 ])})
 
 uncoverLiveTest3 = XProgram([], {XLabel("main"): XBlock({6: set(), 5: {'D'}, 4: {'D'}, 3: {'D', 'B', 'C'}, 2: {'D', 'C'}, 1: {'A', 'D'}, 0: {'A', 'D'}}, [
@@ -730,7 +730,7 @@ uncoverLiveTest3 = XProgram([], {XLabel("main"): XBlock({6: set(), 5: {'D'}, 4: 
     XIAdd(XVar("B"), XVar("C")),
     XINeg(XVar("D")),
     XIMov(XVar("D"), XVar("C")),
-    #XIRet()
+    XIRet()
 ])})
 
 unc4 = XProgram([], {XLabel("main"): XBlock({11: set(), 10: set(), 9: {'RAX', 'T'}, 8: {'Z', 'T'}, 7: {'Z', 'T'}, 6: {'Y', 'Z'}, 5: {'Y', 'Z', 'W'}, 4: {'X', 'Y', 'W'}, 3: {'X', 'W'}, 2: {'X', 'W'}, 1: {'V', 'W'}, 0: {'V'}}, [
@@ -756,6 +756,24 @@ print(uncoverLiveTest3.emit())
 print(uncover_live(uncoverLiveTest3))
 print(unc4.emit())
 print(uncover_live(unc4))
+
+
+######## Build Interferences Testing ########
+
+
+buildInt1 = uncover_live(uncoverLiveTest1)
+print(buildInt1)
+printGrph(buildInt(buildInt1))
+buildInt2 = uncover_live(uncoverLiveTest2)
+print(buildInt2)
+printGrph(buildInt(buildInt2))
+buildInt3 = uncover_live(uncoverLiveTest3)
+print(buildInt3)
+printGrph(buildInt(buildInt3))
+buildInt4 = uncover_live(unc4)
+print(buildInt4)
+printGrph(buildInt(buildInt4))
+
 
 ######## Combined Testing ########
 print("\nCombined Tests\n")
