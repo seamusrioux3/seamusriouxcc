@@ -75,28 +75,28 @@ class Test:
         pe = econ(pr)
         punc = uncover(pe)
         xz = select(punc)
-        az = assign(xz)
-        ptch = patch(az)
-        m = mainpass(ptch)
-        rl = self.testX0OnHardware(m)
-        #print("original: " + p.pp())
-        #print("original ans: " + str(p.interp()))
-        #print("optimized: " + po.pp())
-        #print("optimized ans: " + str(po.interp()))
-        #print("uniquify: " + pu.pp())
-        #print("uniquify ans: " + str(pu.interp()))
-        #print("rco: " + pr.pp())
-        #print("rco ans: " + str(pr.interp()))
-        #print("econ: " + pe.pp())
-        #print("econ ans: " + str(pe.interp()))
-        #print("uncover: " + punc.pp())
-        #print("uncover ans: " + str(punc.interp()))
-        #print("sel: " + xz.emit())
-        #print("sel ans: " + str(xz.interp()))
-        #print("asn: " + az.emit())
-        #print("asn: " + str(az.interp()))
-        #print("patch: " + ptch.emit())
-        #print("patch: " + str(ptch.interp()))
+        # az = assign(xz)
+        # ptch = patch(az)
+        # m = mainpass(ptch)
+        # rl = self.testX0OnHardware(m)
+        # print("original: " + p.pp())
+        # print("original ans: " + str(p.interp()))
+        # print("optimized: " + po.pp())
+        # print("optimized ans: " + str(po.interp()))
+        # print("uniquify: " + pu.pp())
+        # print("uniquify ans: " + str(pu.interp()))
+        # print("rco: " + pr.pp())
+        # print("rco ans: " + str(pr.interp()))
+        # print("econ: " + pe.pp())
+        # print("econ ans: " + str(pe.interp()))
+        # print("uncover: " + punc.pp())
+        # print("uncover ans: " + str(punc.interp()))
+        # print("sel: " + xz.emit())
+        # print("sel ans: " + str(xz.interp()))
+        # print("asn: " + az.emit())
+        # print("asn: " + str(az.interp()))
+        # print("patch: " + ptch.emit())
+        # print("patch: " + str(ptch.interp()))
 
         if (p.interp() == po.interp() == pu.interp() == pr.interp() == pe.interp() == punc.interp() == xz.interp() == az.interp() == ptch.interp() == m.interp() == rl):
             actual = m.interp()
@@ -104,7 +104,7 @@ class Test:
             actual = not p.interp()
 
         self.test(actual, p.interp())
-
+    
 
 s = Test()
 # Variable and Let testing
@@ -123,6 +123,8 @@ letTest7 = RLet(RVar("x"), RNum(7), RLet(RVar("y"), RNum(8),
 letTest8 = RLet(RVar("x"), RNum(7), RLet(RVar("x"), RNum(8),
                                          RAdd(RNegate(RVar("x")), RNegate(RVar("x")))))
 letTest9 = RLet(RVar("x"), RRead(), RNum(4))
+
+letTest10 = RLet(RVar("x"), RRead(), RLet(RVar("y"), RRead(), RAdd(RAdd(RVar("x"), RVar("y")), RNum(42))))
 
 ########## X0 Program Testing ################
 Xprog1 = XProgram([], {
@@ -699,59 +701,118 @@ patch3 = XProgram([], {
     ]
 })
 
+######## Uncover live Testing ########
+uncoverLiveTest1 = XProgram([], {XLabel("main"): XBlock({4: set(), 3: {'B', 'C'}, 2: {'C'}, 1: {'A'}, 0: {'A'}}, [
+    XIMov(XCon(5), XVar("A")),
+    XIMov(XCon(30), XVar("B")),
+    XIMov(XVar("A"), XVar("C")),
+    XIMov(XCon(10), XVar("B")),
+    XIAdd(XVar("B"), XVar("C")),
+    #XIRet()
+])})
+
+uncoverLiveTest2 = XProgram([], {XLabel("main"): XBlock({6: set(), 5: {'D'}, 4: set(), 3: {'B', 'C'}, 2: {'C'}, 1: {'A'}, 0: {'A'}}, [
+    XIMov(XCon(5), XVar("A")),
+    XIMov(XCon(30), XVar("B")),
+    XIMov(XVar("A"), XVar("C")),
+    XIMov(XCon(10), XVar("B")),
+    XIAdd(XVar("B"), XVar("C")),
+    XIMov(XCon(1), XVar("D")),
+    XIMov(XVar("D"), XVar("C")),
+    #XIRet()
+])})
+
+uncoverLiveTest3 = XProgram([], {XLabel("main"): XBlock({6: set(), 5: {'D'}, 4: {'D'}, 3: {'D', 'B', 'C'}, 2: {'D', 'C'}, 1: {'A', 'D'}, 0: {'A', 'D'}}, [
+    XIMov(XCon(5), XVar("A")),
+    XIMov(XCon(30), XVar("B")),
+    XIMov(XVar("A"), XVar("C")),
+    XIMov(XCon(10), XVar("B")),
+    XIAdd(XVar("B"), XVar("C")),
+    XINeg(XVar("D")),
+    XIMov(XVar("D"), XVar("C")),
+    #XIRet()
+])})
+
+unc4 = XProgram([], {XLabel("main"): XBlock({11: set(), 10: set(), 9: {'RAX', 'T'}, 8: {'Z', 'T'}, 7: {'Z', 'T'}, 6: {'Y', 'Z'}, 5: {'Y', 'Z', 'W'}, 4: {'X', 'Y', 'W'}, 3: {'X', 'W'}, 2: {'X', 'W'}, 1: {'V', 'W'}, 0: {'V'}}, [
+    XIMov(XCon(1), XVar("V")),
+    XIMov(XCon(1), XVar("W")),
+    XIMov(XVar("V"), XVar("X")),
+    XIAdd(XCon(7), XVar("X")),
+    XIMov(XVar("X"), XVar("Y")),
+    XIMov(XVar("X"), XVar("Z")),
+    XIAdd(XVar("W"), XVar("Z")),
+    XIMov(XVar("Y"), XVar("T")),
+    XINeg(XVar("T")),
+    XIMov(XVar("Z"), XRegister("RAX")),
+    XIAdd(XVar("T"), XRegister("RAX")),
+    XIJmp(XVar("conclusion"))
+])})
+
+print(uncoverLiveTest1.emit())
+print(uncover_live(uncoverLiveTest1))
+print(uncoverLiveTest2.emit())
+print(uncover_live(uncoverLiveTest2))
+print(uncoverLiveTest3.emit())
+print(uncover_live(uncoverLiveTest3))
+print(unc4.emit())
+print(uncover_live(unc4))
+
 ######## Combined Testing ########
 print("\nCombined Tests\n")
-s.testAll(letTest1)
-s.testAll(letTest2)
-s.testAll(letTest3)
-s.testAll(letTest4)
-s.testAll(letTest5)
-s.testAll(letTest6)
-s.testAll(letTest7)
-s.testAll(letTest8)
-s.testAll(letTest9)
-s.testAll(Econprog1R)
-s.testAll(Econprog2R)
-s.testAll(Econprog3R)
-s.testAll(Econprog4R)
-s.testAll(Econprog5R)
-s.testAll(Econprog6R)
-s.testAll(Rcoprog1)
-s.testAll(Rcoprog2)
-s.testAll(Rcoprog3)
-s.testAll(Rcoprog4)
-s.testAll(Rcoprog5)
-s.testAll(Rcoprog6)
-s.testAll(Uprog1)
-s.testAll(Uprog2)
-s.testAll(Uprog3)
-s.testAll(Uprog4)
-s.testAll(Uprog5)
-s.testAll(Uprog6)
-s.testAll(RAdd(RNum(22), RAdd(RNum(23), RRead())))
-s.testAll(RAdd(RNegate(RNum(22)), RNum(23)))
-s.testAll(RAdd(RNum(22), RNum(23)))
-s.testAll(RNegate(RNegate(RNum(975))))
-s.testAll(RNegate(RAdd(RNum(10), RAdd(RRead(), RNum(12)))))
-s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RNegate(RRead())))))))
-s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RRead()))))))
-s.testAll(RAdd(RNum(22), RAdd(RNum(23), RNum(20))))
-s.testAll(RNegate(RLet(RVar("V0"), RNegate(RLet(RVar("V0"), RNum(2), RVar(
-    "V0"))), RAdd(RAdd(RNum(2), RRead()), RAdd(RNum(4), RVar("V0"))))))
+
+#s.testUncover(letTest1)
+# s.testAll(letTest2)
+# s.testAll(letTest3)
+# s.testAll(letTest4)
+# s.testAll(letTest5)
+# s.testAll(letTest6)
+# s.testAll(letTest7)
+# s.testAll(letTest8)
+# s.testAll(letTest9)
+# s.testAll(letTest10)
+# s.testAll(Econprog1R)
+# s.testAll(Econprog2R)
+# s.testAll(Econprog3R)
+# s.testAll(Econprog4R)
+# s.testAll(Econprog5R)
+# s.testAll(Econprog6R)
+# s.testAll(Rcoprog1)
+# s.testAll(Rcoprog2)
+# s.testAll(Rcoprog3)
+# s.testAll(Rcoprog4)
+# s.testAll(Rcoprog5)
+# s.testAll(Rcoprog6)
+# s.testAll(Uprog1)
+# s.testAll(Uprog2)
+# s.testAll(Uprog3)
+# s.testAll(Uprog4)
+# s.testAll(Uprog5)
+# s.testAll(Uprog6)
+# s.testAll(RAdd(RNum(22), RAdd(RNum(23), RRead())))
+# s.testAll(RAdd(RNegate(RNum(22)), RNum(23)))
+# s.testAll(RAdd(RNum(22), RNum(23)))
+# s.testAll(RNegate(RNegate(RNum(975))))
+# s.testAll(RNegate(RAdd(RNum(10), RAdd(RRead(), RNum(12)))))
+# s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RNegate(RRead())))))))
+# s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RRead()))))))
+# s.testAll(RAdd(RNum(22), RAdd(RNum(23), RNum(20))))
+# s.testAll(RNegate(RLet(RVar("V0"), RNegate(RLet(RVar("V0"), RNum(2), RVar(
+#     "V0"))), RAdd(RAdd(RNum(2), RRead()), RAdd(RNum(4), RVar("V0"))))))
 
 
-for i in range(10):
-    s.testAll(randomR1(4))
-for i in range(100):
-    s.testAll(randomR1(3))
-for i in range(100):
-    s.testAll(randomR1(2))
-for i in range(100):
-    s.testAll(randomR1(1))
-for i in range(100):
-    s.testAll(randomR1(0))
-s.testAll(randomR1(5))
-s.testAll(randomR1(6))
-s.testAll(randomR1(7))
-s.testAll(randomR1(8))
+# for i in range(10):
+#     s.testAll(randomR1(4))
+# for i in range(100):
+#     s.testAll(randomR1(3))
+# for i in range(100):
+#     s.testAll(randomR1(2))
+# for i in range(100):
+#     s.testAll(randomR1(1))
+# for i in range(100):
+#     s.testAll(randomR1(0))
+# s.testAll(randomR1(5))
+# s.testAll(randomR1(6))
+# s.testAll(randomR1(7))
+# s.testAll(randomR1(8))
+
 s.endSuite()
