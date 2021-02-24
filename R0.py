@@ -129,18 +129,16 @@ class XProgram:
         self.info = _info
 
     def emit(self):
-        return ".global main\n\n" + "".join(["\n"+x.emit() + ":" + "".join(["\n"+lin.emit() for lin in y]) for x, y in self.p.items()])
+        return ".global main\n\n" + "".join(["\n"+x.emit() + ":" + "\n" +y.emit() for x, y in self.p.items()])
 
     def interp(self):
         env = XEnv()
         for a, b in self.p.items():
             env.blk[a.interp(env)] = b
         if("main" in env.blk):
-            for l in env.blk["main"]:
-                l.interp(env)
+            env.blk["main"].interp(env)
         else:
-            for l in env.blk[next(iter(env.blk))]:
-                l.interp(env)
+            env.blk[next(iter(env.blk))].interp(env)
         # print(env.reg)
         # print(env.var)
         # print(env.mem)
@@ -150,8 +148,9 @@ class XProgram:
 
 
 class XBlock:
-    def __init__(self, _blk):
+    def __init__(self, _aux, _blk):
         self.blk = _blk
+        self.aux = _aux
 
     def emit(self):
         return "\n".join(x.emit() for x in self.blk)
@@ -329,8 +328,7 @@ class XICall:
             pass
             #print(env.reg["RDI"])
         else:
-            for i in env.blk[temp]:
-                i.interp(env)
+            env.blk[temp].interp(env)
         return env
 
 
@@ -342,8 +340,7 @@ class XIJmp:
         return "jmp" + " " + self.src.emit()
 
     def interp(self, env):
-        for lin in env.blk[self.src.interp(env)]:
-            lin.interp(env)
+        env.blk[self.src.interp(env)].interp(env)
         return env
 
 
@@ -394,12 +391,7 @@ class CProgram:
         self.info = _info
 
     def pp(self):
-        if(self.info):
-            return str(self.info)+"\n" + "".join([i.pp() + "\n" + "\n".join([l.pp() for l in j])
-                                                  for i, j in self.p.items()])
-        else:
-            return "".join([i.pp() + "\n" + "\n".join([l.pp() for l in j])
-                            for i, j in self.p.items()])
+        return "".join(["\n" + l.pp() + ":" + b.pp() for l,b in self.p.items()])
 
     def interp(self):
         tempBlks = {}
@@ -408,10 +400,22 @@ class CProgram:
         env = CEnv()
         env.setBlk(tempBlks)
         rtn = 0
-        for i in env.blk["main"]:
-            rtn = i.interp(env)
+        rtn = env.blk["main"].interp(env)
         return rtn
 
+class CBlock:
+    def __init__(self,_aux,_p):
+        self.p =_p
+        self.aux = _aux
+
+    def pp(self):
+        return "".join(["\n" + i.pp() for i in self.p])
+
+    def interp(self, env):
+        rtn = 0
+        for i in self.p:
+            rtn = i.interp(env)
+        return rtn
 
 class CLabel:
     def __init__(self, _label):
@@ -592,8 +596,8 @@ def _optimizer(n, env):
         elif(isinstance(l, RNum) and isinstance(r, RAdd) and isinstance(r.left, RNum)):
             return RAdd(RNum(l.interp() + r.left.interp()), _optimizer(r.right, env))
 
-        elif(isinstance(l, RAdd) and isinstance(r, RNum) and isinstance(r.right, RNum)):
-            return RAdd(RNum(l.interp() + r.right.interp()), _optimizer(r.left, env))
+        elif(isinstance(l, RAdd) and isinstance(r, RNum) and isinstance(l.left, RNum)):
+            return RAdd(RNum(l.interp() + r.interp()), _optimizer(r.left, env))
 
         elif(isinstance(l, RAdd) and isinstance(l.left, RNum) and isinstance(r, RAdd) and isinstance(r.left, RNum)):
             return RAdd(RNum(l.left.interp() + r.left.interp()), RAdd(_optimizer(l.right, env), _optimizer(r.right, env)))
@@ -608,9 +612,6 @@ def _optimizer(n, env):
             return n
     elif(isinstance(n, RLet)):
         xe = _optimizer(n.l, env)
-        # print(xe.pp())
-        # for i, j in env.getEnv().items():
-        #     print(i + ":" + j.pp())
         if(simple(xe)):
             env.setEnv({n.var.name: xe})
             return _optimizer(n.r, env)
@@ -758,7 +759,7 @@ def econ(r):
     env = EconEnv()
     rtn = econHelper(r, env)
     env.addEnv(rtn)
-    p = CProgram(None, {CLabel("main"): env.getEnv()})
+    p = CProgram(None, {CLabel("main"): CBlock([], env.getEnv())})
     return p
 
 
@@ -798,10 +799,11 @@ def econHelper(r, env):
 def uncover(cp=CProgram()):
     progs = cp.p
     info = []
-    for i, blks in progs.items():
-        for seq in blks:
-            if(isinstance(seq, CSet)):
-                info.append(seq.var.var)
+    for blks in progs.values():
+        if(isinstance(blks,CBlock)):
+            for seq in blks.p:
+                if(isinstance(seq, CSet)):
+                    info.append(seq.var.var)
     return CProgram(info, progs)
 
 
@@ -827,13 +829,14 @@ def select(cp):
     for lab, lin in cp.p.items():
         tempBlk = []
         tempLabel = XLabel(lab.interp())
-        for l in lin:
-            rtn = _selectT(l, env)
-            if(isinstance(rtn, list)):
-                tempBlk = tempBlk + rtn
-            else:
-                tempBlk.append(rtn)
-        blk.update({tempLabel: tempBlk})
+        if(isinstance(lin,CBlock)):
+            for l in lin.p:
+                rtn = _selectT(l, env)
+                if(isinstance(rtn, list)):
+                    tempBlk = tempBlk + rtn
+                else:
+                    tempBlk.append(rtn)
+        blk.update({tempLabel: XBlock([], tempBlk)})
     return XProgram(cp.info, blk)
 
 
@@ -868,23 +871,24 @@ def _selectA(cp, env):
 def assign(xp):
     def isEven(x): return x if (x % 2) == 0 else x+1
     stackSize = 8*isEven(len(xp.info))
-    begin = {XLabel("begin"): [XIPush(XRegister("RBP")), XIMov(XRegister(
+    begin = {XLabel("begin"): XBlock([], [XIPush(XRegister("RBP")), XIMov(XRegister(
         "RSP"), XRegister("RBP")), XISub(XCon(stackSize), XRegister("RSP")), XIJmp(XLabel("body")),
-    ]}
+    ])}
 
     originalMain = []
     body = []
     for lab, blk in xp.p.items():
         if(lab.emit() == "main"):
-            originalMain = blk
+            if(isinstance(blk,XBlock)):
+                originalMain = blk.blk
 
     for instr in originalMain:
         body.append(_assign(instr, xp.info))
     body = body[:-1]
     body.append(XIJmp(XLabel("end")))
-    bdy = {XLabel("body"): body}
-    end = {XLabel("end"): [XIAdd(XCon(stackSize), XRegister(
-        "RSP")), XIPop(XRegister("RBP")), XIRet()]}
+    bdy = {XLabel("body"): XBlock([], body)}
+    end = {XLabel("end"): XBlock([], [XIAdd(XCon(stackSize), XRegister(
+        "RSP")), XIPop(XRegister("RBP")), XIRet()])}
     progm = {}
     progm.update(begin)
     progm.update(bdy)
@@ -924,11 +928,11 @@ def patch(xp):
         progs = xp.p
         newP = {}
         for lab, blks in progs.items():
-            newBlks = []
-            for i in blks:
-                newBlks = newBlks + _patch(i)
-            newP.update({lab: newBlks})
-
+            if(isinstance(blks,XBlock)):
+                newBlks = []
+                for i in blks.blk:
+                    newBlks = newBlks + _patch(i)
+                newP.update({lab: XBlock([], newBlks)})
         return XProgram(xp.info, newP)
 
 
@@ -949,6 +953,67 @@ def _patch(i):
 
 def mainpass(xp):
     if(isinstance(xp, XProgram)):
-        prg = {XLabel("main"): [XICall(XLabel("begin")), XIMov(XRegister("RAX"), XRegister("RDI")), XICall(XLabel("print_int")), XIRet()]}
+        prg = {XLabel("main"): XBlock([], [XICall(XLabel("begin")), XIMov(XRegister("RAX"), XRegister("RDI")), XICall(XLabel("print_int")), XIRet()])}
         prg.update(xp.p)
         return XProgram(xp.info, prg)
+
+
+
+######## Uncover Live ########
+
+def uncover_live(xp):
+    if(isinstance(xp,XProgram)):
+        for l in xp.p.values():
+            d ={}
+            before =set()
+            if(isinstance(l, XBlock)):
+                for n, i in reversed(list(enumerate(l.blk))):
+                    d.update({n:before})
+                    #print("Live before: " + str(n) +" = " + str(before), end=' ')
+                    #print(w)
+                    #print(r)
+                    before = before.difference(_uncoverW(i))
+                    before = before.union(_uncoverR(i))
+                    #print("Live after: " + str(n) +" = " + str(before) )
+
+    return d
+
+def _uncoverW(i):
+    if(isinstance(i, XINeg)):
+        return _uncoverM(i.src)
+    elif(isinstance(i, XIAdd)):
+        return _uncoverM(i.dst)
+    elif(isinstance(i, XISub)):
+        return _uncoverM(i.dst)
+    elif(isinstance(i, XIMov)):
+        return _uncoverM(i.dst)
+    elif(isinstance(i, XIPush)):
+        return set([])
+    elif(isinstance(i, XIPop)):
+        return _uncoverM(i.src)
+    #print(i.emit())
+    return set([])
+
+def _uncoverR(i):
+    if(isinstance(i, XINeg)):
+        return _uncoverM(i.src)
+    elif(isinstance(i, XIAdd)):
+        return _uncoverM(i.dst).union(_uncoverM(i.src))
+    elif(isinstance(i, XISub)):
+        return _uncoverM(i.dst).union(_uncoverM(i.src))
+    elif(isinstance(i, XIMov)):
+        return _uncoverM(i.src)
+    elif(isinstance(i, XIPush)):
+        return _uncoverM(i.src)
+    elif(isinstance(i, XIPop)):
+        return set()
+    #print(i.emit())
+    return set()
+
+def _uncoverM(a):
+    if(isinstance(a, XRegister)):
+         return set([a.getName()])
+    elif(isinstance(a, XVar)):
+         return set([a.getName()])
+    else:
+        return set([])
