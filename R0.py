@@ -1,6 +1,6 @@
 import random
 from datetime import datetime
-
+from graph import Vertex, Graph
 # R0 Data types
 
 
@@ -961,19 +961,36 @@ def mainpass(xp):
 
 ######## Uncover Live ########
 
+# def uncover_live(xp):
+#     if(isinstance(xp,XProgram)):
+#         for l in xp.p.values():
+#             d ={}
+#             before =set()
+#             if(isinstance(l, XBlock)):
+#                 for n, i in reversed(list(enumerate(l.blk))):
+#                     d.update({n:before})
+#                     #print("Live before: " + str(n) +" = " + str(before), end=' ')
+#                     #print(w)
+#                     #print(r)
+#                     before = before.difference(_uncoverW(i))
+#                     before = before.union(_uncoverR(i))
+#                     #print("Live after: " + str(n) +" = " + str(before) )
+
+#     return d
 def uncover_live(xp):
     if(isinstance(xp,XProgram)):
         for l in xp.p.values():
             d ={}
             before =set()
             if(isinstance(l, XBlock)):
-                for n, i in reversed(list(enumerate(l.blk))):
-                    d.update({n:before})
+                for i in reversed(l.blk):
+                    d.update({i:before})
                     #print("Live before: " + str(n) +" = " + str(before), end=' ')
                     #print(w)
                     #print(r)
                     before = before.difference(_uncoverW(i))
                     before = before.union(_uncoverR(i))
+                    
                     #print("Live after: " + str(n) +" = " + str(before) )
 
     return d
@@ -1017,3 +1034,42 @@ def _uncoverM(a):
          return set([a.getName()])
     else:
         return set([])
+
+######## Build Interferences ########
+
+def buildInt(blk):
+    g = Graph()
+    if(isinstance(blk, dict)):
+        for i,s in blk.items():
+            if(isinstance(i, XIMov)):
+                if(s):
+                    d = _buildM(i.dst)
+                    for e in s:
+                        if(not (d == e or e == _buildM(i.src))):
+                            g.add_edge(d,str(e))
+            elif(isinstance(i,XINeg)):
+                if(s):
+                    d = i.src.getName()
+                    for e in s:
+                        if(not d == e):
+                            g.add_edge(d,str(e))
+            else:
+                if(s):
+                    d = i.dst.getName()
+                    for e in s:
+                        if(not d == e):
+                            g.add_edge(d,str(e))
+    return g
+
+def _buildM(a):
+    if(isinstance(a, XRegister)):
+         return a.getName()
+    elif(isinstance(a, XVar)):
+         return a.getName()
+    else:
+        return None
+
+def printGrph(g):
+    for v in g:
+        for w in v.get_connections():
+            print("({} -> {})".format(v.key, w.key))
