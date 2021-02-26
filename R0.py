@@ -220,9 +220,9 @@ allRegs = ["%\rsp", "%\rbp", "%\rax", "%\rbx", "%\rcx", "%\rdx", "%\rsi",
            "%\rdi", "%\r8", "%\r9", "%\r10", "%\r11", "%\r12", "%\r13", "%\r14", "%\r15"]
 calleeSavedRegs = ["%\rbx", "%\rbp", "%\r12", "%\r13", "%\r14", "%\r15"]
 callerSavedRegs = list(set(allRegs) - set(calleeSavedRegs))
-argumentRegs = ["%\rdi", "%\rsi", "%\rdx", "%\rcx", "%\r8", "%\r9"]
-usableRegs = ["%\rbx", "%\rcx", "%\rdx", "%\rsi",
-           "%\rdi", "%\r8", "%\r9", "%\r10", "%\r11", "%\r12", "%\r13", "%\r14", "%\r15"]
+argumentRegs = ["%\rdi", "rsi", "rdx", "rcx", "r8", "r9"]
+usableRegs = ["rbx", "rcx", "rdx", "rsi",
+           "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"]
 tempReg = "%\rax"
 
 
@@ -974,22 +974,21 @@ def mainpass(xp):
 
 ######## Uncover Live ########
 
-def uncover_live(xp):
-    if(isinstance(xp, XProgram)):
-        for l in xp.p.values():
-            d = {}
-            before = set()
-            if(isinstance(l, XBlock)):
-                for i in reversed(l.blk):
-                    d.update({i: before})
-                    #print("Live before: " + str(n) +" = " + str(before), end=' ')
-                    # print(w)
-                    # print(r)
-                    before = before - _uncoverW(i)
-                    before = before.union(_uncoverR(i))
-                    #print("Live after: " + str(n) +" = " + str(before) )
-
-    return d
+def uncover_live(xp: XProgram):
+    for l in xp.p.values():
+        d = {}
+        before = set()
+        if(isinstance(l, XBlock)):
+            for i in reversed(l.blk):
+                d.update({i: before})
+                #print("Live before: " + str(n) +" = " + str(before), end=' ')
+                # print(w)
+                # print(r)
+                before = before - _uncoverW(i)
+                before = before.union(_uncoverR(i))
+                #print("Live after: " + str(n) +" = " + str(before) )
+            l.aux = d 
+    return xp
 
 
 def _uncoverW(i):
@@ -1047,28 +1046,31 @@ def printUncover(uncl: dict):
 ######## Build Interferences ########
 
 
-def buildInt(blk:dict):
+def buildInt(xp:XProgram):
     g = Graph()
-    for i, s in blk.items():
-        if(isinstance(i, XIMov)):
-            if(s):
-                d = _buildM(i.dst)
-                for e in s:
-                    if(not (d == e or e == _buildM(i.src))):
-                        g.add_edge(d, str(e))
-        elif(isinstance(i, XINeg)):
-            if(s):
-                d = i.src.emit()
-                for e in s:
-                    if(not d == e):
-                        g.add_edge(d, str(e))
-        else:
-            if(s):
-                d = i.dst.emit()
-                for e in s:
-                    if(not d == e):
-                        g.add_edge(d, str(e))
-    return g
+    for blk in xp.p.values():
+        if(isinstance(blk,XBlock)):
+            for i, s in blk.aux.items():
+                if(isinstance(i, XIMov)):
+                    if(s):
+                        d = _buildM(i.dst)
+                        for e in s:
+                            if(not (d == e or e == _buildM(i.src))):
+                                g.add_edge(d, str(e))
+                elif(isinstance(i, XINeg)):
+                    if(s):
+                        d = i.src.emit()
+                        for e in s:
+                            if(not d == e):
+                                g.add_edge(d, str(e))
+                else:
+                    if(s):
+                        d = i.dst.emit()
+                        for e in s:
+                            if(not d == e):
+                                g.add_edge(d, str(e))
+            blk.aux = g
+    return xp
 
 
 def _buildM(a):
@@ -1094,38 +1096,107 @@ def saturation(v: Vertex):
         satSet.add(e.get_id())
     return satSet
 
-def color(g: Graph) -> Graph:
-    w = list(g.vert_dict.copy())
-    colorList = dict()
-    available = dict()
+def color(xp: XProgram) -> XProgram:
+    for blk in xp.p.values():
+        g = blk.aux
+        w = list(g.vert_dict.copy())
+        colorList = dict()
+        available = dict()
+        cntr =0
+        for x in g.vert_dict:
+            colorList.update({x: -1})
+            available.update({cntr: False})
+            cntr+=1
+        colorList[w[0]] = 0
+        
+        while w:
+            u = w[0]
+            color = 0
+            adj = saturation(g.vert_dict[u])
+            for e in adj:
+                if(colorList[e] != -1):
+                    available[colorList[e]] = True
+            
+            for e in available:
+                if(available[e] == False):
+                    color =e
+                    break
+            
+            colorList[u] = color
+
+            for e in adj:
+                if(colorList[e] != -1):
+                    available[colorList[e]] = False
+            
+            w.remove(u)
+
+        blk.aux = colorList
+    return xp
+
+
+################ Stupid Allocate Registers ################
+
+def stupid_allocate(xp: XProgram) ->XProgram:
+    def isEven(x): return x if (x % 2) == 0 else x+1
+    stackSize = 8*isEven(len(xp.info))
+    return stackSize
+
+
+
+################ Allocate Registers ################
+def assign_register(xp: XProgram) -> XProgram:
     colorList2 = dict(enumerate(usableRegs))
+    stackSize = stupid_allocate(xp)
+    print(colorList2)
+    regsList =[]
+    begin = {XLabel("begin"): XBlock([], [XIPush(XRegister("RBP")), XIMov(XRegister(
+        "RSP"), XRegister("RBP")), XISub(XCon(stackSize), XRegister("RSP")), XIJmp(XLabel("body")),
+    ])}
 
-    cntr =0
-    for x in g.vert_dict:
-        colorList.update({x: -1})
-        available.update({cntr: False})
-        cntr+=1
-    colorList[w[0]] = 0
-    
-    while w:
-        u = w[0]
-        color = 0
-        adj = saturation(g.vert_dict[u])
-        for e in adj:
-            if(colorList[e] != -1):
-                available[colorList[e]] = True
-        
-        for e in available:
-            if(available[e] == False):
-                color =e
-                break
-        
-        colorList[u] = color
+    originalMain = []
+    body = []
+    for lab, blk in xp.p.items():
+        if(lab.emit() == "main"):
+            if(isinstance(blk, XBlock)):
+                originalMain = blk.blk
+                regsList = blk.aux
 
-        for e in adj:
-            if(colorList[e] != -1):
-                available[colorList[e]] = False
-        
-        w.remove(u)
+    for instr in originalMain:
+        body.append(_assign(instr, regsList, colorList2))
+    body = body[:-1]
+    body.append(XIJmp(XLabel("end")))
+    bdy = {XLabel("main"): XBlock([], body)}
+    end = {XLabel("end"): XBlock([], [XIAdd(XCon(stackSize), XRegister(
+        "RSP")), XIPop(XRegister("RBP")), XIRet()])}
+    progm = {}
+    progm.update(begin)
+    progm.update(bdy)
+    progm.update(end)
+    return XProgram(xp.info, progm)
 
-    return colorList
+
+def _assign(xp, v, regs):
+    if(isinstance(xp, XIAdd)):
+        return XIAdd(_assignA(xp.src, v, regs), _assignA(xp.dst, v, regs))
+    elif(isinstance(xp, XISub)):
+        return XISub(_assignA(xp.src, v, regs), _assignA(xp.dst, v, regs))
+    elif(isinstance(xp, XIMov)):
+        return XIMov(_assignA(xp.src, v, regs), _assignA(xp.dst, v, regs))
+    elif(isinstance(xp, XINeg)):
+        return XINeg(_assignA(xp.src, v, regs))
+    elif(isinstance(xp, XIPush)):
+        return XIPush(_assignA(xp.src, v, regs))
+    elif(isinstance(xp, XIPop)):
+        return XIPush(_assignA(xp.src, v, regs))
+    else:
+        return xp
+
+
+def _assignA(a, v, regs):
+    if(isinstance(a, XVar)):
+        # sub = v.index(a.name) * -8
+        # return XMem(XRegister("RBP"), sub)
+        temp = v[a.emit()]
+        return XRegister(regs[temp])
+    else:
+        return a
