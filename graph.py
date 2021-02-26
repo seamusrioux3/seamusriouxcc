@@ -1,58 +1,51 @@
 class Vertex:
-    def __init__(self, key):
-        self.key = key
-        self.neighbors = {}
-
-    def add_neighbor(self, neighbor, weight=None):
-        self.neighbors[neighbor] = weight
+    def __init__(self, node):
+        self.id = node
+        self.adjacent = {}
 
     def __str__(self):
-        return '{} neighbors: {}'.format(
-            self.key,
-            [x.key for x in self.neighbors]
-        )
+        return str(self.id) + ' adjacent: ' + str([x.id for x in self.adjacent])
+
+    def add_neighbor(self, neighbor, weight=0):
+        self.adjacent[neighbor] = weight
 
     def get_connections(self):
-        return self.neighbors.keys()
+        return self.adjacent.keys()  
+
+    def get_id(self):
+        return self.id
 
     def get_weight(self, neighbor):
-        return self.neighbors[neighbor]
+        return self.adjacent[neighbor]
 
 class Graph:
     def __init__(self):
-        self.vertices = {}
+        self.vert_dict = {}
+        self.num_vertices = 0
 
-    def add_vertex(self, vertex):
-        self.vertices[vertex.key] = vertex
+    def __iter__(self):
+        return iter(self.vert_dict.values())
 
-    def get_vertex(self, key):
-        if key in self.vertices[key]:
-            return self.vertices[key]
+    def add_vertex(self, node):
+        self.num_vertices = self.num_vertices + 1
+        new_vertex = Vertex(node)
+        self.vert_dict[node] = new_vertex
+        return new_vertex
+
+    def get_vertex(self, n):
+        if n in self.vert_dict:
+            return self.vert_dict[n]
         else:
             return None
 
-    def __contains__(self, key):
-        """
-        Overload the in operator to support:
-          >>> g = Graph()
-          >>> g.add_vertex(Vertex(42))
-          >>> 42 in g
-          True
-        """
-        return key in self.vertices
+    def add_edge(self, frm, to, cost = 0):
+        if frm not in self.vert_dict:
+            self.add_vertex(frm)
+        if to not in self.vert_dict:
+            self.add_vertex(to)
 
-    def add_edge(self, from_key, to_key, weight=None):
-        if from_key not in self.vertices:
-            self.add_vertex(Vertex(from_key))
-        if to_key not in self.vertices:
-            self.add_vertex(Vertex(to_key))
-        self.vertices[from_key].add_neighbor(
-            self.vertices[to_key],
-            weight
-        )
+        self.vert_dict[frm].add_neighbor(self.vert_dict[to], cost)
+        self.vert_dict[to].add_neighbor(self.vert_dict[frm], cost)
 
     def get_vertices(self):
-        return self.vertices.keys()
-
-    def __iter__(self):
-        return iter(self.vertices.values())
+        return self.vert_dict.keys()

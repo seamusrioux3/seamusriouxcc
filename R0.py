@@ -129,7 +129,7 @@ class XProgram:
         self.info = _info
 
     def emit(self):
-        return ".global main\n\n" + "".join(["\n"+x.emit() + ":" + "\n" +y.emit() for x, y in self.p.items()])
+        return ".global main\n\n" + "".join(["\n"+x.emit() + ":" + "\n" + y.emit() for x, y in self.p.items()])
 
     def interp(self):
         env = XEnv()
@@ -144,7 +144,7 @@ class XProgram:
         # print(env.mem)
         # print(env.blk)
         # print(env.cntr)
-        return env.reg["RAX"]
+        return env.reg["rax"]
 
 
 class XBlock:
@@ -213,6 +213,17 @@ class XRegister:
 
     def getName(self):
         return self.register
+
+
+########### Register Value Set up ##############
+allRegs = ["%\rsp", "%\rbp", "%\rax", "%\rbx", "%\rcx", "%\rdx", "%\rsi",
+           "%\rdi", "%\r8", "%\r9", "%\r10", "%\r11", "%\r12", "%\r13", "%\r14", "%\r15"]
+calleeSavedRegs = ["%\rbx", "%\rbp", "%\r12", "%\r13", "%\r14", "%\r15"]
+callerSavedRegs = list(set(allRegs) - set(calleeSavedRegs))
+argumentRegs = ["%\rdi", "%\rsi", "%\rdx", "%\rcx", "%\r8", "%\r9"]
+usableRegs = ["%\rbx", "%\rcx", "%\rdx", "%\rsi",
+           "%\rdi", "%\r8", "%\r9", "%\r10", "%\r11", "%\r12", "%\r13", "%\r14", "%\r15"]
+tempReg = "%\rax"
 
 
 class XCon:
@@ -326,7 +337,7 @@ class XICall:
             XIMov(XCon(env.cntr), XRegister("RAX")).interp(env)
         elif(temp == "print_int"):
             pass
-            #print(env.reg["RDI"])
+            # print(env.reg["RDI"])
         else:
             env.blk[temp].interp(env)
         return env
@@ -391,7 +402,7 @@ class CProgram:
         self.info = _info
 
     def pp(self):
-        return "".join(["\n" + l.pp() + ":" + b.pp() for l,b in self.p.items()])
+        return "".join(["\n" + l.pp() + ":" + b.pp() for l, b in self.p.items()])
 
     def interp(self):
         tempBlks = {}
@@ -403,9 +414,10 @@ class CProgram:
         rtn = env.blk["main"].interp(env)
         return rtn
 
+
 class CBlock:
-    def __init__(self,_aux,_p):
-        self.p =_p
+    def __init__(self, _aux, _p):
+        self.p = _p
         self.aux = _aux
 
     def pp(self):
@@ -416,6 +428,7 @@ class CBlock:
         for i in self.p:
             rtn = i.interp(env)
         return rtn
+
 
 class CLabel:
     def __init__(self, _label):
@@ -800,7 +813,7 @@ def uncover(cp=CProgram()):
     progs = cp.p
     info = []
     for blks in progs.values():
-        if(isinstance(blks,CBlock)):
+        if(isinstance(blks, CBlock)):
             for seq in blks.p:
                 if(isinstance(seq, CSet)):
                     info.append(seq.var.var)
@@ -829,7 +842,7 @@ def select(cp):
     for lab, lin in cp.p.items():
         tempBlk = []
         tempLabel = XLabel(lab.interp())
-        if(isinstance(lin,CBlock)):
+        if(isinstance(lin, CBlock)):
             for l in lin.p:
                 rtn = _selectT(l, env)
                 if(isinstance(rtn, list)):
@@ -879,7 +892,7 @@ def assign(xp):
     body = []
     for lab, blk in xp.p.items():
         if(lab.emit() == "main"):
-            if(isinstance(blk,XBlock)):
+            if(isinstance(blk, XBlock)):
                 originalMain = blk.blk
 
     for instr in originalMain:
@@ -928,7 +941,7 @@ def patch(xp):
         progs = xp.p
         newP = {}
         for lab, blks in progs.items():
-            if(isinstance(blks,XBlock)):
+            if(isinstance(blks, XBlock)):
                 newBlks = []
                 for i in blks.blk:
                     newBlks = newBlks + _patch(i)
@@ -953,47 +966,31 @@ def _patch(i):
 
 def mainpass(xp):
     if(isinstance(xp, XProgram)):
-        prg = {XLabel("main"): XBlock([], [XICall(XLabel("begin")), XIMov(XRegister("RAX"), XRegister("RDI")), XICall(XLabel("print_int")), XIRet()])}
+        prg = {XLabel("main"): XBlock([], [XICall(XLabel("begin")), XIMov(
+            XRegister("RAX"), XRegister("RDI")), XICall(XLabel("print_int")), XIRet()])}
         prg.update(xp.p)
         return XProgram(xp.info, prg)
 
 
-
 ######## Uncover Live ########
 
-# def uncover_live(xp):
-#     if(isinstance(xp,XProgram)):
-#         for l in xp.p.values():
-#             d ={}
-#             before =set()
-#             if(isinstance(l, XBlock)):
-#                 for n, i in reversed(list(enumerate(l.blk))):
-#                     d.update({n:before})
-#                     #print("Live before: " + str(n) +" = " + str(before), end=' ')
-#                     #print(w)
-#                     #print(r)
-#                     before = before.difference(_uncoverW(i))
-#                     before = before.union(_uncoverR(i))
-#                     #print("Live after: " + str(n) +" = " + str(before) )
-
-#     return d
 def uncover_live(xp):
-    if(isinstance(xp,XProgram)):
+    if(isinstance(xp, XProgram)):
         for l in xp.p.values():
-            d ={}
-            before =set()
+            d = {}
+            before = set()
             if(isinstance(l, XBlock)):
                 for i in reversed(l.blk):
-                    d.update({i:before})
+                    d.update({i: before})
                     #print("Live before: " + str(n) +" = " + str(before), end=' ')
-                    #print(w)
-                    #print(r)
-                    before = before.difference(_uncoverW(i))
+                    # print(w)
+                    # print(r)
+                    before = before - _uncoverW(i)
                     before = before.union(_uncoverR(i))
-                    
                     #print("Live after: " + str(n) +" = " + str(before) )
 
     return d
+
 
 def _uncoverW(i):
     if(isinstance(i, XINeg)):
@@ -1008,8 +1005,9 @@ def _uncoverW(i):
         return set([])
     elif(isinstance(i, XIPop)):
         return _uncoverM(i.src)
-    #print(i.emit())
+    # print(i.emit())
     return set([])
+
 
 def _uncoverR(i):
     if(isinstance(i, XINeg)):
@@ -1024,52 +1022,110 @@ def _uncoverR(i):
         return _uncoverM(i.src)
     elif(isinstance(i, XIPop)):
         return set()
-    #print(i.emit())
+    # print(i.emit())
     return set()
+
 
 def _uncoverM(a):
     if(isinstance(a, XRegister)):
-         return set([a.getName()])
+        return set([a.emit()])
     elif(isinstance(a, XVar)):
-         return set([a.getName()])
+        return set([a.emit()])
     else:
         return set([])
 
+
+def printUncover(uncl: dict):
+    for l, afterSet in uncl.items():
+        print(l.emit() + " After set: ", end="")
+        for e in afterSet:
+            print(e, end=" ")
+        print()
+    print("\n")
+    return
+
 ######## Build Interferences ########
 
-def buildInt(blk):
+
+def buildInt(blk:dict):
     g = Graph()
-    if(isinstance(blk, dict)):
-        for i,s in blk.items():
-            if(isinstance(i, XIMov)):
-                if(s):
-                    d = _buildM(i.dst)
-                    for e in s:
-                        if(not (d == e or e == _buildM(i.src))):
-                            g.add_edge(d,str(e))
-            elif(isinstance(i,XINeg)):
-                if(s):
-                    d = i.src.getName()
-                    for e in s:
-                        if(not d == e):
-                            g.add_edge(d,str(e))
-            else:
-                if(s):
-                    d = i.dst.getName()
-                    for e in s:
-                        if(not d == e):
-                            g.add_edge(d,str(e))
+    for i, s in blk.items():
+        if(isinstance(i, XIMov)):
+            if(s):
+                d = _buildM(i.dst)
+                for e in s:
+                    if(not (d == e or e == _buildM(i.src))):
+                        g.add_edge(d, str(e))
+        elif(isinstance(i, XINeg)):
+            if(s):
+                d = i.src.emit()
+                for e in s:
+                    if(not d == e):
+                        g.add_edge(d, str(e))
+        else:
+            if(s):
+                d = i.dst.emit()
+                for e in s:
+                    if(not d == e):
+                        g.add_edge(d, str(e))
     return g
+
 
 def _buildM(a):
     if(isinstance(a, XRegister)):
-         return a.getName()
+        return a.emit()
     elif(isinstance(a, XVar)):
-         return a.getName()
+        return a.emit()
     else:
         return None
 
-def printGrph(g):
+
+def printGrph(g: Graph):
+    print("\n")
     for v in g:
         for w in v.get_connections():
-            print("({} -> {})".format(v.key, w.key))
+            print("({} -> {})".format(v.get_id(), w.get_id()))
+
+
+######## Color Graph ########
+def saturation(v: Vertex):
+    satSet = set()
+    for e in v.adjacent:
+        satSet.add(e.get_id())
+    return satSet
+
+def color(g: Graph) -> Graph:
+    w = list(g.vert_dict.copy())
+    colorList = dict()
+    available = dict()
+    colorList2 = dict(enumerate(usableRegs))
+
+    cntr =0
+    for x in g.vert_dict:
+        colorList.update({x: -1})
+        available.update({cntr: False})
+        cntr+=1
+    colorList[w[0]] = 0
+    
+    while w:
+        u = w[0]
+        color = 0
+        adj = saturation(g.vert_dict[u])
+        for e in adj:
+            if(colorList[e] != -1):
+                available[colorList[e]] = True
+        
+        for e in available:
+            if(available[e] == False):
+                color =e
+                break
+        
+        colorList[u] = color
+
+        for e in adj:
+            if(colorList[e] != -1):
+                available[colorList[e]] = False
+        
+        w.remove(u)
+
+    return colorList
