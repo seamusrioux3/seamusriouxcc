@@ -104,8 +104,8 @@ class Test:
             actual = not p.interp()
 
         self.test(actual, p.interp())
-    
-    
+
+
 s = Test()
 # Variable and Let testing
 print("\nR1 Tests")
@@ -124,7 +124,8 @@ letTest8 = RLet(RVar("x"), RNum(7), RLet(RVar("x"), RNum(8),
                                          RAdd(RNegate(RVar("x")), RNegate(RVar("x")))))
 letTest9 = RLet(RVar("x"), RRead(), RNum(4))
 
-letTest10 = RLet(RVar("x"), RRead(), RLet(RVar("y"), RRead(), RAdd(RAdd(RVar("x"), RVar("y")), RNum(42))))
+letTest10 = RLet(RVar("x"), RRead(), RLet(RVar("y"), RRead(),
+                                          RAdd(RAdd(RVar("x"), RVar("y")), RNum(42))))
 
 ########## X0 Program Testing ################
 Xprog1 = XProgram([], {
@@ -702,16 +703,16 @@ patch3 = XProgram([], {
 })
 
 ######## Uncover live Testing ########
-uncoverLiveTest1 = XProgram([], {XLabel("main"): XBlock({4: set(), 3: {'B', 'C'}, 2: {'C'}, 1: {'A'}, 0: {'A'}}, [
+uncoverLiveTest1 = XProgram(["!A", "!B", "!C"], {XLabel("main"): XBlock({4: set(), 3: {'B', 'C'}, 2: {'C'}, 1: {'A'}, 0: {'A'}}, [
     XIMov(XCon(5), XVar("A")),
     XIMov(XCon(30), XVar("B")),
     XIMov(XVar("A"), XVar("C")),
     XIMov(XCon(10), XVar("B")),
     XIAdd(XVar("B"), XVar("C")),
-    XIRet()
+    # XIRet()
 ])})
 
-uncoverLiveTest2 = XProgram([], {XLabel("main"): XBlock({6: set(), 5: {'D'}, 4: set(), 3: {'B', 'C'}, 2: {'C'}, 1: {'A'}, 0: {'A'}}, [
+uncoverLiveTest2 = XProgram(["!A", "!B", "!C", "!D"], {XLabel("main"): XBlock({6: set(), 5: {'D'}, 4: set(), 3: {'B', 'C'}, 2: {'C'}, 1: {'A'}, 0: {'A'}}, [
     XIMov(XCon(5), XVar("A")),
     XIMov(XCon(30), XVar("B")),
     XIMov(XVar("A"), XVar("C")),
@@ -719,10 +720,10 @@ uncoverLiveTest2 = XProgram([], {XLabel("main"): XBlock({6: set(), 5: {'D'}, 4: 
     XIAdd(XVar("B"), XVar("C")),
     XIMov(XCon(1), XVar("D")),
     XIMov(XVar("D"), XVar("C")),
-    XIRet()
+    # XIRet()
 ])})
 
-uncoverLiveTest3 = XProgram([], {XLabel("main"): XBlock({6: set(), 5: {'D'}, 4: {'D'}, 3: {'D', 'B', 'C'}, 2: {'D', 'C'}, 1: {'A', 'D'}, 0: {'A', 'D'}}, [
+uncoverLiveTest3 = XProgram(["!A", "!B", "!C", "!D"], {XLabel("main"): XBlock({6: set(), 5: {'D'}, 4: {'D'}, 3: {'D', 'B', 'C'}, 2: {'D', 'C'}, 1: {'A', 'D'}, 0: {'A', 'D'}}, [
     XIMov(XCon(5), XVar("A")),
     XIMov(XCon(30), XVar("B")),
     XIMov(XVar("A"), XVar("C")),
@@ -730,12 +731,12 @@ uncoverLiveTest3 = XProgram([], {XLabel("main"): XBlock({6: set(), 5: {'D'}, 4: 
     XIAdd(XVar("B"), XVar("C")),
     XINeg(XVar("D")),
     XIMov(XVar("D"), XVar("C")),
-    XIRet()
+    # XIRet()
 ])})
 
 unc4 = XProgram([], {XLabel("main"): XBlock({11: set(), 10: set(), 9: {'RAX', 'T'}, 8: {'Z', 'T'}, 7: {'Z', 'T'}, 6: {'Y', 'Z'}, 5: {'Y', 'Z', 'W'}, 4: {'X', 'Y', 'W'}, 3: {'X', 'W'}, 2: {'X', 'W'}, 1: {'V', 'W'}, 0: {'V'}}, [
     XIMov(XCon(1), XVar("V")),
-    XIMov(XCon(1), XVar("W")),
+    XIMov(XCon(42), XVar("W")),
     XIMov(XVar("V"), XVar("X")),
     XIAdd(XCon(7), XVar("X")),
     XIMov(XVar("X"), XVar("Y")),
@@ -743,42 +744,72 @@ unc4 = XProgram([], {XLabel("main"): XBlock({11: set(), 10: set(), 9: {'RAX', 'T
     XIAdd(XVar("W"), XVar("Z")),
     XIMov(XVar("Y"), XVar("T")),
     XINeg(XVar("T")),
-    XIMov(XVar("Z"), XRegister("RAX")),
-    XIAdd(XVar("T"), XRegister("RAX")),
-    XIJmp(XVar("conclusion"))
+    XIMov(XVar("Z"), XRegister("rax")),
+    XIAdd(XVar("T"), XRegister("rax")),
+    # XIJmp(XVar("conclusion"))
 ])})
 
-print(uncoverLiveTest1.emit())
-print(uncover_live(uncoverLiveTest1))
-print(uncoverLiveTest2.emit())
-print(uncover_live(uncoverLiveTest2))
-print(uncoverLiveTest3.emit())
-print(uncover_live(uncoverLiveTest3))
-print(unc4.emit())
-print(uncover_live(unc4))
 
+# printUncover(uncover_live(uncoverLiveTest1))
+# printUncover(uncover_live(uncoverLiveTest2))
+# printUncover(uncover_live(uncoverLiveTest3))
+# printUncover(uncover_live(unc4))
 
 ######## Build Interferences Testing ########
 
 
+# buildInt1 = uncover_live(uncoverLiveTest1)
+# printGrph(buildInt(buildInt1))
+# buildInt2 = uncover_live(uncoverLiveTest2)
+# printGrph(buildInt(buildInt2))
+# buildInt3 = uncover_live(uncoverLiveTest3)
+# printGrph(buildInt(buildInt3))
+# buildInt4 = uncover_live(unc4)
+# printGrph(buildInt(buildInt4))
+
+######## Color Graph Testing ########
+print("Color Graph Testing")
+
 buildInt1 = uncover_live(uncoverLiveTest1)
 print(buildInt1)
-printGrph(buildInt(buildInt1))
+buildIntAfter1 = buildInt(buildInt1)
+print(color(buildIntAfter1))
+
 buildInt2 = uncover_live(uncoverLiveTest2)
 print(buildInt2)
-printGrph(buildInt(buildInt2))
+buildIntAfter2 = buildInt(buildInt2)
+print(color(buildIntAfter2))
+
 buildInt3 = uncover_live(uncoverLiveTest3)
 print(buildInt3)
-printGrph(buildInt(buildInt3))
+buildIntAfter3 = buildInt(buildInt3)
+print(color(buildIntAfter3))
+
 buildInt4 = uncover_live(unc4)
-print(buildInt4)
-printGrph(buildInt(buildInt4))
+buildIntAfter4 = buildInt(buildInt4)
+print(color(buildIntAfter4))
+
+#Updated unc4 with new registers example from color function
+unc5 = XProgram([], {XLabel("main"): XBlock({11: set(), 10: set(), 9: {'RAX', 'T'}, 8: {'Z', 'T'}, 7: {'Z', 'T'}, 6: {'Y', 'Z'}, 5: {'Y', 'Z', 'W'}, 4: {'X', 'Y', 'W'}, 3: {'X', 'W'}, 2: {'X', 'W'}, 1: {'V', 'W'}, 0: {'V'}}, [
+    XIMov(XCon(1), XRegister("rbx")),
+    XIMov(XCon(42), XRegister("rdx")),
+    XIMov(XRegister("rbx"), XRegister("rbx")),
+    XIAdd(XCon(7), XRegister("rbx")),
+    XIMov(XRegister("rbx"), XRegister("rcx")),
+    XIMov(XRegister("rbx"), XRegister("rbx")),
+    XIAdd(XRegister("rdx"), XRegister("rbx")),
+    XIMov(XRegister("rcx"), XRegister("rcx")),
+    XINeg(XRegister("rcx")),
+    XIMov(XRegister("rbx"), XRegister("rax")),
+    XIAdd(XRegister("rcx"), XRegister("rax")),
+    # XIJmp(XVar("conclusion"))
+])})
 
 
 ######## Combined Testing ########
 print("\nCombined Tests\n")
 
-#s.testUncover(letTest1)
+# s.testUncover(letTest1)
 # s.testAll(letTest2)
 # s.testAll(letTest3)
 # s.testAll(letTest4)
