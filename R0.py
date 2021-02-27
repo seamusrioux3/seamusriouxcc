@@ -222,7 +222,7 @@ calleeSavedRegs = ["%\rbx", "%\rbp", "%\r12", "%\r13", "%\r14", "%\r15"]
 callerSavedRegs = list(set(allRegs) - set(calleeSavedRegs))
 argumentRegs = ["%\rdi", "rsi", "rdx", "rcx", "r8", "r9"]
 usableRegs = ["rbx", "rcx", "rdx", "rsi",
-           "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"]
+              "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"]
 tempReg = "%\rax"
 
 
@@ -334,7 +334,7 @@ class XICall:
         temp = self.src.interp(env)
         if(temp == "read_int"):
             env.cntr = 1
-            XIMov(XCon(env.cntr), XRegister("RAX")).interp(env)
+            XIMov(XCon(env.cntr), XRegister("rax")).interp(env)
         elif(temp == "print_int"):
             pass
             # print(env.reg["RDI"])
@@ -855,7 +855,7 @@ def select(cp):
 
 def _selectT(cp, env):
     if isinstance(cp, CRet):
-        return [XIMov(_selectA(cp.var, env), XRegister("RAX")), XIRet()]
+        return [XIMov(_selectA(cp.var, env), XRegister("rax")), XIRet()]
     if(isinstance(cp, CSet)):
         src = cp.exp
         dst = cp.var
@@ -864,7 +864,7 @@ def _selectT(cp, env):
 
 def _selectE(cp, dst, env):
     if(isinstance(cp, CRead)):
-        return [XICall(XLabel("read_int")), XIMov(XRegister("RAX"), _selectA(dst, env))]
+        return [XICall(XLabel("read_int")), XIMov(XRegister("rax"), _selectA(dst, env))]
     elif(isinstance(cp, CNeg)):
         return [XIMov(_selectA(cp.n, env), _selectA(dst, env)), XINeg(_selectA(dst, env))]
     elif(isinstance(cp, CAdd)):
@@ -952,13 +952,13 @@ def patch(xp):
 def _patch(i):
     if(isinstance(i, XIAdd)):
         if(isinstance(i.src, XMem) and isinstance(i.dst, XMem)):
-            return [XIMov(i.src, XRegister("RAX")), XIAdd(XRegister("RAX"), i.dst)]
+            return [XIMov(i.src, XRegister("rax")), XIAdd(XRegister("rax"), i.dst)]
     elif(isinstance(i, XISub)):
         if(isinstance(i.src, XMem) and isinstance(i.dst, XMem)):
-            return [XIMov(i.src, XRegister("RAX")), XISub(XRegister("RAX"), i.dst)]
+            return [XIMov(i.src, XRegister("rax")), XISub(XRegister("rax"), i.dst)]
     elif(isinstance(i, XIMov)):
         if(isinstance(i.src, XMem) and isinstance(i.dst, XMem)):
-            return [XIMov(i.src, XRegister("RAX")), XIMov(XRegister("RAX"), i.dst)]
+            return [XIMov(i.src, XRegister("rax")), XIMov(XRegister("rax"), i.dst)]
     return [i]
 
 
@@ -967,7 +967,7 @@ def _patch(i):
 def mainpass(xp):
     if(isinstance(xp, XProgram)):
         prg = {XLabel("main"): XBlock([], [XICall(XLabel("begin")), XIMov(
-            XRegister("RAX"), XRegister("RDI")), XICall(XLabel("print_int")), XIRet()])}
+            XRegister("rax"), XRegister("RDI")), XICall(XLabel("print_int")), XIRet()])}
         prg.update(xp.p)
         return XProgram(xp.info, prg)
 
@@ -987,7 +987,8 @@ def uncover_live(xp: XProgram):
                 before = before - _uncoverW(i)
                 before = before.union(_uncoverR(i))
                 #print("Live after: " + str(n) +" = " + str(before) )
-            l.aux = d 
+            printUncover(d)
+            l.aux = d
     return xp
 
 
@@ -1020,9 +1021,9 @@ def _uncoverR(i):
     elif(isinstance(i, XIPush)):
         return _uncoverM(i.src)
     elif(isinstance(i, XIPop)):
-        return set()
+        return set([])
     # print(i.emit())
-    return set()
+    return set([])
 
 
 def _uncoverM(a):
@@ -1046,10 +1047,10 @@ def printUncover(uncl: dict):
 ######## Build Interferences ########
 
 
-def buildInt(xp:XProgram):
+def buildInt(xp: XProgram):
     g = Graph()
     for blk in xp.p.values():
-        if(isinstance(blk,XBlock)):
+        if(isinstance(blk, XBlock)):
             for i, s in blk.aux.items():
                 if(isinstance(i, XIMov)):
                     if(s):
@@ -1061,14 +1062,25 @@ def buildInt(xp:XProgram):
                     if(s):
                         d = i.src.emit()
                         for e in s:
+                            # if(not d == e):
+                            g.add_edge(d, str(e))
+                # elif(isinstance(i, XIJmp)):
+                #     #Will need to fix this later
+                #     pass
+                elif(isinstance(i, XICall)):
+                    if(s):
+                        d = i.src.emit()
+                        for e in s:
                             if(not d == e):
                                 g.add_edge(d, str(e))
+                    # Will need to fix this later
                 else:
                     if(s):
                         d = i.dst.emit()
                         for e in s:
                             if(not d == e):
                                 g.add_edge(d, str(e))
+            printGrph(g)
             blk.aux = g
     return xp
 
@@ -1096,19 +1108,20 @@ def saturation(v: Vertex):
         satSet.add(e.get_id())
     return satSet
 
+
 def color(xp: XProgram) -> XProgram:
     for blk in xp.p.values():
         g = blk.aux
         w = list(g.vert_dict.copy())
         colorList = dict()
         available = dict()
-        cntr =0
+        cntr = 0
         for x in g.vert_dict:
             colorList.update({x: -1})
             available.update({cntr: False})
-            cntr+=1
+            cntr += 1
         colorList[w[0]] = 0
-        
+
         while w:
             u = w[0]
             color = 0
@@ -1116,43 +1129,62 @@ def color(xp: XProgram) -> XProgram:
             for e in adj:
                 if(colorList[e] != -1):
                     available[colorList[e]] = True
-            
+
             for e in available:
                 if(available[e] == False):
-                    color =e
+                    color = e
                     break
-            
+
             colorList[u] = color
 
             for e in adj:
                 if(colorList[e] != -1):
                     available[colorList[e]] = False
-            
+
             w.remove(u)
 
         blk.aux = colorList
     return xp
 
 
-################ Stupid Allocate Registers ################
-
-def stupid_allocate(xp: XProgram) ->XProgram:
-    def isEven(x): return x if (x % 2) == 0 else x+1
-    stackSize = 8*isEven(len(xp.info))
-    return stackSize
-
-
-
 ################ Allocate Registers ################
-def assign_register(xp: XProgram) -> XProgram:
-    colorList2 = dict(enumerate(usableRegs))
-    stackSize = stupid_allocate(xp)
-    print(colorList2)
-    regsList =[]
-    begin = {XLabel("begin"): XBlock([], [XIPush(XRegister("RBP")), XIMov(XRegister(
-        "RSP"), XRegister("RBP")), XISub(XCon(stackSize), XRegister("RSP")), XIJmp(XLabel("body")),
-    ])}
 
+class AllocEnv:
+    def __init__(self):
+        self.stackSize = 0
+        self.stack = {}
+
+    def setStackSize(self, e):
+        if(e in self.stack):
+            return -1*(self.stack[e])
+        else:
+            self.stack.update({e: self.stackSize})
+            self.stackSize += 8
+            return -1*(self.stack[e])
+
+    def getStackSize(self):
+        return self.stackSize
+
+
+def allocate_registers(xp: XProgram) -> XProgram:
+    alloc = AllocEnv()
+    colorList = dict(enumerate(usableRegs))
+    newXp = color(xp)
+    # Gets whatever is the first block in program assumes it is main
+    # Because Xprogram should only have one block to start
+    firstBlock: XBlock = list(newXp.p.values())[0]
+    auxBlk: dict = firstBlock.aux
+    tempStackLocs = {}
+    print(auxBlk)
+    print(len(auxBlk))
+    newXp = assign_register(newXp, colorList, alloc)
+    return newXp
+
+################ Assign Registers ################
+
+
+def assign_register(xp: XProgram, regs: dict, alloc: AllocEnv) -> XProgram:
+    regsList = []
     originalMain = []
     body = []
     for lab, blk in xp.p.items():
@@ -1162,12 +1194,19 @@ def assign_register(xp: XProgram) -> XProgram:
                 regsList = blk.aux
 
     for instr in originalMain:
-        body.append(_assign(instr, regsList, colorList2))
+        body.append(_assign(instr, regsList, regs, alloc))
     body = body[:-1]
+
+    begin = {XLabel("begin"): XBlock([], [XIPush(XRegister("RBP")), XIMov(XRegister(
+        "RSP"), XRegister("RBP")), XISub(XCon(alloc.getStackSize()), XRegister("RSP")), XIJmp(XLabel("body")),
+    ])}
+
     body.append(XIJmp(XLabel("end")))
     bdy = {XLabel("main"): XBlock([], body)}
-    end = {XLabel("end"): XBlock([], [XIAdd(XCon(stackSize), XRegister(
+
+    end = {XLabel("end"): XBlock([], [XIAdd(XCon(alloc.getStackSize()), XRegister(
         "RSP")), XIPop(XRegister("RBP")), XIRet()])}
+
     progm = {}
     progm.update(begin)
     progm.update(bdy)
@@ -1175,28 +1214,30 @@ def assign_register(xp: XProgram) -> XProgram:
     return XProgram(xp.info, progm)
 
 
-def _assign(xp, v, regs):
+def _assign(xp, v, regs, alloc):
     if(isinstance(xp, XIAdd)):
-        return XIAdd(_assignA(xp.src, v, regs), _assignA(xp.dst, v, regs))
+        return XIAdd(_assignA(xp.src, v, regs, alloc), _assignA(xp.dst, v, regs, alloc))
     elif(isinstance(xp, XISub)):
-        return XISub(_assignA(xp.src, v, regs), _assignA(xp.dst, v, regs))
+        return XISub(_assignA(xp.src, v, regs, alloc), _assignA(xp.dst, v, regs, alloc))
     elif(isinstance(xp, XIMov)):
-        return XIMov(_assignA(xp.src, v, regs), _assignA(xp.dst, v, regs))
+        return XIMov(_assignA(xp.src, v, regs, alloc), _assignA(xp.dst, v, regs, alloc))
     elif(isinstance(xp, XINeg)):
-        return XINeg(_assignA(xp.src, v, regs))
+        return XINeg(_assignA(xp.src, v, regs, alloc))
     elif(isinstance(xp, XIPush)):
-        return XIPush(_assignA(xp.src, v, regs))
+        return XIPush(_assignA(xp.src, v, regs, alloc))
     elif(isinstance(xp, XIPop)):
-        return XIPush(_assignA(xp.src, v, regs))
+        return XIPush(_assignA(xp.src, v, regs, alloc))
     else:
         return xp
 
 
-def _assignA(a, v, regs):
+def _assignA(a, v, regs, alloc: AllocEnv):
     if(isinstance(a, XVar)):
-        # sub = v.index(a.name) * -8
-        # return XMem(XRegister("RBP"), sub)
-        temp = v[a.emit()]
-        return XRegister(regs[temp])
+        if(a.emit() in v):
+            temp = v[a.emit()]
+            return XRegister(regs[temp])
+        else:
+            sub = alloc.setStackSize(a.emit())
+            return XMem(XRegister("RBP"), sub)
     else:
         return a
