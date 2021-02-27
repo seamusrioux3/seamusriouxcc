@@ -66,6 +66,15 @@ class Test:
             os.remove(binName)
 
         return int(stdout)
+    
+    def getToXP(self, r):
+        pu = uniquify(r)
+        prco = RCO(pu)
+        pecon = econ(prco)
+        xp = select(pecon)
+        uncl = uncover_live(xp)
+        built = buildInt(uncl)
+        return built
 
     def testAll(self, p):
         actual = 0
@@ -806,7 +815,7 @@ unc5 = XProgram([], {XLabel("main"): XBlock({11: set(), 10: set(), 9: {'RAX', 'T
 ])})
 
 ################ Assign Registers Tests ################
-print("\n Allocate Registers Testing\n")
+print("\n Assign Registers Testing\n")
 alloc1 = XProgram(["!A", "!B", "!C"], {XLabel("main"): XBlock({}, [
     XIMov(XCon(5), XRegister("rcx")),
     XIMov(XCon(30), XRegister("rbx")),
@@ -855,6 +864,74 @@ alloc4 = XProgram([],{XLabel("main"): XBlock({}, [
     XIMov(XRegister("rdx"), XRegister("rax")),
     # XIJmp(XVar("conclusion"))
 ])})
+
+
+################ Allocate Registers Tests ################
+print("\n Allocate Registers Testing\n")
+
+#Original 1
+letTest10 = RLet(RVar("x"), RRead(), RLet(RVar("y"), RRead(),
+                                          RAdd(RAdd(RVar("x"), RVar("y")), RNum(42))))
+
+allocBeforeLetTest10 = s.getToXP(letTest10)
+allocAfterLetTest10 = allocate_registers(allocBeforeLetTest10)
+
+print("Before \n" + allocBeforeLetTest10.emit())
+print("After \n" + allocAfterLetTest10.emit())
+print("Compare Ans: " + str(letTest10.interp()) + "->" + str(allocBeforeLetTest10.interp()) + 
+"->" + str(allocAfterLetTest10.interp()))
+
+#Original 2
+print("\n Test #2 \n")
+letTest11 = RNegate(RLet(RVar("V0"), RNegate(RLet(RVar("V0"), RNum(2), RVar(
+     "V0"))), RAdd(RAdd(RNum(2), RRead()), RAdd(RNum(4), RVar("V0")))))
+
+allocBeforeLetTest11 = s.getToXP(letTest11)
+print("Before \n" + allocBeforeLetTest11.emit())
+allocAfterLetTest11 = allocate_registers(allocBeforeLetTest11)
+print("After \n" + allocAfterLetTest11.emit())
+print("Compare Ans: " + str(letTest11.interp()) + "->" + str(allocBeforeLetTest11.interp()) + 
+ "->" + str(allocAfterLetTest11.interp()))
+
+#Original 3
+print("\n Test #3 \n")
+randomTest3 = randomR1(3)
+print(randomTest3.pp())
+allocBefrandomTest3 = s.getToXP(randomTest3)
+print("Before \n" + allocBefrandomTest3.emit())
+allocAfterLetTest3 = allocate_registers(allocBefrandomTest3)
+print("After \n" + allocAfterLetTest3.emit())
+print("Compare Ans: " + str(randomTest3.interp()) + "->" + str(allocBefrandomTest3.interp()) + 
+ "->" + str(allocAfterLetTest3.interp()))
+
+
+ #Original 4
+print("\n Test #4 \n")
+randomTest5 = randomR1(5)
+print(randomTest5.pp())
+allocBefrandomTest5 = s.getToXP(randomTest5)
+print("Before \n" + allocBefrandomTest5.emit())
+allocAfterLetTest5 = allocate_registers(allocBefrandomTest5)
+print("After \n" + allocAfterLetTest5.emit())
+print("Compare Ans: " + str(randomTest5.interp()) + "->" + str(allocBefrandomTest5.interp()) + 
+ "->" + str(allocAfterLetTest5.interp()))
+
+
+
+#Original 5
+print("\n Test #5 \n")
+negTest = RNegate(RNegate(RNegate(RNum(11))))
+print(negTest.pp())
+allocBeforeNeg = s.getToXP(negTest)
+print("Before \n" + allocBeforeNeg.emit())
+allocAfterNeg = allocate_registers(allocBeforeNeg)
+print("After \n" + allocAfterNeg.emit())
+print("Compare Ans: " + str(negTest.interp()) + "->" + str(allocAfterNeg.interp()) + 
+ "->" + str(allocAfterNeg.interp()))
+
+s.test(randomTest3.interp(), allocAfterLetTest3.interp())
+s.test(randomTest5.interp(), allocAfterLetTest5.interp())
+s.test(negTest.interp(), allocAfterNeg.interp())
 
 ######## Combined Testing ########
 print("\nCombined Tests\n")
