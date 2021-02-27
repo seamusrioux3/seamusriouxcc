@@ -461,15 +461,15 @@ uncprog4 = CProgram(["R1", "R2", "R3"], {
     ]
 })
 
-uncprog5 = CProgram(["R1", "R2", "R3", "R4"], {
+uncprog5 = CProgram([], {
     CLabel("main"):
-    [
+    CBlock([], [
         CSet(CVar("R1"), CNeg(CNum(2))),
         CSet(CVar("R2"), CNeg(CNum(2))),
         CSet(CVar("R3"), CNeg(CVar("R2"))),
         CSet(CVar("R4"), CAdd(CVar("R1"), CVar("R3"))),
         CRet(CVar("R4")),
-    ]
+    ])
 })
 
 uncprog6 = CProgram(["R1"], {
@@ -768,26 +768,26 @@ unc4 = XProgram([], {XLabel("main"): XBlock({11: set(), 10: set(), 9: {'RAX', 'T
 # printGrph(buildInt(buildInt4))
 
 ######## Color Graph Testing ########
-print("Color Graph Testing")
+# print("Color Graph Testing")
 
-buildInt1 = uncover_live(uncoverLiveTest1)
-print(buildInt1)
-buildIntAfter1 = buildInt(buildInt1)
-print(color(buildIntAfter1))
+# buildInt1 = uncover_live(uncoverLiveTest1)
+# print(buildInt1)
+# buildIntAfter1 = buildInt(buildInt1)
+# print(color(buildIntAfter1))
 
-buildInt2 = uncover_live(uncoverLiveTest2)
-print(buildInt2)
-buildIntAfter2 = buildInt(buildInt2)
-print(color(buildIntAfter2))
+# buildInt2 = uncover_live(uncoverLiveTest2)
+# print(buildInt2)
+# buildIntAfter2 = buildInt(buildInt2)
+# print(color(buildIntAfter2))
 
-buildInt3 = uncover_live(uncoverLiveTest3)
-print(buildInt3)
-buildIntAfter3 = buildInt(buildInt3)
-print(color(buildIntAfter3))
+# buildInt3 = uncover_live(uncoverLiveTest3)
+# print(buildInt3)
+# buildIntAfter3 = buildInt(buildInt3)
+# print(color(buildIntAfter3))
 
-buildInt4 = uncover_live(unc4)
-buildIntAfter4 = buildInt(buildInt4)
-print(color(buildIntAfter4))
+# buildInt4 = uncover_live(unc4)
+# buildIntAfter4 = buildInt(buildInt4)
+# print(color(buildIntAfter4))
 
 #Updated unc4 with new registers example from color function
 unc5 = XProgram([], {XLabel("main"): XBlock({11: set(), 10: set(), 9: {'RAX', 'T'}, 8: {'Z', 'T'}, 7: {'Z', 'T'}, 6: {'Y', 'Z'}, 5: {'Y', 'Z', 'W'}, 4: {'X', 'Y', 'W'}, 3: {'X', 'W'}, 2: {'X', 'W'}, 1: {'V', 'W'}, 0: {'V'}}, [
@@ -805,6 +805,56 @@ unc5 = XProgram([], {XLabel("main"): XBlock({11: set(), 10: set(), 9: {'RAX', 'T
     # XIJmp(XVar("conclusion"))
 ])})
 
+################ Assign Registers Tests ################
+print("\n Allocate Registers Testing\n")
+alloc1 = XProgram(["!A", "!B", "!C"], {XLabel("main"): XBlock({}, [
+    XIMov(XCon(5), XRegister("rcx")),
+    XIMov(XCon(30), XRegister("rbx")),
+    XIMov(XRegister("rcx"), XRegister("rcx")),
+    XIMov(XCon(10), XRegister("rbx")),
+    XIAdd(XRegister("rbx"), XRegister("rcx")),
+    XIMov(XRegister("rcx"), XRegister("rax")),
+    XIRet()
+])})
+
+alloc2 = XProgram(["!A", "!B", "!C", "!D"], {XLabel("main"): XBlock({}, [
+    XIMov(XCon(5), XRegister("rcx")),
+    XIMov(XCon(30), XRegister("rbx")),
+    XIMov(XVar("rcx"), XRegister("rcx")),
+    XIMov(XCon(10), XRegister("rbx")),
+    XIAdd(XRegister("rbx"), XRegister("rcx")),
+    XIMov(XCon(1), XRegister("rbx")),
+    XIMov(XRegister("rbx"), XRegister("rax")),
+    XIRet()
+])})
+
+alloc3 = XProgram([],{XLabel("main"): XBlock({}, [
+    XIMov(XCon(1), XRegister("rbx")),
+    XIMov(XCon(42), XRegister("rdx")),
+    XIMov(XRegister("rbx"), XRegister("rbx")),
+    XIAdd(XCon(7), XRegister("rbx")),
+    XIMov(XRegister("rbx"), XRegister("rcx")),
+    XIMov(XRegister("rbx"), XRegister("rbx")),
+    XIAdd(XRegister("rdx"), XRegister("rbx")),
+    XIMov(XRegister("rcx"), XRegister("rcx")),
+    XINeg(XRegister("rcx")),
+    XIMov(XRegister("rbx"), XRegister("rax")),
+    XIAdd(XRegister("rcx"), XRegister("rax")),
+    # XIJmp(XVar("conclusion"))
+])})
+
+alloc4 = XProgram([],{XLabel("main"): XBlock({}, [
+    XIMov(XCon(2), XRegister("rbx")),
+    XINeg(XRegister("rdx")),
+    XIMov(XCon(2), XRegister("rcx")),
+    XINeg(XRegister("rcx")),
+    XIMov(XRegister("rcx"), XRegister("rcx")),
+    XINeg(XRegister("rcx")),
+    XIMov(XRegister("rdx"), XRegister("rbx")),
+    XIAdd(XRegister("rcx"), XRegister("rbx")),
+    XIMov(XRegister("rdx"), XRegister("rax")),
+    # XIJmp(XVar("conclusion"))
+])})
 
 ######## Combined Testing ########
 print("\nCombined Tests\n")
