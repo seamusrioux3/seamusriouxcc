@@ -216,14 +216,14 @@ class XRegister:
 
 
 ########### Register Value Set up ##############
-allRegs = ["%\rsp", "%\rbp", "%\rax", "%\rbx", "%\rcx", "%\rdx", "%\rsi",
-           "%\rdi", "%\r8", "%\r9", "%\r10", "%\r11", "%\r12", "%\r13", "%\r14", "%\r15"]
-calleeSavedRegs = ["%\rbx", "%\rbp", "%\r12", "%\r13", "%\r14", "%\r15"]
+allRegs = ["rsp", "rbp", "rax", "rbx", "rcx", "rdx", "rsi",
+           "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"]
+calleeSavedRegs = ["rbx", "rbp", "r12", "r13", "r14", "r15"]
 callerSavedRegs = list(set(allRegs) - set(calleeSavedRegs))
-argumentRegs = ["%\rdi", "rsi", "rdx", "rcx", "r8", "r9"]
+argumentRegs = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
 usableRegs = ["rbx", "rcx", "rdx", "rsi",
               "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"]
-tempReg = "%\rax"
+tempReg = "rax"
 
 
 class XCon:
@@ -962,15 +962,6 @@ def _patch(i):
     return [i]
 
 
-######## Main Pass ########
-
-def mainpass(xp):
-    if(isinstance(xp, XProgram)):
-        prg = {XLabel("main"): XBlock([], [XICall(XLabel("begin")), XIMov(
-            XRegister("rax"), XRegister("RDI")), XICall(XLabel("print_int")), XIRet()])}
-        prg.update(xp.p)
-        return XProgram(xp.info, prg)
-
 
 ######## Uncover Live ########
 
@@ -1062,18 +1053,16 @@ def buildInt(xp: XProgram):
                     if(s):
                         d = i.src.emit()
                         for e in s:
-                            # if(not d == e):
-                            g.add_edge(d, str(e))
-                # elif(isinstance(i, XIJmp)):
-                #     #Will need to fix this later
-                #     pass
-                elif(isinstance(i, XICall)):
-                    if(s):
-                        d = i.src.emit()
-                        for e in s:
                             if(not d == e):
                                 g.add_edge(d, str(e))
-                    # Will need to fix this later
+                elif(isinstance(i, XICall)):
+                    if(s):
+                        #d = i.src.emit()
+                        for e in s:
+                            for u in callerSavedRegs:
+                                if(not u == e):
+                                    g.add_edge(u, str(e))
+                    #Will need to fix this later
                 else:
                     if(s):
                         d = i.dst.emit()
@@ -1112,38 +1101,39 @@ def saturation(v: Vertex):
 def color(xp: XProgram) -> XProgram:
     for blk in xp.p.values():
         g = blk.aux
-        w = list(g.vert_dict.copy())
-        colorList = dict()
-        available = dict()
-        cntr = 0
-        for x in g.vert_dict:
-            colorList.update({x: -1})
-            available.update({cntr: False})
-            cntr += 1
-        colorList[w[0]] = 0
+        if(g.vert_dict):
+            w = list(g.vert_dict.copy())
+            colorList = dict()
+            available = dict()
+            cntr = 0
+            for x in g.vert_dict:
+                colorList.update({x: -1})
+                available.update({cntr: False})
+                cntr += 1
+            colorList[w[0]] = 0
 
-        while w:
-            u = w[0]
-            color = 0
-            adj = saturation(g.vert_dict[u])
-            for e in adj:
-                if(colorList[e] != -1):
-                    available[colorList[e]] = True
+            while w:
+                u = w[0]
+                color = 0
+                adj = saturation(g.vert_dict[u])
+                for e in adj:
+                    if(colorList[e] != -1):
+                        available[colorList[e]] = True
 
-            for e in available:
-                if(available[e] == False):
-                    color = e
-                    break
+                for e in available:
+                    if(available[e] == False):
+                        color = e
+                        break
 
-            colorList[u] = color
+                colorList[u] = color
 
-            for e in adj:
-                if(colorList[e] != -1):
-                    available[colorList[e]] = False
+                for e in adj:
+                    if(colorList[e] != -1):
+                        available[colorList[e]] = False
 
-            w.remove(u)
+                w.remove(u)
 
-        blk.aux = colorList
+            blk.aux = colorList
     return xp
 
 
@@ -1174,10 +1164,9 @@ def allocate_registers(xp: XProgram) -> XProgram:
     # Because Xprogram should only have one block to start
     firstBlock: XBlock = list(newXp.p.values())[0]
     auxBlk: dict = firstBlock.aux
-    tempStackLocs = {}
     print(auxBlk)
-    print(len(auxBlk))
     newXp = assign_register(newXp, colorList, alloc)
+    newXp = mainpass(newXp, alloc)
     return newXp
 
 ################ Assign Registers ################
@@ -1197,20 +1186,20 @@ def assign_register(xp: XProgram, regs: dict, alloc: AllocEnv) -> XProgram:
         body.append(_assign(instr, regsList, regs, alloc))
     body = body[:-1]
 
-    begin = {XLabel("begin"): XBlock([], [XIPush(XRegister("RBP")), XIMov(XRegister(
+    begin = {XLabel("main"): XBlock([], [XIPush(XRegister("RBP")), XIMov(XRegister(
         "RSP"), XRegister("RBP")), XISub(XCon(alloc.getStackSize()), XRegister("RSP")), XIJmp(XLabel("body")),
     ])}
 
     body.append(XIJmp(XLabel("end")))
-    bdy = {XLabel("main"): XBlock([], body)}
+    bdy = {XLabel("body"): XBlock([], body)}
 
     end = {XLabel("end"): XBlock([], [XIAdd(XCon(alloc.getStackSize()), XRegister(
         "RSP")), XIPop(XRegister("RBP")), XIRet()])}
 
     progm = {}
-    progm.update(begin)
+    #progm.update(begin)
     progm.update(bdy)
-    progm.update(end)
+    #progm.update(end)
     return XProgram(xp.info, progm)
 
 
@@ -1238,6 +1227,29 @@ def _assignA(a, v, regs, alloc: AllocEnv):
             return XRegister(regs[temp])
         else:
             sub = alloc.setStackSize(a.emit())
-            return XMem(XRegister("RBP"), sub)
+            return XMem(XRegister("rbp"), sub)
     else:
         return a
+
+
+######## Main Pass ########
+
+def mainpass(xp: XProgram, alloc: AllocEnv):
+    prg ={}
+    bdyblk =[]
+    mainBdy = []
+    endBlk  = [XIAdd(XCon(alloc.getStackSize()), XRegister("rsp"))]    
+    
+    for r in calleeSavedRegs:
+        mainBdy.append(XIPush(XRegister(r)))
+        endBlk.append(XIPop(XRegister(r)))
+    mainBdy = mainBdy + [XIMov(XRegister("rsp"), XRegister("rbp"))]
+    mainBdy = mainBdy + [XISub(XCon(alloc.getStackSize()), XRegister("rsp")), XIJmp(XLabel("body"))]
+    endBlk = endBlk + [XIMov(XRegister("rax"), XRegister("rdi")), XICall(XLabel("print_int")), XIRet() ]
+        
+    main = {XLabel("main"): XBlock([],mainBdy)}
+    end = {XLabel("end"): XBlock([], endBlk)}
+    xp.p.update(main)
+    xp.p.update(end)
+
+    return XProgram(xp.info, xp.p)
