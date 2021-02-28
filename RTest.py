@@ -72,9 +72,9 @@ class Test:
         prco = RCO(pu)
         pecon = econ(prco)
         xp = select(pecon)
-        uncl = uncover_live(xp)
-        built = buildInt(uncl)
-        return built
+        # uncl = uncover_live(xp)
+        # built = buildInt(uncl)
+        return xp
 
     def testAll(self, p):
         actual = 0
@@ -82,13 +82,13 @@ class Test:
         pu = uniquify(po)
         pr = RCO(pu)
         pe = econ(pr)
-        punc = uncover(pe)
-        xz = select(punc)
-        # az = assign(xz)
-        # ptch = patch(az)
-        # m = mainpass(ptch)
-        # rl = self.testX0OnHardware(m)
-        # print("original: " + p.pp())
+        xz = select(pe)
+        uncl = uncover_live(xz)
+        built = buildInt(uncl)
+        aloc = allocate_registers(built)
+        ptch = patch(aloc)
+        real = self.testX0OnHardware(ptch)
+        #print("original: " + p.pp())
         # print("original ans: " + str(p.interp()))
         # print("optimized: " + po.pp())
         # print("optimized ans: " + str(po.interp()))
@@ -107,8 +107,8 @@ class Test:
         # print("patch: " + ptch.emit())
         # print("patch: " + str(ptch.interp()))
 
-        if (p.interp() == po.interp() == pu.interp() == pr.interp() == pe.interp() == punc.interp() == xz.interp() == az.interp() == ptch.interp() == m.interp() == rl):
-            actual = m.interp()
+        if (p.interp() == po.interp() == pu.interp() == pr.interp() == pe.interp() == uncl.interp() == xz.interp() == built.interp() == ptch.interp() == real):
+            actual = aloc.interp()
         else:
             actual = not p.interp()
 
@@ -481,7 +481,7 @@ uncprog5 = CProgram([], {
     ])
 })
 
-uncprog6 = CProgram(["R1"], {
+uncprog6 = CProgram([], {
     CLabel("main"):
     [
         CSet(CVar("R1"), CNum(4)),
@@ -870,122 +870,122 @@ alloc4 = XProgram([],{XLabel("main"): XBlock({}, [
 print("\n Allocate Registers Testing\n")
 
 #Original 1
-letTest10 = RLet(RVar("x"), RRead(), RLet(RVar("y"), RRead(),
-                                          RAdd(RAdd(RVar("x"), RVar("y")), RNum(42))))
+# letTest10 = RLet(RVar("x"), RRead(), RLet(RVar("y"), RRead(),
+#                                           RAdd(RAdd(RVar("x"), RVar("y")), RNum(42))))
 
-allocBeforeLetTest10 = s.getToXP(letTest10)
-allocAfterLetTest10 = allocate_registers(allocBeforeLetTest10)
+# allocBeforeLetTest10 = s.getToXP(letTest10)
+# allocAfterLetTest10 = allocate_registers(allocBeforeLetTest10)
 
-print("Before \n" + allocBeforeLetTest10.emit())
-print("After \n" + allocAfterLetTest10.emit())
-print("Compare Ans: " + str(letTest10.interp()) + "->" + str(allocBeforeLetTest10.interp()) + 
-"->" + str(allocAfterLetTest10.interp()))
+# print("Before \n" + allocBeforeLetTest10.emit())
+# print("After \n" + allocAfterLetTest10.emit())
+# print("Compare Ans: " + str(letTest10.interp()) + "->" + str(allocBeforeLetTest10.interp()) + 
+# "->" + str(allocAfterLetTest10.interp()))
 
-#Original 2
-print("\n Test #2 \n")
-letTest11 = RNegate(RLet(RVar("V0"), RNegate(RLet(RVar("V0"), RNum(2), RVar(
-     "V0"))), RAdd(RAdd(RNum(2), RRead()), RAdd(RNum(4), RVar("V0")))))
+# #Original 2
+# print("\n Test #2 \n")
+# letTest11 = RNegate(RLet(RVar("V0"), RNegate(RLet(RVar("V0"), RNum(2), RVar(
+#      "V0"))), RAdd(RAdd(RNum(2), RRead()), RAdd(RNum(4), RVar("V0")))))
 
-allocBeforeLetTest11 = s.getToXP(letTest11)
-print("Before \n" + allocBeforeLetTest11.emit())
-allocAfterLetTest11 = allocate_registers(allocBeforeLetTest11)
-print("After \n" + allocAfterLetTest11.emit())
-print("Compare Ans: " + str(letTest11.interp()) + "->" + str(allocBeforeLetTest11.interp()) + 
- "->" + str(allocAfterLetTest11.interp()))
+# allocBeforeLetTest11 = s.getToXP(letTest11)
+# print("Before \n" + allocBeforeLetTest11.emit())
+# allocAfterLetTest11 = allocate_registers(allocBeforeLetTest11)
+# print("After \n" + allocAfterLetTest11.emit())
+# print("Compare Ans: " + str(letTest11.interp()) + "->" + str(allocBeforeLetTest11.interp()) + 
+#  "->" + str(allocAfterLetTest11.interp()))
 
-#Original 3
-print("\n Test #3 \n")
-randomTest3 = randomR1(3)
-print(randomTest3.pp())
-allocBefrandomTest3 = s.getToXP(randomTest3)
-print("Before \n" + allocBefrandomTest3.emit())
-allocAfterLetTest3 = allocate_registers(allocBefrandomTest3)
-print("After \n" + allocAfterLetTest3.emit())
-print("Compare Ans: " + str(randomTest3.interp()) + "->" + str(allocBefrandomTest3.interp()) + 
- "->" + str(allocAfterLetTest3.interp()))
-
-
- #Original 4
-print("\n Test #4 \n")
-randomTest5 = randomR1(5)
-print(randomTest5.pp())
-allocBefrandomTest5 = s.getToXP(randomTest5)
-print("Before \n" + allocBefrandomTest5.emit())
-allocAfterLetTest5 = allocate_registers(allocBefrandomTest5)
-print("After \n" + allocAfterLetTest5.emit())
-print("Compare Ans: " + str(randomTest5.interp()) + "->" + str(allocBefrandomTest5.interp()) + 
- "->" + str(allocAfterLetTest5.interp()))
+# #Original 3
+# print("\n Test #3 \n")
+# randomTest3 = randomR1(3)
+# print(randomTest3.pp())
+# allocBefrandomTest3 = s.getToXP(randomTest3)
+# print("Before \n" + allocBefrandomTest3.emit())
+# allocAfterLetTest3 = allocate_registers(allocBefrandomTest3)
+# print("After \n" + allocAfterLetTest3.emit())
+# print("Compare Ans: " + str(randomTest3.interp()) + "->" + str(allocBefrandomTest3.interp()) + 
+#  "->" + str(allocAfterLetTest3.interp()))
 
 
+#  #Original 4
+# print("\n Test #4 \n")
+# randomTest5 = randomR1(5)
+# print(randomTest5.pp())
+# allocBefrandomTest5 = s.getToXP(randomTest5)
+# print("Before \n" + allocBefrandomTest5.emit())
+# allocAfterLetTest5 = allocate_registers(allocBefrandomTest5)
+# print("After \n" + allocAfterLetTest5.emit())
+# print("Compare Ans: " + str(randomTest5.interp()) + "->" + str(allocBefrandomTest5.interp()) + 
+#  "->" + str(allocAfterLetTest5.interp()))
 
-#Original 5
-print("\n Test #5 \n")
-negTest = RNegate(RNegate(RNegate(RNum(11))))
-print(negTest.pp())
-allocBeforeNeg = s.getToXP(negTest)
-print("Before \n" + allocBeforeNeg.emit())
-allocAfterNeg = allocate_registers(allocBeforeNeg)
-print("After \n" + allocAfterNeg.emit())
-print("Compare Ans: " + str(negTest.interp()) + "->" + str(allocAfterNeg.interp()) + 
- "->" + str(allocAfterNeg.interp()))
 
-s.test(randomTest3.interp(), allocAfterLetTest3.interp())
-s.test(randomTest5.interp(), allocAfterLetTest5.interp())
-s.test(negTest.interp(), allocAfterNeg.interp())
+
+# #Original 5
+# print("\n Test #5 \n")
+# negTest = RNegate(RNegate(RNegate(RNum(11))))
+# print(negTest.pp())
+# allocBeforeNeg = s.getToXP(negTest)
+# print("Before \n" + allocBeforeNeg.emit())
+# allocAfterNeg = allocate_registers(allocBeforeNeg)
+# print("After \n" + allocAfterNeg.emit())
+# print("Compare Ans: " + str(negTest.interp()) + "->" + str(allocAfterNeg.interp()) + 
+#  "->" + str(allocAfterNeg.interp()))
+
+# s.test(randomTest3.interp(), allocAfterLetTest3.interp())
+# s.test(randomTest5.interp(), allocAfterLetTest5.interp())
+# s.test(negTest.interp(), allocAfterNeg.interp())
 
 ######## Combined Testing ########
 print("\nCombined Tests\n")
 
-# s.testUncover(letTest1)
-# s.testAll(letTest2)
-# s.testAll(letTest3)
-# s.testAll(letTest4)
-# s.testAll(letTest5)
-# s.testAll(letTest6)
-# s.testAll(letTest7)
-# s.testAll(letTest8)
-# s.testAll(letTest9)
-# s.testAll(letTest10)
-# s.testAll(Econprog1R)
-# s.testAll(Econprog2R)
-# s.testAll(Econprog3R)
-# s.testAll(Econprog4R)
-# s.testAll(Econprog5R)
-# s.testAll(Econprog6R)
-# s.testAll(Rcoprog1)
-# s.testAll(Rcoprog2)
-# s.testAll(Rcoprog3)
-# s.testAll(Rcoprog4)
-# s.testAll(Rcoprog5)
-# s.testAll(Rcoprog6)
-# s.testAll(Uprog1)
-# s.testAll(Uprog2)
-# s.testAll(Uprog3)
-# s.testAll(Uprog4)
-# s.testAll(Uprog5)
-# s.testAll(Uprog6)
-# s.testAll(RAdd(RNum(22), RAdd(RNum(23), RRead())))
-# s.testAll(RAdd(RNegate(RNum(22)), RNum(23)))
-# s.testAll(RAdd(RNum(22), RNum(23)))
-# s.testAll(RNegate(RNegate(RNum(975))))
-# s.testAll(RNegate(RAdd(RNum(10), RAdd(RRead(), RNum(12)))))
-# s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RNegate(RRead())))))))
-# s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RRead()))))))
-# s.testAll(RAdd(RNum(22), RAdd(RNum(23), RNum(20))))
-# s.testAll(RNegate(RLet(RVar("V0"), RNegate(RLet(RVar("V0"), RNum(2), RVar(
-#     "V0"))), RAdd(RAdd(RNum(2), RRead()), RAdd(RNum(4), RVar("V0"))))))
+s.testAll(letTest1)
+s.testAll(letTest2)
+s.testAll(letTest3)
+s.testAll(letTest4)
+s.testAll(letTest5)
+s.testAll(letTest6)
+s.testAll(letTest7)
+s.testAll(letTest8)
+s.testAll(letTest9)
+s.testAll(letTest10)
+s.testAll(Econprog1R)
+s.testAll(Econprog2R)
+s.testAll(Econprog3R)
+s.testAll(Econprog4R)
+s.testAll(Econprog5R)
+s.testAll(Econprog6R)
+s.testAll(Rcoprog1)
+s.testAll(Rcoprog2)
+s.testAll(Rcoprog3)
+s.testAll(Rcoprog4)
+s.testAll(Rcoprog5)
+s.testAll(Rcoprog6)
+s.testAll(Uprog1)
+s.testAll(Uprog2)
+s.testAll(Uprog3)
+s.testAll(Uprog4)
+s.testAll(Uprog5)
+s.testAll(Uprog6)
+s.testAll(RAdd(RNum(22), RAdd(RNum(23), RRead())))
+s.testAll(RAdd(RNegate(RNum(22)), RNum(23)))
+s.testAll(RAdd(RNum(22), RNum(23)))
+s.testAll(RNegate(RNegate(RNum(975))))
+s.testAll(RNegate(RAdd(RNum(10), RAdd(RRead(), RNum(12)))))
+s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RNegate(RRead())))))))
+s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RRead()))))))
+s.testAll(RAdd(RNum(22), RAdd(RNum(23), RNum(20))))
+s.testAll(RNegate(RLet(RVar("V0"), RNegate(RLet(RVar("V0"), RNum(2), RVar(
+    "V0"))), RAdd(RAdd(RNum(2), RRead()), RAdd(RNum(4), RVar("V0"))))))
 
 
-# for i in range(10):
-#     s.testAll(randomR1(4))
-# for i in range(100):
-#     s.testAll(randomR1(3))
-# for i in range(100):
-#     s.testAll(randomR1(2))
-# for i in range(100):
-#     s.testAll(randomR1(1))
-# for i in range(100):
-#     s.testAll(randomR1(0))
+for i in range(10):
+    s.testAll(randomR1(4))
+for i in range(100):
+    s.testAll(randomR1(3))
+for i in range(100):
+    s.testAll(randomR1(2))
+for i in range(100):
+    s.testAll(randomR1(1))
+for i in range(100):
+    s.testAll(randomR1(0))
 # s.testAll(randomR1(5))
 # s.testAll(randomR1(6))
 # s.testAll(randomR1(7))
