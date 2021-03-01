@@ -218,7 +218,7 @@ class XRegister:
 ########### Register Value Set up ##############
 allRegs = ["rsp", "rbp", "rax", "rbx", "rcx", "rdx", "rsi",
            "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"]
-calleeSavedRegs = ["rbx", "rbp", "r12", "r13", "r14", "r15"]
+calleeSavedRegs = ["r12", "r13", "r14", "r15"]
 callerSavedRegs = list(set(allRegs) - set(calleeSavedRegs))
 argumentRegs = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
 usableRegs = ["rbx", "rcx", "rdx", "rsi",
@@ -806,19 +806,6 @@ def econHelper(r, env):
     else:
         return CRet(r)
 
-######## Uncover Locals ########
-
-
-def uncover(cp=CProgram()):
-    progs = cp.p
-    info = []
-    for blks in progs.values():
-        if(isinstance(blks, CBlock)):
-            for seq in blks.p:
-                if(isinstance(seq, CSet)):
-                    info.append(seq.var.var)
-    return CProgram(info, progs)
-
 
 ######## Select Instr Pass ########
 
@@ -1040,14 +1027,24 @@ def printUncover(uncl: dict):
 
 def buildInt(xp: XProgram):
     g = Graph()
+    m = Graph()
     for blk in xp.p.values():
         if(isinstance(blk, XBlock)):
             for i, s in blk.aux.items():
                 if(isinstance(i, XIMov)):
                     if(s):
-                        d = _buildM(i.dst)
+                        d = i.dst.emit()
+                        sr = i.src.emit()
                         for e in s:
-                            if(not (d == e or e == _buildM(i.src))):
+                            if(not (d == e or e == sr)):
+                                g.add_edge(d, str(e))
+                                m.add_edge(sr, d)
+                elif(isinstance(i, XIAdd)):
+                    if(s):
+                        d = i.dst.emit()
+                        sr = i.src.emit()
+                        for e in s:
+                            if(not d == e):
                                 g.add_edge(d, str(e))
                 elif(isinstance(i, XINeg)):
                     if(s):
@@ -1057,12 +1054,10 @@ def buildInt(xp: XProgram):
                                 g.add_edge(d, str(e))
                 elif(isinstance(i, XICall)):
                     if(s):
-                        #d = i.src.emit()
                         for e in s:
                             for u in callerSavedRegs:
                                 if(not u == e):
                                     g.add_edge(u, str(e))
-                    #Will need to fix this later
                 else:
                     if(s):
                         d = i.dst.emit()
@@ -1070,17 +1065,9 @@ def buildInt(xp: XProgram):
                             if(not d == e):
                                 g.add_edge(d, str(e))
             printGrph(g)
-            blk.aux = g
+            printGrph(m)
+            blk.aux = (g, m)
     return xp
-
-
-def _buildM(a):
-    if(isinstance(a, XRegister)):
-        return a.emit()
-    elif(isinstance(a, XVar)):
-        return a.emit()
-    else:
-        return None
 
 
 def printGrph(g: Graph):
@@ -1100,7 +1087,8 @@ def saturation(v: Vertex):
 
 def color(xp: XProgram) -> XProgram:
     for blk in xp.p.values():
-        g = blk.aux
+        g = blk.aux[0]
+        m = blk.aux[1]
         if(g.vert_dict):
             w = list(g.vert_dict.copy())
             colorList = dict()
@@ -1186,20 +1174,11 @@ def assign_register(xp: XProgram, regs: dict, alloc: AllocEnv) -> XProgram:
         body.append(_assign(instr, regsList, regs, alloc))
     body = body[:-1]
 
-    begin = {XLabel("main"): XBlock([], [XIPush(XRegister("RBP")), XIMov(XRegister(
-        "RSP"), XRegister("RBP")), XISub(XCon(alloc.getStackSize()), XRegister("RSP")), XIJmp(XLabel("body")),
-    ])}
-
     body.append(XIJmp(XLabel("end")))
     bdy = {XLabel("body"): XBlock([], body)}
 
-    end = {XLabel("end"): XBlock([], [XIAdd(XCon(alloc.getStackSize()), XRegister(
-        "RSP")), XIPop(XRegister("RBP")), XIRet()])}
-
     progm = {}
-    #progm.update(begin)
     progm.update(bdy)
-    #progm.update(end)
     return XProgram(xp.info, progm)
 
 
@@ -1235,15 +1214,12 @@ def _assignA(a, v, regs, alloc: AllocEnv):
 ######## Main Pass ########
 
 def mainpass(xp: XProgram, alloc: AllocEnv):
-    prg ={}
-    bdyblk =[]
-    mainBdy = []
-    endBlk  = [XIAdd(XCon(alloc.getStackSize()), XRegister("rsp"))]    
+    mainBdy = [XIPush(XRegister("rbp")), XIMov(XRegister("rsp"), XRegister("rbp")),XIPush(XRegister("rbx"))]
+    endBlk  = [XIAdd(XCon(alloc.getStackSize()), XRegister("rsp")), XIPop(XRegister("rbx")), XIPop(XRegister("rbp"))]    
     
     for r in calleeSavedRegs:
         mainBdy.append(XIPush(XRegister(r)))
         endBlk.append(XIPop(XRegister(r)))
-    mainBdy = mainBdy + [XIMov(XRegister("rsp"), XRegister("rbp"))]
     mainBdy = mainBdy + [XISub(XCon(alloc.getStackSize()), XRegister("rsp")), XIJmp(XLabel("body"))]
     endBlk = endBlk + [XIMov(XRegister("rax"), XRegister("rdi")), XICall(XLabel("print_int")), XIRet() ]
         
