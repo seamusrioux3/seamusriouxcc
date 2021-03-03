@@ -216,14 +216,17 @@ class XRegister:
 
 
 ########### Register Value Set up ##############
-allRegs = ["rsp", "rbp", "rax", "rbx", "rcx", "rdx", "rsi",
-           "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"]
-calleeSavedRegs = ["r12", "r13", "r14", "r15"]
-callerSavedRegs = list(set(allRegs) - set(calleeSavedRegs))
-argumentRegs = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
-usableRegs = ["rbx", "rcx", "rdx", "rsi",
-              "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"]
-tempReg = "rax"
+allRegs = [XRegister("rsp"), XRegister("rbp"), XRegister("rax"), XRegister("rbx"), XRegister("rcx"), XRegister("rdx"), XRegister("rsi"),
+           XRegister("rdi"), XRegister("r8"), XRegister("r9"), XRegister("r10"), XRegister("r11"), XRegister("r12"), XRegister("r13"), 
+           XRegister("r14"), XRegister("r15")]
+calleeSavedRegs = [XRegister("r12"), XRegister("r13"), XRegister("r14"), XRegister("r15")]
+callerSavedRegs = [XRegister("rax"), XRegister("rcx"), XRegister("rdx"), XRegister("rsi"), XRegister("rdi"), XRegister("r8"), XRegister("r9"),
+           XRegister("r10"), XRegister("r11")]
+argumentRegs = [XRegister("rdi"), XRegister("rsi"), XRegister("rdx"), XRegister("rcx"), XRegister("r8"), XRegister("r9")]
+usableRegs = [ XRegister("rbx"), XRegister("rcx"), XRegister("rdx"), XRegister("rsi"),
+           XRegister("rdi"), XRegister("r8"), XRegister("r9"), XRegister("r10"), XRegister("r11"), XRegister("r12"), XRegister("r13"), 
+           XRegister("r14"), XRegister("r15")]
+tempReg = XRegister("rax")
 
 
 class XCon:
@@ -867,97 +870,14 @@ def _selectA(cp, env):
         return XVar(cp.pp())
 
 
-######## Assign Home Pass ########
-def assign(xp):
-    def isEven(x): return x if (x % 2) == 0 else x+1
-    stackSize = 8*isEven(len(xp.info))
-    begin = {XLabel("begin"): XBlock([], [XIPush(XRegister("RBP")), XIMov(XRegister(
-        "RSP"), XRegister("RBP")), XISub(XCon(stackSize), XRegister("RSP")), XIJmp(XLabel("body")),
-    ])}
-
-    originalMain = []
-    body = []
-    for lab, blk in xp.p.items():
-        if(lab.emit() == "main"):
-            if(isinstance(blk, XBlock)):
-                originalMain = blk.blk
-
-    for instr in originalMain:
-        body.append(_assign(instr, xp.info))
-    body = body[:-1]
-    body.append(XIJmp(XLabel("end")))
-    bdy = {XLabel("body"): XBlock([], body)}
-    end = {XLabel("end"): XBlock([], [XIAdd(XCon(stackSize), XRegister(
-        "RSP")), XIPop(XRegister("RBP")), XIRet()])}
-    progm = {}
-    progm.update(begin)
-    progm.update(bdy)
-    progm.update(end)
-    return XProgram(xp.info, progm)
-
-
-def _assign(xp, v):
-    if(isinstance(xp, XIAdd)):
-        return XIAdd(_assignA(xp.src, v), _assignA(xp.dst, v))
-    elif(isinstance(xp, XISub)):
-        return XISub(_assignA(xp.src, v), _assignA(xp.dst, v))
-    elif(isinstance(xp, XIMov)):
-        return XIMov(_assignA(xp.src, v), _assignA(xp.dst, v))
-    elif(isinstance(xp, XINeg)):
-        return XINeg(_assignA(xp.src, v))
-    elif(isinstance(xp, XIPush)):
-        return XIPush(_assignA(xp.src, v))
-    elif(isinstance(xp, XIPop)):
-        return XIPush(_assignA(xp.src, v))
-    else:
-        return xp
-
-
-def _assignA(a, v):
-    if(isinstance(a, XVar)):
-        sub = v.index(a.name) * -8
-        return XMem(XRegister("RBP"), sub)
-    else:
-        return a
-
-######## Patch Instr ########
-
-
-def patch(xp):
-    if(isinstance(xp, XProgram)):
-        progs = xp.p
-        newP = {}
-        for lab, blks in progs.items():
-            if(isinstance(blks, XBlock)):
-                newBlks = []
-                for i in blks.blk:
-                    newBlks = newBlks + _patch(i)
-                newP.update({lab: XBlock([], newBlks)})
-        return XProgram(xp.info, newP)
-
-
-def _patch(i):
-    if(isinstance(i, XIAdd)):
-        if(isinstance(i.src, XMem) and isinstance(i.dst, XMem)):
-            return [XIMov(i.src, XRegister("rax")), XIAdd(XRegister("rax"), i.dst)]
-    elif(isinstance(i, XISub)):
-        if(isinstance(i.src, XMem) and isinstance(i.dst, XMem)):
-            return [XIMov(i.src, XRegister("rax")), XISub(XRegister("rax"), i.dst)]
-    elif(isinstance(i, XIMov)):
-        if(isinstance(i.src, XMem) and isinstance(i.dst, XMem)):
-            return [XIMov(i.src, XRegister("rax")), XIMov(XRegister("rax"), i.dst)]
-    return [i]
-
-
-
 ######## Uncover Live ########
 
 def uncover_live(xp: XProgram):
     for l in xp.p.values():
         d = {}
-        before = set()
+        before = set([XRegister("rsp").emit()])
         if(isinstance(l, XBlock)):
-            for i in reversed(l.blk):
+            for i in reversed(l.blk[:-1]):
                 d.update({i: before})
                 #print("Live before: " + str(n) +" = " + str(before), end=' ')
                 # print(w)
@@ -1038,7 +958,7 @@ def buildInt(xp: XProgram):
                         for e in s:
                             if(not (d == e or e == sr)):
                                 g.add_edge(d, str(e))
-                                m.add_edge(sr, d)
+                            m.add_edge(sr, d)
                 elif(isinstance(i, XIAdd)):
                     if(s):
                         d = i.dst.emit()
@@ -1057,7 +977,7 @@ def buildInt(xp: XProgram):
                         for e in s:
                             for u in callerSavedRegs:
                                 if(not u == e):
-                                    g.add_edge(u, str(e))
+                                    g.add_edge(u.emit(), str(e))
                 else:
                     if(s):
                         d = i.dst.emit()
@@ -1065,7 +985,7 @@ def buildInt(xp: XProgram):
                             if(not d == e):
                                 g.add_edge(d, str(e))
             printGrph(g)
-            printGrph(m)
+            #printGrph(m)
             blk.aux = (g, m)
     return xp
 
@@ -1085,15 +1005,17 @@ def saturation(v: Vertex):
     return satSet
 
 
-def color(xp: XProgram) -> XProgram:
+def color(xp: XProgram, idx) -> XProgram:
     for blk in xp.p.values():
         g = blk.aux[0]
         m = blk.aux[1]
+        print("VET" + str(g.vert_dict))
         if(g.vert_dict):
             w = list(g.vert_dict.copy())
             colorList = dict()
             available = dict()
             cntr = 0
+            
             for x in g.vert_dict:
                 colorList.update({x: -1})
                 available.update({cntr: False})
@@ -1103,10 +1025,18 @@ def color(xp: XProgram) -> XProgram:
             while w:
                 u = w[0]
                 color = 0
+                mvadj = None
                 adj = saturation(g.vert_dict[u])
+                if(u in m.vert_dict):
+                    mvadj = saturation(m.vert_dict[u])
                 for e in adj:
-                    if(colorList[e] != -1):
+                    if(e in colorList and colorList[e] != -1):
                         available[colorList[e]] = True
+                
+                if(mvadj):
+                    for e in mvadj:
+                        if(e in colorList and colorList[e] != -1):
+                            available[colorList[e]] = True
 
                 for e in available:
                     if(available[e] == False):
@@ -1116,12 +1046,30 @@ def color(xp: XProgram) -> XProgram:
                 colorList[u] = color
 
                 for e in adj:
-                    if(colorList[e] != -1):
+                    if(e in colorList and colorList[e] != -1):
                         available[colorList[e]] = False
 
                 w.remove(u)
 
-            blk.aux = colorList
+            regColorList = dict(enumerate(usableRegs))
+            print(colorList)
+            print(regColorList)
+            maxKey = max([int(s) for s in colorList.values()])
+            print(maxKey)
+            if(maxKey > len(regColorList)):
+                stackSize = maxKey
+                i = len(regColorList)
+                cntr = 0
+                while(i<= stackSize):
+                    regColorList.update({i: XMem(XRegister("rbp"), cntr)})
+                    cntr+=8
+                    i+=1
+                cntr+=8
+            for v, c in colorList.items():
+                colorList.update({v: regColorList[c]})
+            blk.aux = (colorList, cntr)
+            print(colorList)
+            
     return xp
 
 
@@ -1136,8 +1084,8 @@ class AllocEnv:
         if(e in self.stack):
             return -1*(self.stack[e])
         else:
-            self.stack.update({e: self.stackSize})
             self.stackSize += 8
+            self.stack.update({e: self.stackSize})
             return -1*(self.stack[e])
 
     def getStackSize(self):
@@ -1146,32 +1094,29 @@ class AllocEnv:
 
 def allocate_registers(xp: XProgram) -> XProgram:
     alloc = AllocEnv()
-    colorList = dict(enumerate(usableRegs))
-    newXp = color(xp)
+    newXp = color(xp,0)
     # Gets whatever is the first block in program assumes it is main
     # Because Xprogram should only have one block to start
     firstBlock: XBlock = list(newXp.p.values())[0]
-    auxBlk: dict = firstBlock.aux
-    print(auxBlk)
-    newXp = assign_register(newXp, colorList, alloc)
-    newXp = mainpass(newXp, alloc)
+    colorList, stackSize = firstBlock.aux
+    #print(auxBlk)
+    newXp = assign_register(newXp, colorList)
+    newXp = mainpass(newXp, stackSize)
     return newXp
 
 ################ Assign Registers ################
 
 
-def assign_register(xp: XProgram, regs: dict, alloc: AllocEnv) -> XProgram:
-    regsList = []
+def assign_register(xp: XProgram, regs: dict) -> XProgram:
     originalMain = []
     body = []
     for lab, blk in xp.p.items():
         if(lab.emit() == "main"):
             if(isinstance(blk, XBlock)):
                 originalMain = blk.blk
-                regsList = blk.aux
 
     for instr in originalMain:
-        body.append(_assign(instr, regsList, regs, alloc))
+        body.append(_assign(instr, regs))
     body = body[:-1]
 
     body.append(XIJmp(XLabel("end")))
@@ -1182,31 +1127,31 @@ def assign_register(xp: XProgram, regs: dict, alloc: AllocEnv) -> XProgram:
     return XProgram(xp.info, progm)
 
 
-def _assign(xp, v, regs, alloc):
+def _assign(xp, regs):
     if(isinstance(xp, XIAdd)):
-        return XIAdd(_assignA(xp.src, v, regs, alloc), _assignA(xp.dst, v, regs, alloc))
+        return XIAdd(_assignA(xp.src,  regs), _assignA(xp.dst,  regs))
     elif(isinstance(xp, XISub)):
-        return XISub(_assignA(xp.src, v, regs, alloc), _assignA(xp.dst, v, regs, alloc))
+        return XISub(_assignA(xp.src, regs), _assignA(xp.dst,  regs))
     elif(isinstance(xp, XIMov)):
-        return XIMov(_assignA(xp.src, v, regs, alloc), _assignA(xp.dst, v, regs, alloc))
+        return XIMov(_assignA(xp.src,  regs), _assignA(xp.dst, regs))
     elif(isinstance(xp, XINeg)):
-        return XINeg(_assignA(xp.src, v, regs, alloc))
+        return XINeg(_assignA(xp.src,  regs))
     elif(isinstance(xp, XIPush)):
-        return XIPush(_assignA(xp.src, v, regs, alloc))
+        return XIPush(_assignA(xp.src,  regs))
     elif(isinstance(xp, XIPop)):
-        return XIPush(_assignA(xp.src, v, regs, alloc))
+        return XIPush(_assignA(xp.src, regs))
     else:
         return xp
 
 
-def _assignA(a, v, regs, alloc: AllocEnv):
+def _assignA(a, v):
     if(isinstance(a, XVar)):
         if(a.emit() in v):
-            temp = v[a.emit()]
-            return XRegister(regs[temp])
+            return v[a.emit()]
         else:
-            sub = alloc.setStackSize(a.emit())
-            return XMem(XRegister("rbp"), sub)
+              print(a.emit())
+        #     sub = alloc.setStackSize(a.emit())
+        #     return XMem(XRegister("rbp"), sub)
     else:
         return a
 
@@ -1215,12 +1160,12 @@ def _assignA(a, v, regs, alloc: AllocEnv):
 
 def mainpass(xp: XProgram, alloc: AllocEnv):
     mainBdy = [XIPush(XRegister("rbp")), XIMov(XRegister("rsp"), XRegister("rbp")),XIPush(XRegister("rbx"))]
-    endBlk  = [XIAdd(XCon(alloc.getStackSize()), XRegister("rsp")), XIPop(XRegister("rbx")), XIPop(XRegister("rbp"))]    
+    endBlk  = [XIAdd(XCon(alloc), XRegister("rsp")), XIPop(XRegister("rbx")), XIPop(XRegister("rbp"))]    
     
     for r in calleeSavedRegs:
-        mainBdy.append(XIPush(XRegister(r)))
-        endBlk.append(XIPop(XRegister(r)))
-    mainBdy = mainBdy + [XISub(XCon(alloc.getStackSize()), XRegister("rsp")), XIJmp(XLabel("body"))]
+        mainBdy.append(XIPush(r))
+        endBlk.append(XIPop(r))
+    mainBdy = mainBdy + [XISub(XCon(alloc), XRegister("rsp")), XIJmp(XLabel("body"))]
     endBlk = endBlk + [XIMov(XRegister("rax"), XRegister("rdi")), XICall(XLabel("print_int")), XIRet() ]
         
     main = {XLabel("main"): XBlock([],mainBdy)}
@@ -1229,3 +1174,32 @@ def mainpass(xp: XProgram, alloc: AllocEnv):
     xp.p.update(end)
 
     return XProgram(xp.info, xp.p)
+
+
+######## Patch Instr ########
+
+
+def patch(xp):
+    if(isinstance(xp, XProgram)):
+        progs = xp.p
+        newP = {}
+        for lab, blks in progs.items():
+            if(isinstance(blks, XBlock)):
+                newBlks = []
+                for i in blks.blk:
+                    newBlks = newBlks + _patch(i)
+                newP.update({lab: XBlock([], newBlks)})
+        return XProgram(xp.info, newP)
+
+
+def _patch(i):
+    if(isinstance(i, XIAdd)):
+        if(isinstance(i.src, XMem) and isinstance(i.dst, XMem)):
+            return [XIMov(i.src, XRegister("rax")), XIAdd(XRegister("rax"), i.dst)]
+    elif(isinstance(i, XISub)):
+        if(isinstance(i.src, XMem) and isinstance(i.dst, XMem)):
+            return [XIMov(i.src, XRegister("rax")), XISub(XRegister("rax"), i.dst)]
+    elif(isinstance(i, XIMov)):
+        if(isinstance(i.src, XMem) and isinstance(i.dst, XMem)):
+            return [XIMov(i.src, XRegister("rax")), XIMov(XRegister("rax"), i.dst)]
+    return [i]
