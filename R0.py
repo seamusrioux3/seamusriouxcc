@@ -885,7 +885,7 @@ def uncover_live(xp: XProgram):
                 before = before - _uncoverW(i)
                 before = before.union(_uncoverR(i))
                 #print("Live after: " + str(n) +" = " + str(before) )
-            printUncover(d)
+            #printUncover(d)
             l.aux = d
     return xp
 
@@ -903,7 +903,6 @@ def _uncoverW(i):
         return set([])
     elif(isinstance(i, XIPop)):
         return _uncoverM(i.src)
-    # print(i.emit())
     return set([])
 
 
@@ -920,7 +919,6 @@ def _uncoverR(i):
         return _uncoverM(i.src)
     elif(isinstance(i, XIPop)):
         return set([])
-    # print(i.emit())
     return set([])
 
 
@@ -984,7 +982,7 @@ def buildInt(xp: XProgram):
                         for e in s:
                             if(not d == e):
                                 g.add_edge(d, str(e))
-            printGrph(g)
+            #printGrph(g)
             #printGrph(m)
             blk.aux = (g, m)
     return xp
@@ -1005,11 +1003,10 @@ def saturation(v: Vertex):
     return satSet
 
 
-def color(xp: XProgram, idx) -> XProgram:
+def color(xp: XProgram) -> XProgram:
     for blk in xp.p.values():
         g = blk.aux[0]
         m = blk.aux[1]
-        print("VET" + str(g.vert_dict))
         if(g.vert_dict):
             w = list(g.vert_dict.copy())
             colorList = dict()
@@ -1052,49 +1049,34 @@ def color(xp: XProgram, idx) -> XProgram:
                 w.remove(u)
 
             regColorList = dict(enumerate(usableRegs))
-            print(colorList)
-            print(regColorList)
+            # print(colorList)
+            # print(regColorList)
             maxKey = max([int(s) for s in colorList.values()])
-            print(maxKey)
+            ss = 0
+            #print(maxKey)
             if(maxKey > len(regColorList)):
                 stackSize = maxKey
                 i = len(regColorList)
-                cntr = 0
+                
                 while(i<= stackSize):
                     regColorList.update({i: XMem(XRegister("rbp"), cntr)})
-                    cntr+=8
+                    ss+=8
                     i+=1
-                cntr+=8
+                ss = cntr + 8
+                if(not ss%2==0):
+                    ss+=1
             for v, c in colorList.items():
                 colorList.update({v: regColorList[c]})
-            blk.aux = (colorList, cntr)
-            print(colorList)
+            blk.aux = (colorList, ss)
+            #print(colorList)
             
     return xp
 
 
 ################ Allocate Registers ################
 
-class AllocEnv:
-    def __init__(self):
-        self.stackSize = 0
-        self.stack = {}
-
-    def setStackSize(self, e):
-        if(e in self.stack):
-            return -1*(self.stack[e])
-        else:
-            self.stackSize += 8
-            self.stack.update({e: self.stackSize})
-            return -1*(self.stack[e])
-
-    def getStackSize(self):
-        return self.stackSize
-
-
 def allocate_registers(xp: XProgram) -> XProgram:
-    alloc = AllocEnv()
-    newXp = color(xp,0)
+    newXp = color(xp)
     # Gets whatever is the first block in program assumes it is main
     # Because Xprogram should only have one block to start
     firstBlock: XBlock = list(newXp.p.values())[0]
@@ -1148,17 +1130,13 @@ def _assignA(a, v):
     if(isinstance(a, XVar)):
         if(a.emit() in v):
             return v[a.emit()]
-        else:
-              print(a.emit())
-        #     sub = alloc.setStackSize(a.emit())
-        #     return XMem(XRegister("rbp"), sub)
     else:
         return a
 
 
 ######## Main Pass ########
 
-def mainpass(xp: XProgram, alloc: AllocEnv):
+def mainpass(xp: XProgram, alloc: int):
     mainBdy = [XIPush(XRegister("rbp")), XIMov(XRegister("rsp"), XRegister("rbp")),XIPush(XRegister("rbx"))]
     endBlk  = [XIAdd(XCon(alloc), XRegister("rsp")), XIPop(XRegister("rbx")), XIPop(XRegister("rbp"))]    
     
@@ -1200,6 +1178,8 @@ def _patch(i):
         if(isinstance(i.src, XMem) and isinstance(i.dst, XMem)):
             return [XIMov(i.src, XRegister("rax")), XISub(XRegister("rax"), i.dst)]
     elif(isinstance(i, XIMov)):
+        if(i.dst.emit() == i.src.emit()):
+            return []
         if(isinstance(i.src, XMem) and isinstance(i.dst, XMem)):
             return [XIMov(i.src, XRegister("rax")), XIMov(XRegister("rax"), i.dst)]
     return [i]
