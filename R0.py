@@ -118,16 +118,25 @@ class RAnd:
         self.l = _l
         self.r = _r
 
+    def pp(self):
+        return "(and " + self.l.pp() + " " + self.r.pp() + ")"
+
 
 class ROr:
     def __init__(self, _l, _r):
         self.l = _l
         self.r = _r
 
+    def pp(self):
+        return "(or " + self.l.pp() + " " + self.r.pp() + ")"
+
 
 class RNot:
     def __init__(self, _e):
         self.e = _e
+
+    def pp(self):
+        return "(not " + self.e.pp() + ")"
 
 
 class RCmp:
@@ -136,6 +145,9 @@ class RCmp:
         self.l = _l
         self.r = _r
 
+    def pp(self):
+        return "(" + self.op + " " + self.l.pp() + " " + self.r.pp() + ")"
+
 
 class RIf:
     def __init__(self, _var, _l, _r):
@@ -143,21 +155,33 @@ class RIf:
         self.l = _l
         self.r = _r
 
+    def pp(self):
+        return "(if" + self.var + " " + self.l.pp() + " " + self.r.pp() + ")"
+
 
 class RSub:
     def __init__(self, _l, _r):
         self.l = _l
         self.r = _r
 
+    def pp(self):
+        return "(- " + self.l.pp() + " " + self.r.pp() + ")"
+
 
 class RBool:
     def __init__(self, _b):
         self.b = _b
 
+    def pp(self):
+        return str(self.b)
+
 
 class RS64:
     def __init__(self, _s):
         self.s = _s
+
+    def pp(self):
+        return str(self.s)
 
 
 ############ X0 Programs ############
