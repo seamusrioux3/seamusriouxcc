@@ -111,6 +111,55 @@ class RLet:
         return self.r.interp(e)
 
 
+###### R2 data types ######
+
+class RAnd:
+    def __init__(self, _l, _r):
+        self.l = _l
+        self.r = _r
+
+
+class ROr:
+    def __init__(self, _l, _r):
+        self.l = _l
+        self.r = _r
+
+
+class RNot:
+    def __init__(self, _e):
+        self.e = _e
+
+
+class RCmp:
+    def __init__(self, _op, _l, _r):
+        self.op = _op
+        self.l = _l
+        self.r = _r
+
+
+class RIf:
+    def __init__(self, _var, _l, _r):
+        self.var = _var
+        self.l = _l
+        self.r = _r
+
+
+class RSub:
+    def __init__(self, _l, _r):
+        self.l = _l
+        self.r = _r
+
+
+class RBool:
+    def __init__(self, _b):
+        self.b = _b
+
+
+class RS64:
+    def __init__(self, _s):
+        self.s = _s
+
+
 ############ X0 Programs ############
 
 
@@ -217,15 +266,19 @@ class XRegister:
 
 ########### Register Value Set up ##############
 allRegs = [XRegister("rsp"), XRegister("rbp"), XRegister("rax"), XRegister("rbx"), XRegister("rcx"), XRegister("rdx"), XRegister("rsi"),
-           XRegister("rdi"), XRegister("r8"), XRegister("r9"), XRegister("r10"), XRegister("r11"), XRegister("r12"), XRegister("r13"), 
+           XRegister("rdi"), XRegister("r8"), XRegister("r9"), XRegister(
+               "r10"), XRegister("r11"), XRegister("r12"), XRegister("r13"),
            XRegister("r14"), XRegister("r15")]
-calleeSavedRegs = [XRegister("r12"), XRegister("r13"), XRegister("r14"), XRegister("r15")]
+calleeSavedRegs = [XRegister("r12"), XRegister(
+    "r13"), XRegister("r14"), XRegister("r15")]
 callerSavedRegs = [XRegister("rax"), XRegister("rcx"), XRegister("rdx"), XRegister("rsi"), XRegister("rdi"), XRegister("r8"), XRegister("r9"),
-           XRegister("r10"), XRegister("r11")]
-argumentRegs = [XRegister("rdi"), XRegister("rsi"), XRegister("rdx"), XRegister("rcx"), XRegister("r8"), XRegister("r9")]
-usableRegs = [ XRegister("rbx"), XRegister("rcx"), XRegister("rdx"), XRegister("rsi"),
-           XRegister("rdi"), XRegister("r8"), XRegister("r9"), XRegister("r10"), XRegister("r11"), XRegister("r12"), XRegister("r13"), 
-           XRegister("r14"), XRegister("r15")]
+                   XRegister("r10"), XRegister("r11")]
+argumentRegs = [XRegister("rdi"), XRegister("rsi"), XRegister(
+    "rdx"), XRegister("rcx"), XRegister("r8"), XRegister("r9")]
+usableRegs = [XRegister("rbx"), XRegister("rcx"), XRegister("rdx"), XRegister("rsi"),
+              XRegister("rdi"), XRegister("r8"), XRegister("r9"), XRegister(
+                  "r10"), XRegister("r11"), XRegister("r12"), XRegister("r13"),
+              XRegister("r14"), XRegister("r15")]
 tempReg = XRegister("rax")
 
 
@@ -885,7 +938,7 @@ def uncover_live(xp: XProgram):
                 before = before - _uncoverW(i)
                 before = before.union(_uncoverR(i))
                 #print("Live after: " + str(n) +" = " + str(before) )
-            #printUncover(d)
+            # printUncover(d)
             l.aux = d
     return xp
 
@@ -982,8 +1035,8 @@ def buildInt(xp: XProgram):
                         for e in s:
                             if(not d == e):
                                 g.add_edge(d, str(e))
-            #printGrph(g)
-            #printGrph(m)
+            # printGrph(g)
+            # printGrph(m)
             blk.aux = (g, m)
     return xp
 
@@ -1012,7 +1065,7 @@ def color(xp: XProgram) -> XProgram:
             colorList = dict()
             available = dict()
             cntr = 0
-            
+
             for x in g.vert_dict:
                 colorList.update({x: -1})
                 available.update({cntr: False})
@@ -1029,7 +1082,7 @@ def color(xp: XProgram) -> XProgram:
                 for e in adj:
                     if(e in colorList and colorList[e] != -1):
                         available[colorList[e]] = True
-                
+
                 if(mvadj):
                     for e in mvadj:
                         if(e in colorList and colorList[e] != -1):
@@ -1053,23 +1106,23 @@ def color(xp: XProgram) -> XProgram:
             # print(regColorList)
             maxKey = max([int(s) for s in colorList.values()])
             ss = 0
-            #print(maxKey)
+            # print(maxKey)
             if(maxKey > len(regColorList)):
                 stackSize = maxKey
                 i = len(regColorList)
-                
-                while(i<= stackSize):
+
+                while(i <= stackSize):
                     regColorList.update({i: XMem(XRegister("rbp"), cntr)})
-                    ss+=8
-                    i+=1
+                    ss += 8
+                    i += 1
                 ss = cntr + 8
-                if(not ss%2==0):
-                    ss+=1
+                if(not ss % 2 == 0):
+                    ss += 1
             for v, c in colorList.items():
                 colorList.update({v: regColorList[c]})
             blk.aux = (colorList, ss)
-            #print(colorList)
-            
+            # print(colorList)
+
     return xp
 
 
@@ -1081,7 +1134,7 @@ def allocate_registers(xp: XProgram) -> XProgram:
     # Because Xprogram should only have one block to start
     firstBlock: XBlock = list(newXp.p.values())[0]
     colorList, stackSize = firstBlock.aux
-    #print(auxBlk)
+    # print(auxBlk)
     newXp = assign_register(newXp, colorList)
     newXp = mainpass(newXp, stackSize)
     return newXp
@@ -1137,16 +1190,20 @@ def _assignA(a, v):
 ######## Main Pass ########
 
 def mainpass(xp: XProgram, alloc: int):
-    mainBdy = [XIPush(XRegister("rbp")), XIMov(XRegister("rsp"), XRegister("rbp")),XIPush(XRegister("rbx"))]
-    endBlk  = [XIAdd(XCon(alloc), XRegister("rsp")), XIPop(XRegister("rbx")), XIPop(XRegister("rbp"))]    
-    
+    mainBdy = [XIPush(XRegister("rbp")), XIMov(
+        XRegister("rsp"), XRegister("rbp")), XIPush(XRegister("rbx"))]
+    endBlk = [XIAdd(XCon(alloc), XRegister("rsp")), XIPop(
+        XRegister("rbx")), XIPop(XRegister("rbp"))]
+
     for r in calleeSavedRegs:
         mainBdy.append(XIPush(r))
         endBlk.append(XIPop(r))
-    mainBdy = mainBdy + [XISub(XCon(alloc), XRegister("rsp")), XIJmp(XLabel("body"))]
-    endBlk = endBlk + [XIMov(XRegister("rax"), XRegister("rdi")), XICall(XLabel("print_int")), XIRet() ]
-        
-    main = {XLabel("main"): XBlock([],mainBdy)}
+    mainBdy = mainBdy + \
+        [XISub(XCon(alloc), XRegister("rsp")), XIJmp(XLabel("body"))]
+    endBlk = endBlk + [XIMov(XRegister("rax"), XRegister("rdi")),
+                       XICall(XLabel("print_int")), XIRet()]
+
+    main = {XLabel("main"): XBlock([], mainBdy)}
     end = {XLabel("end"): XBlock([], endBlk)}
     xp.p.update(main)
     xp.p.update(end)
