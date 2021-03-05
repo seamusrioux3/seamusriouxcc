@@ -121,6 +121,9 @@ class RAnd:
     def pp(self):
         return "(and " + self.l.pp() + " " + self.r.pp() + ")"
 
+    def interp(self, env=None):
+        return self.l.interp(env) and self.r.interp(env)
+
 
 class ROr:
     def __init__(self, _l, _r):
@@ -130,6 +133,9 @@ class ROr:
     def pp(self):
         return "(or " + self.l.pp() + " " + self.r.pp() + ")"
 
+    def interp(self, env=None):
+        return self.l.interp(env) or self.r.interp(env)
+
 
 class RNot:
     def __init__(self, _e):
@@ -137,6 +143,9 @@ class RNot:
 
     def pp(self):
         return "(not " + self.e.pp() + ")"
+
+    def interp(self, env=None):
+        return not self.e.interp(env)
 
 
 class RCmp:
@@ -148,6 +157,19 @@ class RCmp:
     def pp(self):
         return "(" + self.op + " " + self.l.pp() + " " + self.r.pp() + ")"
 
+    def interp(self, env=None):
+        if(self.op == "=="):
+            return self.l.interp(env) == self.r.interp(env)
+        elif(self.op == ">="):
+            return self.l.interp(env) >= self.r.interp(env)
+        elif(self.op == ">"):
+            return self.l.interp(env) > self.r.interp(env)
+        elif(self.op == "<="):
+            return self.l.interp(env) <= self.r.interp(env)
+        elif(self.op == "<"):
+            return self.l.interp(env) < self.r.interp(env)
+        return "ERROR"
+
 
 class RIf:
     def __init__(self, _var, _l, _r):
@@ -156,7 +178,10 @@ class RIf:
         self.r = _r
 
     def pp(self):
-        return "(if" + self.var + " " + self.l.pp() + " " + self.r.pp() + ")"
+        return "(if " + self.var.pp() + " " + self.l.pp() + " " + self.r.pp() + ")"
+
+    def interp(self, env=None):
+        return self.l.interp(env) if self.var.interp(env) else self.r.interp(env)
 
 
 class RSub:
@@ -167,6 +192,9 @@ class RSub:
     def pp(self):
         return "(- " + self.l.pp() + " " + self.r.pp() + ")"
 
+    def interp(self, env=None):
+        return self.l.interp(env) - self.r.interp(env)
+
 
 class RBool:
     def __init__(self, _b):
@@ -175,6 +203,9 @@ class RBool:
     def pp(self):
         return str(self.b)
 
+    def interp(self, env=None):
+        return self.b
+
 
 class RS64:
     def __init__(self, _s):
@@ -182,6 +213,9 @@ class RS64:
 
     def pp(self):
         return str(self.s)
+
+    def interp(self, env=None):
+        return self.s
 
 
 ############ X0 Programs ############

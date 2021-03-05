@@ -66,7 +66,7 @@ class Test:
             os.remove(binName)
 
         return int(stdout)
-    
+
     def getToXP(self, r):
         pu = uniquify(r)
         prco = RCO(pu)
@@ -98,13 +98,13 @@ class Test:
         aloc = allocate_registers(built)
         ptch = patch(aloc)
         real = self.testX0OnHardware(ptch)
-        
+
         # print("optimized: " + po.pp())
         # print("uniquify: " + pu.pp())
         # print("rco: " + pr.pp())
         # print("econ: " + pe.pp())
         # print("sel: " + xz.emit())
-        
+
         # print("original: " + p.pp())
 
         # print("original ans: " + str(p.interp()))
@@ -118,7 +118,7 @@ class Test:
         # print("real ans: " + str(real))
         if (self.checkAll(p, [pu, po, pr, pe, xz, uncl, built, aloc, ptch], real)):
             print(ptch.emit())
-            actual = ptch.interp()#aloc.interp()
+            actual = ptch.interp()  # aloc.interp()
         else:
             print("patch: " + ptch.emit())
             print("original ans: " + str(p.interp()))
@@ -131,7 +131,7 @@ class Test:
             print("patch ans: " + str(ptch.interp()))
             print("real ans: " + str(real))
             actual = not p.interp()
-            #exit(1)
+            # exit(1)
 
         self.test(actual, p.interp())
 
@@ -471,7 +471,8 @@ r2prog10 = RSub(RNum(10), RNum(10))
 r2prog11 = RSub(RNum(20), RNum(10))
 r2prog12 = RIf(r2prog5, RNum(5), RNum(2))
 r2prog13 = RIf(r2prog6, RAdd(RNum(5), RNum(1)), RNum(2))
-r2prog14 = RLet(RVar("v"), RNum(10), RLet(RVar("y"), RNum(10), RIf(RCmp("==",RVar("v"), RVar("y")), RNum("v"), RVar("y"))))
+r2prog14 = RLet(RVar("v"), RNum(10), RLet(RVar("y"), RNum(10), RIf(
+    RCmp("==", RVar("v"), RVar("y")), RVar("v"), RVar("y"))))
 
 print(rTrue.pp())
 print(rFalse.pp())
@@ -490,6 +491,22 @@ print(r2prog12.pp())
 print(r2prog13.pp())
 print(r2prog14.pp())
 
+print(rTrue.interp())
+print(rFalse.interp())
+print(r2prog1.interp())
+print(r2prog2.interp())
+print(r2prog3.interp())
+print(r2prog4.interp())
+print(r2prog5.interp())
+print(r2prog6.interp())
+print(r2prog7.interp())
+print(r2prog8.interp())
+print(r2prog9.interp())
+print(r2prog10.interp())
+print(r2prog11.interp())
+print(r2prog12.interp())
+print(r2prog13.interp())
+print(r2prog14.interp())
 
 ######## Combined Testing ########
 #print("\nCombined Tests\n")
