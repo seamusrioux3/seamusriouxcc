@@ -78,10 +78,18 @@ class Test:
         ptch = patch(aloc)
         return ptch
 
+    def checkAll(self, org: RLet, arr, real: int):
+        for a in arr:
+            if(not org.interp() == a.interp()):
+                return False
+        if(real and not real == org.interp()):
+            return False
+        return True
+
     def testAll(self, p):
         actual = 0
         po = optimizer(p)
-        pu = uniquify(po)
+        pu = uniquify(p)
         pr = RCO(pu)
         pe = econ(pr)
         xz = select(pe)
@@ -90,31 +98,40 @@ class Test:
         aloc = allocate_registers(built)
         ptch = patch(aloc)
         real = self.testX0OnHardware(ptch)
-        #print("original: " + p.pp())
-        # print("original ans: " + str(p.interp()))
+        
         # print("optimized: " + po.pp())
-        # print("optimized ans: " + str(po.interp()))
         # print("uniquify: " + pu.pp())
-        # print("uniquify ans: " + str(pu.interp()))
         # print("rco: " + pr.pp())
-        # print("rco ans: " + str(pr.interp()))
         # print("econ: " + pe.pp())
-        # print("econ ans: " + str(pe.interp()))
-        # print("uncover: " + punc.pp())
-        # print("uncover ans: " + str(punc.interp()))
-        print("sel: " + xz.emit())
-        print("sel ans: " + str(xz.interp()))
-        # print("asn: " + az.emit())
-        # print("asn: " + str(az.interp()))
-        print("patch: " + ptch.emit())
-        print("patch: " + str(ptch.interp()))
-        print("real: " + str(real))
+        # print("sel: " + xz.emit())
+        
+        # print("original: " + p.pp())
 
-        if (p.interp() == po.interp() == pu.interp() == pr.interp() == pe.interp() == uncl.interp() == xz.interp() == built.interp() == ptch.interp() == real):
-            actual = aloc.interp()
+        # print("original ans: " + str(p.interp()))
+        # print("optimized ans: " + str(po.interp()))
+        # print("uniquify ans: " + str(pu.interp()))
+        # print("rco ans: " + str(pr.interp()))
+        # print("econ ans: " + str(pe.interp()))
+        # print("sel ans: " + str(xz.interp()))
+        # print("aloc ans: " + str(aloc.interp()))
+        # print("patch ans: " + str(ptch.interp()))
+        # print("real ans: " + str(real))
+        if (self.checkAll(p, [pu, po, pr, pe, xz, uncl, built, aloc, ptch], real)):
+            print(ptch.emit())
+            actual = ptch.interp()#aloc.interp()
         else:
+            print("patch: " + ptch.emit())
+            print("original ans: " + str(p.interp()))
+            print("optimized ans: " + str(po.interp()))
+            print("uniquify ans: " + str(pu.interp()))
+            print("rco ans: " + str(pr.interp()))
+            print("econ ans: " + str(pe.interp()))
+            print("sel ans: " + str(xz.interp()))
+            print("aloc ans: " + str(aloc.interp()))
+            print("patch ans: " + str(ptch.interp()))
+            print("real ans: " + str(real))
             actual = not p.interp()
-            exit(1)
+            #exit(1)
 
         self.test(actual, p.interp())
 
@@ -436,544 +453,46 @@ Econprog6C = CProgram({
         CRet(CVar("R1")),
     ]
 })
-######## Uncover Locals Exs ########
-uncprog1 = CProgram(["R1"], {
-    CLabel("main"):
-    [
-        CSet(CVar("R1"), CAdd(CNum(2), CNum(3))),
-        CRet(CVar("R1")),
-    ]
-})
-
-uncprog2 = CProgram(["R1", "R2", "R3"], {
-    CLabel("main"):
-    [
-        CSet(CVar("R1"), CAdd(CNum(2), CNum(3))),
-        CSet(CVar("R2"), CAdd(CNum(1), CVar("R1"))),
-        CSet(CVar("R3"), CAdd(CVar("R1"), CVar("R1"))),
-        CRet(CVar("R3")),
-    ]
-})
-
-uncprog3 = CProgram(["R1", "R2", "R3"], {
-    CLabel("main"):
-    [
-        CSet(CVar("R1"), CNeg(CNum(3))),
-        CSet(CVar("R2"), CAdd(CNum(1), CVar("R1"))),
-        CSet(CVar("R3"), CAdd(CVar("R1"), CVar("R1"))),
-        CRet(CVar("R3")),
-    ]
-})
-uncprog4 = CProgram(["R1", "R2", "R3"], {
-    CLabel("main"):
-    [
-        CSet(CVar("R1"), CAdd(CNum(1), CNum(1))),
-        CSet(CVar("R2"), CAdd(CVar("R1"), CVar("R1"))),
-        CSet(CVar("R3"), CAdd(CVar("R2"), CVar("R2"))),
-        CRet(CVar("R3")),
-    ]
-})
-
-uncprog5 = CProgram([], {
-    CLabel("main"):
-    CBlock([], [
-        CSet(CVar("R1"), CNeg(CNum(2))),
-        CSet(CVar("R2"), CNeg(CNum(2))),
-        CSet(CVar("R3"), CNeg(CVar("R2"))),
-        CSet(CVar("R4"), CAdd(CVar("R1"), CVar("R3"))),
-        CRet(CVar("R4")),
-    ])
-})
-
-uncprog6 = CProgram([], {
-    CLabel("main"):
-    [
-        CSet(CVar("R1"), CNum(4)),
-        CRet(CVar("R1")),
-    ]
-})
-######### Select Instr Exs Based On Uncover Locals ########
-selProg1 = XProgram([], {
-    XLabel("main"):
-    [
-        XIMov(XCon(2), XRegister("R13")),
-        XIMov(XCon(3), XRegister("R14")),
-        XIAdd(XRegister("R13"), XRegister("R14")),
-        XIMov(XRegister("R14"), XRegister("RAX")),
-        XIRet()
-    ]
-})
-selProg2 = XProgram([], {
-    XLabel("main"):
-    [
-        XIMov(XCon(2), XRegister("R13")),
-        XIMov(XCon(3), XRegister("R14")),
-        XIAdd(XRegister("R13"), XRegister("R14")),
-        XIAdd(XCon(1), XRegister("R12")),
-        XIAdd(XRegister("R14"), XRegister("R14")),
-        XIMov(XRegister("R14"), XRegister("RAX")),
-        XIRet()
-    ]
-})
-selProg3 = XProgram([], {
-    XLabel("main"):
-    [
-        XIMov(XCon(3), XRegister("R13")),
-        XIMov(XCon(3), XRegister("R14")),
-        XIAdd(XRegister("R13"), XRegister("R14")),
-        XIAdd(XCon(1), XRegister("R12")),
-        XIAdd(XRegister("R14"), XRegister("R14")),
-        XIMov(XRegister("R14"), XRegister("RAX")),
-        XIRet()
-    ]
-})
-selProg4 = XProgram([], {
-    XLabel("main"):
-    [
-        XIMov(XCon(2), XRegister("R13")),
-        XIAdd(XRegister("R13"), XRegister("R13")),
-        XIAdd(XRegister("R13"), XRegister("R13")),
-        XIMov(XRegister("R13"), XRegister("RAX")),
-        XIRet()
-    ]
-})
-selProg5 = XProgram([], {
-    XLabel("main"):
-    [
-        XIMov(XCon(2), XRegister("R13")),
-        XIMov(XCon(2), XRegister("R14")),
-        XINeg(XRegister("R14")),
-        XIAdd(XRegister("R13"), XRegister("R14")),
-        XIMov(XRegister("R14"), XRegister("RAX")),
-        XIRet()
-    ]
-})
-selProg6 = XProgram([], {
-    XLabel("main"):
-    [
-        XIMov(XCon(4), XRegister("RAX")),
-        XIRet()
-    ]
-})
-
-######### Assign Homes Example########
-asnhome1 = XProgram([], {
-    XLabel("main"):
-    [
-        XIPush(XRegister("RBP")),
-        XIMov(XRegister("RSP"), XRegister("RBP")),
-        XISub(XCon(32), XRegister("RSP")),
-        XIJmp(XLabel("body"))
-    ],
-    XLabel("body"):
-    [
-        XIMov(XCon(3), XMem(XRegister("RBP"), 0)),
-        XIMov(XCon(2), XMem(XRegister("RBP"), 8)),
-        XIMov(XMem(XRegister("RBP"), 0), XMem(XRegister("RBP"), 16)),
-        XIAdd(XMem(XRegister("RBP"), 8), XMem(XRegister("RBP"), 16)),
-        XIMov(XMem(XRegister("RBP"), 16), XRegister("RAX")),
-        XIJmp(XLabel("end"))
-    ],
-    XLabel("end"):
-    [
-        XIAdd(XCon(32), XRegister("RSP")),
-        XIPop(XRegister("RBP")),
-        XIRet()
-    ]
-})
-asnhome2 = XProgram([], {
-    XLabel("main"):
-    [
-        XIPush(XRegister("RBP")),
-        XIMov(XRegister("RSP"), XRegister("RBP")),
-        XISub(XCon(32), XRegister("RSP")),
-        XIJmp(XLabel("body"))
-    ],
-    XLabel("body"):
-    [
-        XIMov(XCon(2), XMem(XRegister("RBP"), 0)),
-        XIMov(XCon(1), XMem(XRegister("RBP"), 8)),
-        XIMov(XMem(XRegister("RBP"), 0), XMem(XRegister("RBP"), 16)),
-        XIAdd(XMem(XRegister("RBP"), 8), XMem(XRegister("RBP"), 16)),
-        XIMov(XMem(XRegister("RBP"), 16), XRegister("RAX")),
-        XIJmp(XLabel("end"))
-    ],
-    XLabel("end"):
-    [
-        XIAdd(XCon(32), XRegister("RSP")),
-        XIPop(XRegister("RBP")),
-        XIRet()
-    ]
-})
-asnhome3 = XProgram([], {
-    XLabel("main"):
-    [
-        XIPush(XRegister("RBP")),
-        XIMov(XRegister("RSP"), XRegister("RBP")),
-        XISub(XCon(32), XRegister("RSP")),
-        XIJmp(XLabel("body"))
-    ],
-    XLabel("body"):
-    [
-        XIMov(XCon(1), XMem(XRegister("RBP"), 0)),
-        XIMov(XCon(1), XMem(XRegister("RBP"), 8)),
-        XIMov(XMem(XRegister("RBP"), 0), XMem(XRegister("RBP"), 16)),
-        XIAdd(XMem(XRegister("RBP"), 8), XMem(XRegister("RBP"), 16)),
-        XIMov(XMem(XRegister("RBP"), 16), XRegister("RAX")),
-        XIJmp(XLabel("end"))
-    ],
-    XLabel("end"):
-    [
-        XIAdd(XCon(32), XRegister("RSP")),
-        XIPop(XRegister("RBP")),
-        XIRet()
-    ]
-})
-######## Patch Instructions Testing ########
-patch1 = XProgram([], {
-    XLabel("main"):
-    [
-        XIPush(XRegister("RBP")),
-        XIMov(XRegister("RSP"), XRegister("RBP")),
-        XISub(XCon(32), XRegister("RSP")),
-        XIJmp(XLabel("body"))
-    ],
-    XLabel("body"):
-    [
-        XIMov(XCon(3), XRegister("RAX")),
-        XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 0)),
-        XIMov(XCon(2), XRegister("RAX")),
-        XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 8)),
-        XIMov(XMem(XRegister("RBP"), 0), XRegister("RAX")),
-        XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 16)),
-        XIMov(XMem(XRegister("RBP"), 8), XRegister("RAX")),
-        XIAdd(XRegister("RAX"), XMem(XRegister("RBP"), 16)),
-        XIMov(XMem(XRegister("RBP"), 16), XRegister("RAX")),
-        XIJmp(XLabel("end"))
-    ],
-    XLabel("end"):
-    [
-        XIAdd(XCon(32), XRegister("RSP")),
-        XIPop(XRegister("RBP")),
-        XIRet()
-    ]
-})
-patch2 = XProgram([], {
-    XLabel("main"):
-    [
-        XIPush(XRegister("RBP")),
-        XIMov(XRegister("RSP"), XRegister("RBP")),
-        XISub(XCon(32), XRegister("RSP")),
-        XIJmp(XLabel("body"))
-    ],
-    XLabel("body"):
-    [
-        XIMov(XCon(2), XRegister("RAX")),
-        XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 0)),
-        XIMov(XCon(1), XRegister("RAX")),
-        XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 8)),
-        XIMov(XMem(XRegister("RBP"), 0), XRegister("RAX")),
-        XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 16)),
-        XIAdd(XRegister("RAX"), XMem(XRegister("RBP"), 16)),
-        XIMov(XMem(XRegister("RBP"), 16), XRegister("RAX")),
-        XIMov(XRegister("RAX"), XRegister("RAX")),
-        XIJmp(XLabel("end"))
-    ],
-    XLabel("end"):
-    [
-        XIAdd(XCon(32), XRegister("RSP")),
-        XIPop(XRegister("RBP")),
-        XIRet()
-    ]
-})
-patch3 = XProgram([], {
-    XLabel("main"):
-    [
-        XIPush(XRegister("RBP")),
-        XIMov(XRegister("RSP"), XRegister("RBP")),
-        XISub(XCon(32), XRegister("RSP")),
-        XIJmp(XLabel("body"))
-    ],
-    XLabel("body"):
-    [
-        XIMov(XCon(1), XRegister("RAX")),
-        XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 0)),
-        XIMov(XCon(1), XRegister("RAX")),
-        XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 8)),
-        XIMov(XMem(XRegister("RBP"), 0), XRegister("RAX")),
-        XIMov(XRegister("RAX"), XMem(XRegister("RBP"), 16)),
-        XIAdd(XRegister("RAX"), XMem(XRegister("RBP"), 16)),
-        XIMov(XMem(XRegister("RBP"), 16), XRegister("RAX")),
-        XIMov(XRegister("RAX"), XRegister("RAX")),
-        XIJmp(XLabel("end"))
-    ],
-    XLabel("end"):
-    [
-        XIAdd(XCon(32), XRegister("RSP")),
-        XIPop(XRegister("RBP")),
-        XIRet()
-    ]
-})
-
-######## Uncover live Testing ########
-uncoverLiveTest1 = XProgram(["!A", "!B", "!C"], {XLabel("main"): XBlock({4: set(), 3: {'B', 'C'}, 2: {'C'}, 1: {'A'}, 0: {'A'}}, [
-    XIMov(XCon(5), XVar("A")),
-    XIMov(XCon(30), XVar("B")),
-    XIMov(XVar("A"), XVar("C")),
-    XIMov(XCon(10), XVar("B")),
-    XIAdd(XVar("B"), XVar("C")),
-    # XIRet()
-])})
-
-uncoverLiveTest2 = XProgram(["!A", "!B", "!C", "!D"], {XLabel("main"): XBlock({6: set(), 5: {'D'}, 4: set(), 3: {'B', 'C'}, 2: {'C'}, 1: {'A'}, 0: {'A'}}, [
-    XIMov(XCon(5), XVar("A")),
-    XIMov(XCon(30), XVar("B")),
-    XIMov(XVar("A"), XVar("C")),
-    XIMov(XCon(10), XVar("B")),
-    XIAdd(XVar("B"), XVar("C")),
-    XIMov(XCon(1), XVar("D")),
-    XIMov(XVar("D"), XVar("C")),
-    # XIRet()
-])})
-
-uncoverLiveTest3 = XProgram(["!A", "!B", "!C", "!D"], {XLabel("main"): XBlock({6: set(), 5: {'D'}, 4: {'D'}, 3: {'D', 'B', 'C'}, 2: {'D', 'C'}, 1: {'A', 'D'}, 0: {'A', 'D'}}, [
-    XIMov(XCon(5), XVar("A")),
-    XIMov(XCon(30), XVar("B")),
-    XIMov(XVar("A"), XVar("C")),
-    XIMov(XCon(10), XVar("B")),
-    XIAdd(XVar("B"), XVar("C")),
-    XINeg(XVar("D")),
-    XIMov(XVar("D"), XVar("C")),
-    # XIRet()
-])})
-
-unc4 = XProgram([], {XLabel("main"): XBlock({11: set(), 10: set(), 9: {'RAX', 'T'}, 8: {'Z', 'T'}, 7: {'Z', 'T'}, 6: {'Y', 'Z'}, 5: {'Y', 'Z', 'W'}, 4: {'X', 'Y', 'W'}, 3: {'X', 'W'}, 2: {'X', 'W'}, 1: {'V', 'W'}, 0: {'V'}}, [
-    XIMov(XCon(1), XVar("V")),
-    XIMov(XCon(42), XVar("W")),
-    XIMov(XVar("V"), XVar("X")),
-    XIAdd(XCon(7), XVar("X")),
-    XIMov(XVar("X"), XVar("Y")),
-    XIMov(XVar("X"), XVar("Z")),
-    XIAdd(XVar("W"), XVar("Z")),
-    XIMov(XVar("Y"), XVar("T")),
-    XINeg(XVar("T")),
-    XIMov(XVar("Z"), XRegister("rax")),
-    XIAdd(XVar("T"), XRegister("rax")),
-    # XIJmp(XVar("conclusion"))
-])})
 
 
-# printUncover(uncover_live(uncoverLiveTest1))
-# printUncover(uncover_live(uncoverLiveTest2))
-# printUncover(uncover_live(uncoverLiveTest3))
-# printUncover(uncover_live(unc4))
+########### R2 Programs Testing ##############
+rTrue = RBool(True)
+rFalse = RBool(False)
+r2prog1 = RAnd(rTrue, rFalse)
+r2prog2 = RAnd(rFalse, rFalse)
+r2prog3 = ROr(rFalse, rTrue)
+r2prog4 = RNot(rTrue)
+r2prog5 = RCmp("<=", RNum(1), RNum(2))
+r2prog6 = RCmp(">=", RNum(3), RNum(4))
+r2prog7 = RCmp("<", RNum(5), RNum(6))
+r2prog8 = RCmp("==", RNum(7), RNum(8))
+r2prog9 = RCmp("==", RNum(9), RNum(9))
+r2prog10 = RSub(RNum(10), RNum(10))
+r2prog11 = RSub(RNum(20), RNum(10))
+r2prog12 = RIf(r2prog5, RNum(5), RNum(2))
+r2prog13 = RIf(r2prog6, RAdd(RNum(5), RNum(1)), RNum(2))
+r2prog14 = RLet(RVar("v"), RNum(10), RLet(RVar("y"), RNum(10), RIf(RCmp("==",RVar("v"), RVar("y")), RNum("v"), RVar("y"))))
 
-######## Build Interferences Testing ########
+print(rTrue.pp())
+print(rFalse.pp())
+print(r2prog1.pp())
+print(r2prog2.pp())
+print(r2prog3.pp())
+print(r2prog4.pp())
+print(r2prog5.pp())
+print(r2prog6.pp())
+print(r2prog7.pp())
+print(r2prog8.pp())
+print(r2prog9.pp())
+print(r2prog10.pp())
+print(r2prog11.pp())
+print(r2prog12.pp())
+print(r2prog13.pp())
+print(r2prog14.pp())
 
-
-# buildInt1 = uncover_live(uncoverLiveTest1)
-# printGrph(buildInt(buildInt1))
-# buildInt2 = uncover_live(uncoverLiveTest2)
-# printGrph(buildInt(buildInt2))
-# buildInt3 = uncover_live(uncoverLiveTest3)
-# printGrph(buildInt(buildInt3))
-# buildInt4 = uncover_live(unc4)
-# printGrph(buildInt(buildInt4))
-
-######## Color Graph Testing ########
-# print("Color Graph Testing")
-
-# buildInt1 = uncover_live(uncoverLiveTest1)
-# print(buildInt1)
-# buildIntAfter1 = buildInt(buildInt1)
-# print(color(buildIntAfter1))
-
-# buildInt2 = uncover_live(uncoverLiveTest2)
-# print(buildInt2)
-# buildIntAfter2 = buildInt(buildInt2)
-# print(color(buildIntAfter2))
-
-# buildInt3 = uncover_live(uncoverLiveTest3)
-# print(buildInt3)
-# buildIntAfter3 = buildInt(buildInt3)
-# print(color(buildIntAfter3))
-
-# buildInt4 = uncover_live(unc4)
-# buildIntAfter4 = buildInt(buildInt4)
-# print(color(buildIntAfter4))
-
-#Updated unc4 with new registers example from color function
-unc5 = XProgram([], {XLabel("main"): XBlock({11: set(), 10: set(), 9: {'RAX', 'T'}, 8: {'Z', 'T'}, 7: {'Z', 'T'}, 6: {'Y', 'Z'}, 5: {'Y', 'Z', 'W'}, 4: {'X', 'Y', 'W'}, 3: {'X', 'W'}, 2: {'X', 'W'}, 1: {'V', 'W'}, 0: {'V'}}, [
-    XIMov(XCon(1), XRegister("rbx")),
-    XIMov(XCon(42), XRegister("rdx")),
-    XIMov(XRegister("rbx"), XRegister("rbx")),
-    XIAdd(XCon(7), XRegister("rbx")),
-    XIMov(XRegister("rbx"), XRegister("rcx")),
-    XIMov(XRegister("rbx"), XRegister("rbx")),
-    XIAdd(XRegister("rdx"), XRegister("rbx")),
-    XIMov(XRegister("rcx"), XRegister("rcx")),
-    XINeg(XRegister("rcx")),
-    XIMov(XRegister("rbx"), XRegister("rax")),
-    XIAdd(XRegister("rcx"), XRegister("rax")),
-    # XIJmp(XVar("conclusion"))
-])})
-
-################ Assign Registers Tests ################
-print("\n Assign Registers Testing\n")
-alloc1 = XProgram(["!A", "!B", "!C"], {XLabel("main"): XBlock({}, [
-    XIMov(XCon(5), XRegister("rcx")),
-    XIMov(XCon(30), XRegister("rbx")),
-    XIMov(XRegister("rcx"), XRegister("rcx")),
-    XIMov(XCon(10), XRegister("rbx")),
-    XIAdd(XRegister("rbx"), XRegister("rcx")),
-    XIMov(XRegister("rcx"), XRegister("rax")),
-    XIRet()
-])})
-
-alloc2 = XProgram(["!A", "!B", "!C", "!D"], {XLabel("main"): XBlock({}, [
-    XIMov(XCon(5), XRegister("rcx")),
-    XIMov(XCon(30), XRegister("rbx")),
-    XIMov(XVar("rcx"), XRegister("rcx")),
-    XIMov(XCon(10), XRegister("rbx")),
-    XIAdd(XRegister("rbx"), XRegister("rcx")),
-    XIMov(XCon(1), XRegister("rbx")),
-    XIMov(XRegister("rbx"), XRegister("rax")),
-    XIRet()
-])})
-
-alloc3 = XProgram([],{XLabel("main"): XBlock({}, [
-    XIMov(XCon(1), XRegister("rbx")),
-    XIMov(XCon(42), XRegister("rdx")),
-    XIMov(XRegister("rbx"), XRegister("rbx")),
-    XIAdd(XCon(7), XRegister("rbx")),
-    XIMov(XRegister("rbx"), XRegister("rcx")),
-    XIMov(XRegister("rbx"), XRegister("rbx")),
-    XIAdd(XRegister("rdx"), XRegister("rbx")),
-    XIMov(XRegister("rcx"), XRegister("rcx")),
-    XINeg(XRegister("rcx")),
-    XIMov(XRegister("rbx"), XRegister("rax")),
-    XIAdd(XRegister("rcx"), XRegister("rax")),
-    # XIJmp(XVar("conclusion"))
-])})
-
-alloc4 = XProgram([],{XLabel("main"): XBlock({}, [
-    XIMov(XCon(2), XRegister("rbx")),
-    XINeg(XRegister("rdx")),
-    XIMov(XCon(2), XRegister("rcx")),
-    XINeg(XRegister("rcx")),
-    XIMov(XRegister("rcx"), XRegister("rcx")),
-    XINeg(XRegister("rcx")),
-    XIMov(XRegister("rdx"), XRegister("rbx")),
-    XIAdd(XRegister("rcx"), XRegister("rbx")),
-    XIMov(XRegister("rdx"), XRegister("rax")),
-    # XIJmp(XVar("conclusion"))
-])})
-
-
-################ Allocate Registers Tests ################
-print("\n Allocate Registers Testing\n")
-
-#Original 1
-# letTest10 = RLet(RVar("x"), RRead(), RLet(RVar("y"), RRead(),
-#                                           RAdd(RAdd(RVar("x"), RVar("y")), RNum(42))))
-
-# allocBeforeLetTest10 = s.getToXP(letTest10)
-# allocAfterLetTest10 = allocate_registers(allocBeforeLetTest10)
-
-# print("Before \n" + allocBeforeLetTest10.emit())
-# print("After \n" + allocAfterLetTest10.emit())
-# print("Compare Ans: " + str(letTest10.interp()) + "->" + str(allocBeforeLetTest10.interp()) + 
-# "->" + str(allocAfterLetTest10.interp()))
-
-# #Original 2
-# print("\n Test #2 \n")
-# letTest11 = RNegate(RLet(RVar("V0"), RNegate(RLet(RVar("V0"), RNum(2), RVar(
-#      "V0"))), RAdd(RAdd(RNum(2), RRead()), RAdd(RNum(4), RVar("V0")))))
-
-# allocBeforeLetTest11 = s.getToXP(letTest11)
-# print("Before \n" + allocBeforeLetTest11.emit())
-# allocAfterLetTest11 = allocate_registers(allocBeforeLetTest11)
-# print("After \n" + allocAfterLetTest11.emit())
-# print("Compare Ans: " + str(letTest11.interp()) + "->" + str(allocBeforeLetTest11.interp()) + 
-#  "->" + str(allocAfterLetTest11.interp()))
-
-# #Original 3
-# print("\n Test #3 \n")
-# randomTest3 = randomR1(3)
-# print(randomTest3.pp())
-# allocBefrandomTest3 = s.getToXP(randomTest3)
-# print("Before \n" + allocBefrandomTest3.emit())
-# allocAfterLetTest3 = allocate_registers(allocBefrandomTest3)
-# print("After \n" + allocAfterLetTest3.emit())
-# print("Compare Ans: " + str(randomTest3.interp()) + "->" + str(allocBefrandomTest3.interp()) + 
-#  "->" + str(allocAfterLetTest3.interp()))
-
-
-#  #Original 4
-# print("\n Test #4 \n")
-# randomTest5 = randomR1(5)
-# print(randomTest5.pp())
-# allocBefrandomTest5 = s.getToXP(randomTest5)
-# print("Before \n" + allocBefrandomTest5.emit())
-# allocAfterLetTest5 = allocate_registers(allocBefrandomTest5)
-# print("After \n" + allocAfterLetTest5.emit())
-# print("Compare Ans: " + str(randomTest5.interp()) + "->" + str(allocBefrandomTest5.interp()) + 
-#  "->" + str(allocAfterLetTest5.interp()))
-
-
-
-# #Original 5
-# print("\n Test #5 \n")
-# negTest = RNegate(RNegate(RNegate(RNum(11))))
-# print(negTest.pp())
-# allocBeforeNeg = s.getToXP(negTest)
-# print("Before \n" + allocBeforeNeg.emit())
-# allocAfterNeg = allocate_registers(allocBeforeNeg)
-# print("After \n" + allocAfterNeg.emit())
-# print("Compare Ans: " + str(negTest.interp()) + "->" + str(allocAfterNeg.interp()) + 
-#  "->" + str(allocAfterNeg.interp()))
-
-# s.test(randomTest3.interp(), allocAfterLetTest3.interp())
-# s.test(randomTest5.interp(), allocAfterLetTest5.interp())
-# s.test(negTest.interp(), allocAfterNeg.interp())
-
-
-################ Move biasing Tests ################
-print("Move Biasing \n")
-move1 = XProgram([], {XLabel("main"): XBlock({11: set(), 10: set(), 9: {'RAX', 'T'}, 8: {'Z', 'T'}, 7: {'Z', 'T'}, 6: {'Y', 'Z'}, 5: {'Y', 'Z', 'W'}, 4: {'X', 'Y', 'W'}, 3: {'X', 'W'}, 2: {'X', 'W'}, 1: {'V', 'W'}, 0: {'V'}}, [
-    XIMov(XCon(1), XVar("V")),
-    XIMov(XCon(42), XVar("W")),
-    XIMov(XVar("V"), XVar("X")),
-    XIAdd(XCon(7), XVar("X")),
-    XIMov(XVar("X"), XVar("Y")),
-    XIMov(XVar("X"), XVar("Z")),
-    XIAdd(XVar("W"), XVar("Z")),
-    XIMov(XVar("Y"), XVar("T")),
-    XINeg(XVar("T")),
-    XIMov(XVar("Z"), XRegister("rax")),
-    XIAdd(XVar("T"), XRegister("rax")),
-    # XIJmp(XVar("conclusion"))
-])})
-
-move2 = s.getToXP(letTest8)
-move3 = s.getToXP(letTest2)
-
-move1Before = allocate_registers(buildInt(uncover_live(move1)))
-move1After = patch(allocate_registers(buildInt(uncover_live(move1))))
-print(move1Before.emit())
-print(move1After.emit())
-print(str(move1.interp()) + "->" + str(move1After.interp()))
-
-
-print(move2.emit())
-#print(move2.emit())
-
-print(move3.emit())
-#print(move3.emit())
-#print(str(move1.interp()) + "->" + str(move1After.interp()))
 
 ######## Combined Testing ########
-print("\nCombined Tests\n")
+#print("\nCombined Tests\n")
 
 # s.testAll(letTest1)
 # s.testAll(letTest2)
@@ -1015,19 +534,24 @@ print("\nCombined Tests\n")
 #     "V0"))), RAdd(RAdd(RNum(2), RRead()), RAdd(RNum(4), RVar("V0"))))))
 
 
-# for i in range(10):
+# for i in range(1):
+#     s.testAll(randomR1(8))
+# for i in range(1):
+#     s.testAll(randomR1(7))
+# for i in range(1):
+#     s.testAll(randomR1(6))
+# for i in range(1):
+#     s.testAll(randomR1(5))
+# for i in range(1):
 #     s.testAll(randomR1(4))
-# for i in range(100):
+# for i in range(1000):
 #     s.testAll(randomR1(3))
-# for i in range(100):
+# for i in range(1000):
 #     s.testAll(randomR1(2))
-# for i in range(100):
+# for i in range(1000):
 #     s.testAll(randomR1(1))
-# for i in range(100):
+# for i in range(1000):
 #     s.testAll(randomR1(0))
-# s.testAll(randomR1(5))
-# s.testAll(randomR1(6))
-# s.testAll(randomR1(7))
-# s.testAll(randomR1(8))
+
 
 s.endSuite()
