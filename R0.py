@@ -25,6 +25,9 @@ class RNum:
     def interp(self, e=None):
         return self.num
 
+    def typec(self, env=None):
+        return "NUM"
+
 
 class RNegate:
     def __init__(self, _num):
@@ -35,6 +38,11 @@ class RNegate:
 
     def interp(self, e=None):
         return -1*self.num.interp(e)
+
+    def typec(self, env=None):
+        if(self.num.typec(env) == "NUM"):
+            return "NUM"
+        return "ERROR"
 
 
 class RAdd:
@@ -47,6 +55,11 @@ class RAdd:
 
     def interp(self, e=None):
         return self.left.interp(e) + self.right.interp(e)
+
+    def typec(self, env=None):
+        if(self.left.typec(env) == self.right.typec(env) == "NUM"):
+            return self.left.typec(env)
+        return "ERROR"
 
 
 class RRead:
@@ -65,19 +78,9 @@ class RRead:
             self.num = int(inp)
         return self.num
 
+    def typec(self, env=None):
+        return "NUM"
 
-class Pow:
-    def __init__(self, _num):
-        self.num = _num
-
-    def pp(self):
-        return "2^" + str(self.num.pp())
-
-    def interp(self, e=None):
-        if(self.num.interp() == 0):
-            return 1
-        else:
-            return RAdd(Pow(RNum(self.num.interp()-1)), Pow(RNum(self.num.interp()-1))).interp(e)
 
 ###### R1 data types ######
 
@@ -92,6 +95,11 @@ class RVar:
     def interp(self, e=None):
         if(self.name in e.getEnv()):
             return e.getEnv()[self.name]
+        return "ERROR"
+    
+    def typec(self, env=None):
+        if(self.name in env.getEnv()):
+            return env.getEnv()[self.name]
         return "ERROR"
 
 
@@ -109,6 +117,14 @@ class RLet:
             e = REnv()
         e.setEnv(self.var.name, self.l.interp(e))
         return self.r.interp(e)
+    
+    def typec(self, env=None):
+        if(not env):
+            env = REnv()
+        env.setEnv(self.var.name, self.l.typec(env))
+        if(self.l.typec(env) == self.r.typec(env)):
+            return self.l.typec(env)
+        return "ERROR"
 
 
 ###### R2 data types ######
@@ -123,6 +139,11 @@ class RAnd:
 
     def interp(self, env=None):
         return self.l.interp(env) and self.r.interp(env)
+    
+    def typec(self, env=None):
+        if(self.l.typec(env) == self.r.typec(env)  == "BOOL"):
+            return self.l.typec(env)
+        return "ERROR"
 
 
 class ROr:
@@ -135,6 +156,11 @@ class ROr:
 
     def interp(self, env=None):
         return self.l.interp(env) or self.r.interp(env)
+    
+    def typec(self, env=None):
+        if(self.l.typec(env) == self.r.typec(env)  == "BOOL"):
+            return self.l.typec(env)
+        return "ERROR"
 
 
 class RNot:
@@ -146,6 +172,11 @@ class RNot:
 
     def interp(self, env=None):
         return not self.e.interp(env)
+    
+    def typec(self, env=None):
+        if(self.e.typec(env) == "BOOL"):
+            return self.e.typec(env)
+        return "ERROR"
 
 
 class RCmp:
@@ -169,6 +200,9 @@ class RCmp:
         elif(self.op == "<"):
             return self.l.interp(env) < self.r.interp(env)
         return "ERROR"
+    
+    def typec(self, env=None):
+        return "BOOL"
 
 
 class RIf:
@@ -182,6 +216,12 @@ class RIf:
 
     def interp(self, env=None):
         return self.l.interp(env) if self.var.interp(env) else self.r.interp(env)
+    
+    def typec(self, env=None):
+        if(self.var.interp(env)):
+            return self.l.typec(env)
+        else:
+            return self.r.typec(env)
 
 
 class RSub:
@@ -194,6 +234,11 @@ class RSub:
 
     def interp(self, env=None):
         return self.l.interp(env) - self.r.interp(env)
+    
+    def typec(self, env=None):
+        if(self.l.typec(env) == self.r.typec(env)  == "NUM"):
+            return self.l.typec(env)
+        return "ERROR"
 
 
 class RBool:
@@ -205,6 +250,9 @@ class RBool:
 
     def interp(self, env=None):
         return self.b
+    
+    def typec(self, env=None):
+        return "BOOL"
 
 
 class RS64:
