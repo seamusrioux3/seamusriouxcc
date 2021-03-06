@@ -532,6 +532,15 @@ print(r2prog14.typec())
 print(bad1.typec())
 print(bad2.typec())
 print(bad3.typec())
+
+######## Random R2 Testing ########
+print("\nR2 Random Testing \n")
+for i in range(1000):
+    for n in range(0, 3):
+        ranTest = randomR2(n)
+        print(ranTest.pp())
+        print(ranTest.interp())
+        s.test(isinstance(ranTest.interp(), int) or isinstance(ranTest.interp(), bool) , True)
 ######## Combined Testing ########
 #print("\nCombined Tests\n")
 

@@ -96,7 +96,7 @@ class RVar:
         if(self.name in e.getEnv()):
             return e.getEnv()[self.name]
         return "ERROR"
-    
+
     def typec(self, env=None):
         if(self.name in env.getEnv()):
             return env.getEnv()[self.name]
@@ -117,7 +117,7 @@ class RLet:
             e = REnv()
         e.setEnv(self.var.name, self.l.interp(e))
         return self.r.interp(e)
-    
+
     def typec(self, env=None):
         if(not env):
             env = REnv()
@@ -139,9 +139,9 @@ class RAnd:
 
     def interp(self, env=None):
         return self.l.interp(env) and self.r.interp(env)
-    
+
     def typec(self, env=None):
-        if(self.l.typec(env) == self.r.typec(env)  == "BOOL"):
+        if(self.l.typec(env) == self.r.typec(env) == "BOOL"):
             return self.l.typec(env)
         return "ERROR"
 
@@ -156,9 +156,9 @@ class ROr:
 
     def interp(self, env=None):
         return self.l.interp(env) or self.r.interp(env)
-    
+
     def typec(self, env=None):
-        if(self.l.typec(env) == self.r.typec(env)  == "BOOL"):
+        if(self.l.typec(env) == self.r.typec(env) == "BOOL"):
             return self.l.typec(env)
         return "ERROR"
 
@@ -172,7 +172,7 @@ class RNot:
 
     def interp(self, env=None):
         return not self.e.interp(env)
-    
+
     def typec(self, env=None):
         if(self.e.typec(env) == "BOOL"):
             return self.e.typec(env)
@@ -200,7 +200,7 @@ class RCmp:
         elif(self.op == "<"):
             return self.l.interp(env) < self.r.interp(env)
         return "ERROR"
-    
+
     def typec(self, env=None):
         return "BOOL"
 
@@ -216,7 +216,7 @@ class RIf:
 
     def interp(self, env=None):
         return self.l.interp(env) if self.var.interp(env) else self.r.interp(env)
-    
+
     def typec(self, env=None):
         if(self.var.interp(env)):
             return self.l.typec(env)
@@ -234,9 +234,9 @@ class RSub:
 
     def interp(self, env=None):
         return self.l.interp(env) - self.r.interp(env)
-    
+
     def typec(self, env=None):
-        if(self.l.typec(env) == self.r.typec(env)  == "NUM"):
+        if(self.l.typec(env) == self.r.typec(env) == "NUM"):
             return self.l.typec(env)
         return "ERROR"
 
@@ -250,7 +250,7 @@ class RBool:
 
     def interp(self, env=None):
         return self.b
-    
+
     def typec(self, env=None):
         return "BOOL"
 
@@ -688,26 +688,69 @@ class CSet:
 ###################### Functions ######################
 
 
-def randomR1(n):
-    r = _randomR1(n, [])
+def randomR2(n):
+    random.seed(datetime.now())
+    r = random.choice([_randomR2Bool(n, []), _randomR2(n, [])])
     return r
 
 
-def _randomR1(n, v):
+def _randomR2(n, v):
     random.seed(datetime.now())
     ret = 0
+    ranNum = RNum(random.randint(0, 16))
+    def ranNeg(n): return RNegate(_randomR2(n-1, v))
+    def ranAdd(n): return RAdd(_randomR2(n-1, v), _randomR2(n-1, v))
+
     if(n == 0):
         if(v):
             chosenVar = random.choice(v)
             ret = random.choice(
-                [RNum(random.randint(0, 16)), chosenVar, RRead()])
+                [ranNum, chosenVar, RRead()])
         else:
-            ret = random.choice([RNum(random.randint(0, 16)), RRead()])
+            ret = random.choice([ranNum, RRead()])
     else:
-        newVar = RVar("V" + str(len(v)))
-        ret = random.choice([RAdd(_randomR1(n-1, v), _randomR1(n-1, v)), RNegate(
-            _randomR1(n-1, v)), RLet(newVar, _randomR1(n-1, v), _randomR1(n-1, [newVar]))])
+
+        ret = random.choice(
+            [ranAdd(n), ranNeg(n), ranLet("NUM", n, v), ranIf(n, v)])
     return ret
+
+
+def _randomR2Bool(n, v):
+    random.seed(datetime.now())
+    ret = 0
+    ranBool = RBool(random.choice([True, False]))
+    def ranNot(n): return RNot(_randomR2Bool(n-1, v))
+    def ranAnd(n): return RAnd(_randomR2Bool(n-1, v), _randomR2Bool(n-1, v))
+    def ranOR(n): return ROr(_randomR2Bool(n-1, v), _randomR2Bool(n-1, v))
+    def ranCmp(n): return RCmp(random.choice(
+        ["==", ">=", ">", "<=", "<"]), _randomR2(n-1, v), _randomR2(n-1, v))
+    if(n == 0):
+        if(v):
+            chosenVar = random.choice(v)
+            ret = random.choice(
+                [chosenVar, ranBool])
+        else:
+            ret = random.choice([ranBool])
+    else:
+
+        ret = random.choice([ranNot(n), ranAnd(n), ranOR(
+            n), ranCmp(n), ranLet("BOOL", n, v), ranIf(n, v)])
+    return ret
+
+
+def ranLet(t, n, v):
+    newVar = RVar("V" + str(len(v)))
+    if(t == "BOOL"):
+        return RLet(newVar,  _randomR2Bool(n-1, []),  _randomR2Bool(n-1, []))
+    elif(t == "NUM"):
+        return RLet(newVar,  _randomR2(n-1, []),  _randomR2(n-1, []))
+    print("ERROR in RAN")
+    exit(1)
+    return "ERROR"
+
+
+def ranIf(n, v):
+    return RIf(_randomR2Bool(n-1, v), random.choice([_randomR2(n-1, v), _randomR2Bool(n-1, v)]), random.choice([_randomR2(n-1, v), _randomR2(n-1, v)]))
 
 
 ######## Optimizer Function ########
@@ -1034,7 +1077,7 @@ def _selectA(cp, env):
 def uncover_live(xp: XProgram):
     for l in xp.p.values():
         d = {}
-        before = set([XRegister("rsp").emit()])
+        before = set([])
         if(isinstance(l, XBlock)):
             for i in reversed(l.blk[:-1]):
                 d.update({i: before})
@@ -1228,7 +1271,8 @@ def color(xp: XProgram) -> XProgram:
                 colorList.update({v: regColorList[c]})
             blk.aux = (colorList, ss)
             # print(colorList)
-
+        else:
+            blk.aux = ({}, 0)
     return xp
 
 
@@ -1240,7 +1284,9 @@ def allocate_registers(xp: XProgram) -> XProgram:
     # Because Xprogram should only have one block to start
     firstBlock: XBlock = list(newXp.p.values())[0]
     colorList, stackSize = firstBlock.aux
-    # print(auxBlk)
+    print(newXp.emit())
+    print(colorList)
+    print(stackSize)
     newXp = assign_register(newXp, colorList)
     newXp = mainpass(newXp, stackSize)
     return newXp
@@ -1289,6 +1335,7 @@ def _assignA(a, v):
     if(isinstance(a, XVar)):
         if(a.emit() in v):
             return v[a.emit()]
+        return XRegister("rax")
     else:
         return a
 
