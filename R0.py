@@ -750,7 +750,7 @@ def ranLet(t, n, v):
 
 
 def ranIf(n, v):
-    return RIf(_randomR2Bool(n-1, v), random.choice([_randomR2(n-1, v), _randomR2Bool(n-1, v)]), random.choice([_randomR2(n-1, v), _randomR2(n-1, v)]))
+    return RIf(_randomR2Bool(n-1, v), _randomR2Bool(n-1, v), _randomR2Bool(n-1, v))
 
 
 ######## Optimizer Function ########
@@ -794,21 +794,21 @@ def _optimizer(n, env):
         return n
     elif isinstance(n, RRead):
         return n
-    elif(isinstance(n,RCmp)):
+    elif(isinstance(n, RCmp)):
         op = n.op
         l = n.l
         r = n.r
-        if(isinstance(l,RNum) and isinstance(r,RNum) and op == "==" and l.interp() == r.interp()):
+        if(isinstance(l, RNum) and isinstance(r, RNum) and op == "==" and l.interp() == r.interp()):
             return RBool(n.interp())
         elif(op == "<"):
-            if(isinstance(r,RAdd) and isinstance(r.left,RNum)):
+            if(isinstance(r, RAdd) and isinstance(r.left, RNum)):
                 if(r.right.interp() == l.interp() and r.left.interp() > 0):
                     return RBool(True)
         return n
     elif(isinstance(n, RNot)):
         if(isinstance(n.e, RNot)):
             return _optimizer(n.e.e, env)
-        return RNot(_optimizer(n.e, env)) 
+        return RNot(_optimizer(n.e, env))
     elif isinstance(n, RNegate):
         e = n.num
         if(isinstance(e, RNum)):
@@ -847,21 +847,23 @@ def _optimizer(n, env):
         else:
             print("Add case 6")
             return RAdd(_optimizer(l, env), _optimizer(r, env))
+    elif isinstance(n, RSub):
+        return RSub(_optimizer(n.l, env), _optimizer(n.r, env))
     elif(isinstance(n, RIf)):
         var = n.var
         l = n.l
         r = n.r
         if(l.interp() == True and r.interp() == False):
             return _optimizer(var, env)
-        elif(isinstance(var, RIf) and var.l.interp() == False and var.r.interp() == True):
+        elif(isinstance(var, RIf) and isinstance(l, RBool) and isinstance(r, RBool) and 
+                    var.l.interp() == False and var.r.interp() == True):
             if(l.interp() == False and r.interp() == True):
                 return _optimizer(var.var, env)
         elif(isinstance(var, RNot)):
             return RIf(var.e, r, l)
         elif(l.interp() == r.interp()):
             return RLet(RVar("_"), var, l)
-        
-        return RIf(_optimizer(var,env), _optimizer(l,env), _optimizer(r,env))
+        return RIf(_optimizer(var, env), _optimizer(l, env), _optimizer(r, env))
 
     elif(isinstance(n, RVar)):
         if(n.name in env.getEnv()):
@@ -904,12 +906,26 @@ def uniquify(e):
 def uni(e, uenv):
     if(isinstance(e, RNum)):
         return e
+    if(isinstance(e, RBool)):
+        return e
     elif(isinstance(e, RRead)):
         return e
     elif(isinstance(e, RNegate)):
         return RNegate(uni(e.num, uenv))
     elif(isinstance(e, RAdd)):
         return RAdd(uni(e.left, uenv), uni(e.right, uenv))
+    elif(isinstance(e, RSub)):
+        return RSub(uni(e.l, uenv), uni(e.r, uenv))
+    elif(isinstance(e, RCmp)):
+        return RCmp(e.op, uni(e.l, uenv), uni(e.r, uenv))
+    elif(isinstance(e, RAnd)):
+        return RAnd(uni(e.l, uenv), uni(e.r, uenv))
+    elif(isinstance(e, ROr)):
+        return ROr(uni(e.l, uenv), uni(e.r, uenv))
+    elif(isinstance(e, RNot)):
+        return RNot(uni(e.e, uenv))
+    elif(isinstance(e, RIf)):
+        return RIf(uni(e.var, uenv), uni(e.l, uenv), uni(e.r, uenv))
     elif(isinstance(e, RVar)):
         if e.pp() in uenv.getEnv():
             return RVar(uenv.getEnv()[e.pp()])
