@@ -21,21 +21,8 @@ class Test:
             self.testPassed += 1
             return True
         print("Test failed expected " + str(_expected) + " got " + str(_actual))
+        exit(1)
         return False
-
-    def testOpt(self, n):
-        testCompleted = 0
-        for i in range(n):
-            print("Test Number: " + str(i))
-            p = randomR1(6)
-            pprim = optimizer(p)
-            print(p.pp())
-            print(pprim.pp())
-            if(p.interp() == pprim.interp()):
-                print(True)
-                testCompleted += 1
-        print("Number of optimizer tests completed " +
-              str(testCompleted) + " out of "+str(n))
 
     def testX0OnHardware(self, prog):
         fileName = "c0.s"
@@ -535,12 +522,35 @@ print(bad3.typec())
 
 ######## Random R2 Testing ########
 print("\nR2 Random Testing \n")
-for i in range(1000):
-    for n in range(0, 3):
-        ranTest = randomR2(n)
+for i in range(800):
+    for n in range(0, 4):
+        ranTest = optimizer(randomR2(n))
+        print(ranTest.pp())
+        orgAns = ranTest.interp()
+        print(orgAns)
+        ranTest = optimizer(ranTest)
+        print(ranTest)
         print(ranTest.pp())
         print(ranTest.interp())
-        s.test(isinstance(ranTest.interp(), int) or isinstance(ranTest.interp(), bool) , True)
+        s.test(isinstance(ranTest.interp(), int)
+               or isinstance(ranTest.interp(), bool), (orgAns == ranTest.interp()))
+
+######## Optimizer R2 Testing ########
+optEx1 = optimizer(RNot(RNot(RBool(True))))
+print(optEx1.pp() +"-->"+ str(optEx1.interp()))
+optEx1 = optimizer(RIf(RIf(RBool(True), RBool(False), RBool(True)), RBool(False), RBool(True)))
+print(optEx1.pp() +"-->"+ str(optEx1.interp()))
+optEx1 = optimizer(RIf(RNot(RBool(True)), RBool(False), RBool(True)))
+print(optEx1.pp() +"-->"+ str(optEx1.interp()))
+optEx1 = optimizer(RIf(RNot(RBool(True)), RBool(True), RBool(False)))
+print(optEx1.pp() +"-->"+ str(optEx1.interp()))
+optEx1 = optimizer(RCmp("==", RNum(4), RNum(4)))
+print(optEx1.pp() +"-->"+ str(optEx1.interp()))
+optEx1 = optimizer(RCmp("<", RNum(3), RAdd(RNum(1), RNum(3))))
+print(optEx1.pp() +"-->"+ str(optEx1.interp()))
+optEx1 = optimizer(RIf(RCmp("==", RNum(1), RNum(2)), RBool(True), RBool(True)))
+print(optEx1.pp() +"-->"+ str(optEx1.interp()))
+
 ######## Combined Testing ########
 #print("\nCombined Tests\n")
 
