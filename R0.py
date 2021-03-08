@@ -700,7 +700,7 @@ def _randomR2(n, v):
     ranNum = RNum(random.randint(0, 16))
     def ranNeg(n): return RNegate(_randomR2(n-1, v))
     def ranAdd(n): return RAdd(_randomR2(n-1, v), _randomR2(n-1, v))
-
+    def ranSub(n): return RSub(_randomR2(n-1, v), _randomR2(n-1, v))
     if(n == 0):
         if(v):
             chosenVar = random.choice(v)
@@ -711,7 +711,7 @@ def _randomR2(n, v):
     else:
 
         ret = random.choice(
-            [ranAdd(n), ranNeg(n), ranLet("NUM", n, v), ranIf(n, v)])
+            [ranAdd(n), ranNeg(n), ranLet("NUM", n, v), ranSub(n), ranIf(n, v)])
     return ret
 
 
@@ -790,8 +790,25 @@ def optimizer(n):
 def _optimizer(n, env):
     if isinstance(n, RNum):
         return n
+    elif isinstance(n, RBool):
+        return n
     elif isinstance(n, RRead):
         return n
+    elif(isinstance(n,RCmp)):
+        op = n.op
+        l = n.l
+        r = n.r
+        if(isinstance(l,RNum) and isinstance(r,RNum) and op == "==" and l.interp() == r.interp()):
+            return RBool(n.interp())
+        elif(op == "<"):
+            if(isinstance(r,RAdd) and isinstance(r.left,RNum)):
+                if(r.right.interp() == l.interp() and r.left.interp() > 0):
+                    return RBool(True)
+        return n
+    elif(isinstance(n, RNot)):
+        if(isinstance(n.e, RNot)):
+            return _optimizer(n.e.e, env)
+        return RNot(_optimizer(n.e, env)) 
     elif isinstance(n, RNegate):
         e = n.num
         if(isinstance(e, RNum)):
@@ -809,20 +826,43 @@ def _optimizer(n, env):
         l = n.left
         r = n.right
         if(isinstance(l, RNum) and isinstance(r, RNum)):
+            print("Add case 1")
             return RNum(l.interp() + r.interp())
 
         elif(isinstance(l, RNum) and isinstance(r, RAdd) and isinstance(r.left, RNum)):
+            print("Add case 2")
             return RAdd(RNum(l.interp() + r.left.interp()), _optimizer(r.right, env))
 
         elif(isinstance(l, RAdd) and isinstance(r, RNum) and isinstance(l.left, RNum)):
-            return RAdd(RNum(l.interp() + r.interp()), _optimizer(r.left, env))
+            print("Add case 3")
+            return RAdd(RNum(l.left.interp() + r.interp()), _optimizer(l.right, env))
 
         elif(isinstance(l, RAdd) and isinstance(l.left, RNum) and isinstance(r, RAdd) and isinstance(r.left, RNum)):
+            print("Add case 4")
             return RAdd(RNum(l.left.interp() + r.left.interp()), RAdd(_optimizer(l.right, env), _optimizer(r.right, env)))
+
         elif(not isinstance(l, RNum) and isinstance(r, RNum)):
+            print("Add case 5")
             return RAdd(r, _optimizer(l, env))
         else:
+            print("Add case 6")
             return RAdd(_optimizer(l, env), _optimizer(r, env))
+    elif(isinstance(n, RIf)):
+        var = n.var
+        l = n.l
+        r = n.r
+        if(l.interp() == True and r.interp() == False):
+            return _optimizer(var, env)
+        elif(isinstance(var, RIf) and var.l.interp() == False and var.r.interp() == True):
+            if(l.interp() == False and r.interp() == True):
+                return _optimizer(var.var, env)
+        elif(isinstance(var, RNot)):
+            return RIf(var.e, r, l)
+        elif(l.interp() == r.interp()):
+            return RLet(RVar("_"), var, l)
+        
+        return RIf(_optimizer(var,env), _optimizer(l,env), _optimizer(r,env))
+
     elif(isinstance(n, RVar)):
         if(n.name in env.getEnv()):
             return env.getEnv()[n.name]
@@ -838,6 +878,7 @@ def _optimizer(n, env):
             be = _optimizer(n.r, env)
             return RLet(n.var, xe, be)
 
+    return n
 
 ######## Uniquify Function ########
 
