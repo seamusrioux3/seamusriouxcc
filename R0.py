@@ -692,6 +692,9 @@ class CBool:
         self.b = _b
 
     def pp(self):
+        return str(self.b)
+
+    def interp(self, env):
         return self.b
 
 
@@ -702,6 +705,9 @@ class CEquals:
 
     def pp(self):
         return "(" + self.l.pp() + " == " + self.r.pp() + ")"
+    
+    def interp(self, env):
+        return self.l.interp(env) == self.r.interp(env)
 
 
 class CLessThan:
@@ -712,6 +718,9 @@ class CLessThan:
     def pp(self):
         return "(" + self.l.pp() + " < " + self.r.pp() + ")"
 
+    def interp(self, env):
+        return self.l.interp(env) < self.r.interp(env)
+
 
 class CGreaterThan:
     def __init__(self, _l, _r):
@@ -720,6 +729,9 @@ class CGreaterThan:
 
     def pp(self):
         return "(" + self.l.pp() + " > " + self.r.pp() + ")"
+    
+    def interp(self, env):
+        return self.l.interp(env) > self.r.interp(env)
 
 
 class CGreaterThanEqual:
@@ -729,6 +741,9 @@ class CGreaterThanEqual:
 
     def pp(self):
         return "(" + self.l.pp() + " >= " + self.r.pp() + ")"
+    
+    def interp(self, env):
+        return self.l.interp(env) >= self.r.interp(env)
 
 
 class CLessThanEqual:
@@ -738,6 +753,9 @@ class CLessThanEqual:
 
     def pp(self):
         return "(" + self.l.pp() + " <= " + self.r.pp() + ")"
+    
+    def interp(self, env):
+        return self.l.interp(env) <= self.r.interp(env)
 
 
 class CNot:
@@ -746,6 +764,9 @@ class CNot:
 
     def pp(self):
         return "not(" + self.e.pp() + ")"
+    
+    def interp(self, env):
+        return not self.e.interp(env)
 
 
 class CGoto:
@@ -754,6 +775,10 @@ class CGoto:
 
     def pp(self):
         return "goto " + self.label.pp()
+    
+    def interp(self, env):
+        rtn = "ERROR"
+        return env.blk[self.label.interp()].interp(env)
 
 
 class CIf:
@@ -764,6 +789,13 @@ class CIf:
 
     def pp(self):
         return "goto-if(" + self.cmp.pp() + " " + self.l.pp() + " " + self.r.pp() + ")"
+    
+    def interp(self, env):
+        rtn = "ERROR"
+        if(self.cmp.interp(env)):
+            return env.blk[self.l.interp()].interp(env)
+        else:
+            return env.blk[self.r.interp()].interp(env)
 
 
 ###################### Functions ######################

@@ -303,7 +303,7 @@ print(optEx1.pp() + "-->" + str(optEx1.interp()))
 ########  C1 Testing  ########
 cprog1 = CProgram([], {CLabel("main"): CBlock(None,[
     CSet(CVar("x"), CNum(1)),
-    CSet(CVar("y"), CNum(2)),
+    CSet(CVar("y"), CBool(False)),
     CSet(CVar("z"), CNot(CVar("y"))),
     CRet(CVar("z"))
 ])})
@@ -386,11 +386,12 @@ cprog7 = CProgram([], {
     ]),
     CLabel("loop"):CBlock(None,
     [
-        CIf(CLessThan(CVar("x"), CNum(5)), CLabel("finish"), CLabel("inc"))
+        CIf(CLessThan(CVar("x"), CNum(5)), CLabel("inc"), CLabel("finish"))
     ]),
     CLabel("inc"):CBlock(None,
     [
-        CSet(CVar("x"),CAdd(CVar("x"), CNum(1)))
+        CSet(CVar("x"),CAdd(CVar("x"), CNum(1))),
+        CGoto(CLabel("loop"))
     ]),
     CLabel("finish"):CBlock(None,
     [
@@ -400,12 +401,19 @@ cprog7 = CProgram([], {
 
 
 print(cprog1.pp())
+print("Ans: " + str(cprog1.interp()))
 print(cprog2.pp())
+print("Ans: " + str(cprog2.interp()))
 print(cprog3.pp())
+print("Ans: " + str(cprog3.interp()))
 print(cprog4.pp())
+print("Ans: " + str(cprog4.interp()))
 print(cprog5.pp())
+print("Ans: " + str(cprog5.interp()))
 print(cprog6.pp())
+print("Ans: " + str(cprog6.interp()))
 print(cprog7.pp())
+print("Ans: " + str(cprog7.interp()))
 ######## Combined Testing Updated With R2 Uniquify ########
 print("\nCombined Tests\n")
 #s.bigTest(5)
