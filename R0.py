@@ -564,7 +564,7 @@ class CProgram:
         self.info = _info
 
     def pp(self):
-        return "".join(["\n" + l.pp() + ":" + b.pp() for l, b in self.p.items()])
+        return "".join(["\n\n" + l.pp() + ":" + b.pp() for l, b in self.p.items()])
 
     def interp(self):
         tempBlks = {}
@@ -691,11 +691,17 @@ class CBool:
     def __init__(self, _b):
         self.b = _b
 
+    def pp(self):
+        return self.b
+
 
 class CEquals:
     def __init__(self, _l, _r):
         self.l = _l
         self.r = _r
+
+    def pp(self):
+        return "(" + self.l.pp() + " == " + self.r.pp() + ")"
 
 
 class CLessThan:
@@ -703,11 +709,17 @@ class CLessThan:
         self.l = _l
         self.r = _r
 
+    def pp(self):
+        return "(" + self.l.pp() + " < " + self.r.pp() + ")"
+
 
 class CGreaterThan:
     def __init__(self, _l, _r):
         self.l = _l
         self.r = _r
+
+    def pp(self):
+        return "(" + self.l.pp() + " > " + self.r.pp() + ")"
 
 
 class CGreaterThanEqual:
@@ -715,21 +727,33 @@ class CGreaterThanEqual:
         self.l = _l
         self.r = _r
 
+    def pp(self):
+        return "(" + self.l.pp() + " >= " + self.r.pp() + ")"
+
 
 class CLessThanEqual:
     def __init__(self, _l, _r):
         self.l = _l
         self.r = _r
 
+    def pp(self):
+        return "(" + self.l.pp() + " <= " + self.r.pp() + ")"
+
 
 class CNot:
     def __init__(self, _e):
         self.e = _e
 
+    def pp(self):
+        return "not(" + self.e.pp() + ")"
+
 
 class CGoto:
     def __init__(self, _label):
         self.label = _label
+
+    def pp(self):
+        return "goto " + self.label.pp()
 
 
 class CIf:
@@ -737,6 +761,9 @@ class CIf:
         self.cmp = _cmp
         self.l = _l
         self.r = _r
+
+    def pp(self):
+        return "goto-if(" + self.cmp.pp() + " " + self.l.pp() + " " + self.r.pp() + ")"
 
 
 ###################### Functions ######################
