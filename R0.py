@@ -684,6 +684,60 @@ class CSet:
         env.setVar({self.var.pp(): self.exp.interp(env)})
         return 0
 
+###### C1 Program Data Types ########
+
+
+class CBool:
+    def __init__(self, _b):
+        self.b = _b
+
+
+class CEquals:
+    def __init__(self, _l, _r):
+        self.l = _l
+        self.r = _r
+
+
+class CLessThan:
+    def __init__(self, _l, _r):
+        self.l = _l
+        self.r = _r
+
+
+class CGreaterThan:
+    def __init__(self, _l, _r):
+        self.l = _l
+        self.r = _r
+
+
+class CGreaterThanEqual:
+    def __init__(self, _l, _r):
+        self.l = _l
+        self.r = _r
+
+
+class CLessThanEqual:
+    def __init__(self, _l, _r):
+        self.l = _l
+        self.r = _r
+
+
+class CNot:
+    def __init__(self, _e):
+        self.e = _e
+
+
+class CGoto:
+    def __init__(self, _label):
+        self.label = _label
+
+
+class CIf:
+    def __init__(self, _cmp, _l, _r):
+        self.cmp = _cmp
+        self.l = _l
+        self.r = _r
+
 
 ###################### Functions ######################
 
@@ -855,8 +909,8 @@ def _optimizer(n, env):
         r = n.r
         if(l.interp() == True and r.interp() == False):
             return _optimizer(var, env)
-        elif(isinstance(var, RIf) and isinstance(l, RBool) and isinstance(r, RBool) and 
-                    var.l.interp() == False and var.r.interp() == True):
+        elif(isinstance(var, RIf) and isinstance(l, RBool) and isinstance(r, RBool) and
+             var.l.interp() == False and var.r.interp() == True):
             if(l.interp() == False and r.interp() == True):
                 return _optimizer(var.var, env)
         elif(isinstance(var, RNot)):
