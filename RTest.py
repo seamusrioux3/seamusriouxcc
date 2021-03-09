@@ -85,12 +85,11 @@ class Test:
         # ptch = patch(aloc)
         # real = self.testX0OnHardware(ptch)
 
-        
         # print("rco: " + pr.pp())
         # print("econ: " + pe.pp())
         # print("sel: " + xz.emit())
 
-        # 
+        #
 
         # print("original ans: " + str(p.interp()))
         # print("optimized ans: " + str(po.interp()))
@@ -102,7 +101,7 @@ class Test:
         # print("patch ans: " + str(ptch.interp()))
         # print("real ans: " + str(real))
         if (self.checkAll(p, [po, pu], None)):
-            actual = pu.interp()  
+            actual = pu.interp()
         else:
             print("original: " + p.pp())
             print("original ans: " + str(p.interp()))
@@ -110,11 +109,16 @@ class Test:
             print("optimized ans: " + str(po.interp()))
             print("uniquify: " + pu.pp())
             print("uniquify ans: " + str(pu.interp()))
-            
+
             actual = not p.interp()
             exit(1)
 
         self.test(actual, p.interp())
+    
+    def bigTest(self,n):
+        for i in range(1000):
+          for n in range(0, n):
+            self.testAll(randomR2(n))
 
 
 s = Test()
@@ -296,53 +300,157 @@ print(optEx1.pp() + "-->" + str(optEx1.interp()))
 optEx1 = optimizer(RIf(RCmp("==", RNum(1), RNum(2)), RBool(True), RBool(True)))
 print(optEx1.pp() + "-->" + str(optEx1.interp()))
 
+########  C1 Testing  ########
+cprog1 = CProgram([], {CLabel("main"): CBlock(None,[
+    CSet(CVar("x"), CNum(1)),
+    CSet(CVar("y"), CNum(2)),
+    CSet(CVar("z"), CNot(CVar("y"))),
+    CRet(CVar("z"))
+])})
+
+cprog2 = CProgram([], {
+    CLabel("main"):CBlock(None,
+    [
+        CSet(CVar("x"), CNum(1)),
+        CSet(CVar("y"), CNum(2)),
+        CIf(CGreaterThanEqual(CVar("x"), CVar("y")), CLabel("xLabel"), CLabel("yLabel")),
+    ]),
+    CLabel("xLabel"):CBlock(None,
+    [
+        CRet(CVar("x"))
+    ]),
+    CLabel("yLabel"):CBlock(None,
+    [
+        CRet(CVar("y"))
+    ])
+})
+
+cprog3 = CProgram([], {
+    CLabel("main"):CBlock(None,
+    [
+        CSet(CVar("x"), CNum(1)),
+        CSet(CVar("y"), CNum(2)),
+        CIf(CGreaterThanEqual(CVar("x"), CVar("y")), CLabel("xLabel"), CLabel("yLabel")),
+    ]),
+    CLabel("xLabel"):CBlock(None,
+    [
+        CSet(CVar("rb"), CEquals(CVar("x"), CVar("y"))),
+        CRet(CVar("rb"))
+    ]),
+    CLabel("yLabel"):CBlock(None,
+    [
+        CRet(CVar("y"))
+    ])
+})
+
+cprog4 = CProgram([], {
+    CLabel("main"):CBlock(None,
+    [
+        CSet(CVar("x"), CNum(1)),
+        CSet(CVar("y"), CNum(2)),
+        CIf(CGreaterThanEqual(CVar("x"), CVar("y")), CLabel("xLabel"), CLabel("yLabel")),
+    ]),
+    CLabel("xLabel"):CBlock(None,
+    [
+        CSet(CVar("rb"), CEquals(CVar("x"), CVar("y"))),
+        CRet(CVar("rb"))
+    ]),
+    CLabel("yLabel"):CBlock(None,
+    [
+        CSet(CVar("rb"), CEquals(CVar("x"), CVar("y"))),
+        CSet(CVar("rb"), CNot(CVar("rb"))),
+        CRet(CVar("rb"))
+    ])
+})
+
+cprog5 = CProgram([], {CLabel("main"): CBlock(None,[
+    CSet(CVar("x"), CNum(1)),
+    CSet(CVar("y"), CNum(2)),
+    CSet(CVar("z"), CLessThan(CVar("x"), CVar("y"))),
+    CRet(CVar("z"))
+])})
+
+cprog6 = CProgram([], {CLabel("main"): CBlock(None,[
+    CSet(CVar("x"), CNum(1)),
+    CSet(CVar("y"), CNum(2)),
+    CSet(CVar("z"), CGreaterThanEqual(CVar("x"), CVar("y"))),
+    CRet(CVar("z"))
+])})
+
+
+cprog7 = CProgram([], {
+    CLabel("main"):CBlock(None,
+    [
+        CSet(CVar("x"), CNum(1)),
+        CGoto(CLabel("loop"))
+    ]),
+    CLabel("loop"):CBlock(None,
+    [
+        CIf(CLessThan(CVar("x"), CNum(5)), CLabel("finish"), CLabel("inc"))
+    ]),
+    CLabel("inc"):CBlock(None,
+    [
+        CSet(CVar("x"),CAdd(CVar("x"), CNum(1)))
+    ]),
+    CLabel("finish"):CBlock(None,
+    [
+        CRet(CVar("x"))
+    ])
+})
+
+
+print(cprog1.pp())
+print(cprog2.pp())
+print(cprog3.pp())
+print(cprog4.pp())
+print(cprog5.pp())
+print(cprog6.pp())
+print(cprog7.pp())
 ######## Combined Testing Updated With R2 Uniquify ########
 print("\nCombined Tests\n")
+#s.bigTest(5)
+# s.testAll(letTest1)
+# s.testAll(letTest2)
+# s.testAll(letTest3)
+# s.testAll(letTest4)
+# s.testAll(letTest5)
+# s.testAll(letTest6)
+# s.testAll(letTest7)
+# s.testAll(letTest8)
+# s.testAll(letTest9)
+# s.testAll(letTest10)
+# s.testAll(Econprog1R)
+# s.testAll(Econprog2R)
+# s.testAll(Econprog3R)
+# s.testAll(RLet(RVar("R1"), RAdd(RNum(1), RNum(1)), RLet(RVar("R2"), RAdd(RVar(
+#     "R1"), RVar("R1")), RLet(RVar("R3"), RAdd(RVar("R2"), RVar("R2")), RVar("R3")))))
+# s.testAll(RLet(RVar("R1"), RAdd(RNegate(RNum(2)),
+#                                 RNegate(RNegate(RNum(2)))), RVar("R1")))
+# s.testAll(RLet(RVar("R1"), RNum(4), RVar("R1")))
+# s.testAll(Rcoprog1)
+# s.testAll(Rcoprog2)
+# s.testAll(Rcoprog3)
+# s.testAll(Rcoprog4)
+# s.testAll(Rcoprog5)
+# s.testAll(Rcoprog6)
+# s.testAll(Uprog1)
+# s.testAll(Uprog2)
+# s.testAll(Uprog3)
+# s.testAll(Uprog4)
+# s.testAll(Uprog5)
+# s.testAll(Uprog6)
+# s.testAll(RAdd(RNum(22), RAdd(RNum(23), RRead())))
+# s.testAll(RAdd(RNegate(RNum(22)), RNum(23)))
+# s.testAll(RAdd(RNum(22), RNum(23)))
+# s.testAll(RNegate(RNegate(RNum(975))))
+# s.testAll(RNegate(RAdd(RNum(10), RAdd(RRead(), RNum(12)))))
+# s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RNegate(RRead())))))))
+# s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RRead()))))))
+# s.testAll(RAdd(RNum(22), RAdd(RNum(23), RNum(20))))
+# s.testAll(RNegate(RLet(RVar("V0"), RNegate(RLet(RVar("V0"), RNum(2), RVar(
+#     "V0"))), RAdd(RAdd(RNum(2), RRead()), RAdd(RNum(4), RVar("V0"))))))
 
-s.testAll(letTest1)
-s.testAll(letTest2)
-s.testAll(letTest3)
-s.testAll(letTest4)
-s.testAll(letTest5)
-s.testAll(letTest6)
-s.testAll(letTest7)
-s.testAll(letTest8)
-s.testAll(letTest9)
-s.testAll(letTest10)
-s.testAll(Econprog1R)
-s.testAll(Econprog2R)
-s.testAll(Econprog3R)
-s.testAll(RLet(RVar("R1"), RAdd(RNum(1), RNum(1)), RLet(RVar("R2"), RAdd(RVar(
-    "R1"), RVar("R1")), RLet(RVar("R3"), RAdd(RVar("R2"), RVar("R2")), RVar("R3")))))
-s.testAll(RLet(RVar("R1"), RAdd(RNegate(RNum(2)),
-                                RNegate(RNegate(RNum(2)))), RVar("R1")))
-s.testAll(RLet(RVar("R1"), RNum(4), RVar("R1")))
-s.testAll(Rcoprog1)
-s.testAll(Rcoprog2)
-s.testAll(Rcoprog3)
-s.testAll(Rcoprog4)
-s.testAll(Rcoprog5)
-s.testAll(Rcoprog6)
-s.testAll(Uprog1)
-s.testAll(Uprog2)
-s.testAll(Uprog3)
-s.testAll(Uprog4)
-s.testAll(Uprog5)
-s.testAll(Uprog6)
-s.testAll(RAdd(RNum(22), RAdd(RNum(23), RRead())))
-s.testAll(RAdd(RNegate(RNum(22)), RNum(23)))
-s.testAll(RAdd(RNum(22), RNum(23)))
-s.testAll(RNegate(RNegate(RNum(975))))
-s.testAll(RNegate(RAdd(RNum(10), RAdd(RRead(), RNum(12)))))
-s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RNegate(RRead())))))))
-s.testAll(RNegate(RNegate(RNegate(RNegate(RNegate(RRead()))))))
-s.testAll(RAdd(RNum(22), RAdd(RNum(23), RNum(20))))
-s.testAll(RNegate(RLet(RVar("V0"), RNegate(RLet(RVar("V0"), RNum(2), RVar(
-    "V0"))), RAdd(RAdd(RNum(2), RRead()), RAdd(RNum(4), RVar("V0"))))))
 
-for i in range(1000):
-    for n in range(0, 4):
-        s.testAll(randomR2(n))
 
 
 s.endSuite()
