@@ -542,6 +542,61 @@ class XIPop:
         XIAdd(XCon(8), XRegister("RSP")).interp(env)
         return
 
+###### X1 Program Data Types ########
+class XByteRegister:
+    def __init__(self, _r):
+        self.r =_r
+
+class XEq:
+    def __init__(self, _l, _r):
+        self.l =_l
+        self.r =_r
+
+class XLEq:
+    def __init__(self, _l, _r):
+        self.l =_l
+        self.r =_r
+
+class XL:
+    def __init__(self, _l, _r):
+        self.l =_l
+        self.r =_r
+
+class XGEq:
+    def __init__(self, _l, _r):
+        self.l =_l
+        self.r =_r
+
+class XG:
+    def __init__(self, _l, _r):
+        self.l =_l
+        self.r =_r
+
+class XIXor:
+    def __init__(self, _l, _r):
+        self.l =_l
+        self.r =_r
+
+class XICmp:
+    def __init__(self, _l, _r):
+        self.l =_l
+        self.r =_r
+
+class XISet:
+    def __init__(self, _cc, _arg):
+        self.cc =_cc
+        self.arg =_arg
+
+class XIMovzb:
+    def __init__(self, _l, _r):
+        self.l =_l
+        self.r =_r
+
+class XIJmpIf:
+    def __init__(self, _cc, _label):
+        self.cc =_cc
+        self.label =_label
+
 ###### C0 Program Data Types ########
 
 
