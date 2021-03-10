@@ -546,56 +546,78 @@ class XIPop:
 class XByteRegister:
     def __init__(self, _r):
         self.r =_r
+    
+    def emit(self):
+        return "%" + self.r
 
 class XEq:
-    def __init__(self, _l, _r):
-        self.l =_l
-        self.r =_r
+    def __init__(self):
+    
+    def emit(self):
+        return "e"
 
 class XLEq:
-    def __init__(self, _l, _r):
-        self.l =_l
-        self.r =_r
+    def __init__(self):
+    def emit(self):
+        return "le"
 
 class XL:
-    def __init__(self, _l, _r):
-        self.l =_l
-        self.r =_r
+    def __init__(self):
+    def emit(self):
+        return "l"
 
 class XGEq:
-    def __init__(self, _l, _r):
-        self.l =_l
-        self.r =_r
+    def __init__(self):
+    def emit(self):
+        return "ge"
 
 class XG:
-    def __init__(self, _l, _r):
-        self.l =_l
-        self.r =_r
+    def __init__(self):
+    def emit(self):
+        return "g"
 
 class XIXor:
     def __init__(self, _l, _r):
         self.l =_l
         self.r =_r
+    
+    def emit(self):
+        return "xorq" + " " + self.l.emit() + " " + self.r.emit()
 
 class XICmp:
     def __init__(self, _l, _r):
         self.l =_l
         self.r =_r
+    
+    def emit(self):
+        return "cmpq" + " " + self.l.emit() + " " + self.r.emit()
+
 
 class XISet:
     def __init__(self, _cc, _arg):
         self.cc =_cc
         self.arg =_arg
+    
+    def emit(self):
+        return "set" + self.cc.emit() + " " + self.arg.emit()
 
 class XIMovzb:
     def __init__(self, _l, _r):
         self.l =_l
         self.r =_r
+    
+    def emit(self):
+        return "movzbq" + " " + self.l.emit() + " " + self.r.emit()
+
 
 class XIJmpIf:
     def __init__(self, _cc, _label):
         self.cc =_cc
         self.label =_label
+    
+    def emit(self):
+        return "j" +  self.cc.emit() + " " + self.r.emit()
+
 
 ###### C0 Program Data Types ########
 
