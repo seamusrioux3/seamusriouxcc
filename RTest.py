@@ -414,6 +414,149 @@ print(cprog6.pp())
 print("Ans: " + str(cprog6.interp()))
 print(cprog7.pp())
 print("Ans: " + str(cprog7.interp()))
+
+########  X1 Testing  ########
+print("\nX1  Testing")
+
+
+xprog1 = XProgram([], {XLabel("main"):
+    XBlock(None,[
+        XIMov(XCon(1), XRegister("rax")),
+        XIXor(XCon(1), XRegister("rax")),
+        XIRet()
+    ])
+})
+
+xprog2 = XProgram([], {XLabel("main"):
+    XBlock(None,[
+        XIMov(XCon(0), XRegister("rax")),
+        XIMov(XCon(0), XRegister("rbx")),
+        XIXor(XRegister("rbx"), XRegister("rax")),
+        XIRet()
+    ])
+})
+
+xprog3 = XProgram([], {XLabel("main"):
+    XBlock(None,[
+        XIMov(XCon(1), XRegister("rax")),
+        XIMov(XCon(0), XRegister("rbx")),
+        XIXor(XRegister("rbx"), XRegister("rax")),
+        XIMov(XCon(1), XRegister("rbx")),
+        XIXor(XRegister("rbx"), XRegister("rax")),
+        XIRet()
+    ])
+})
+
+xprog4 = XProgram([], {
+    XLabel("main"):
+    XBlock(None,[
+        XIMov(XCon(3), XRegister("rcx")),
+        XIMov(XCon(2), XRegister("rbx")),
+        XICmp(XRegister("rcx"), XRegister("rbx")),
+        XIJmpIf(XGEq(), XLabel("ltrue")),
+        XIRet()  
+    ]),
+    XLabel("ltrue"):
+    XBlock(None,[
+        XIMov(XCon(3), XRegister("rax")),
+        XIRet() 
+    ])
+})
+
+xprog5 = XProgram([], {
+    XLabel("main"):
+    XBlock(None,[
+        XIMov(XCon(3), XRegister("rcx")),
+        XIMov(XCon(2), XRegister("rbx")),
+        XICmp(XRegister("rcx"), XRegister("rbx")),
+        XIJmpIf(XL(), XLabel("ltrue")),
+        XICmp(XRegister("rcx"), XRegister("rbx")),
+        XIJmpIf(XG(), XLabel("lfalse")),
+        XIRet()  
+    ]),
+    XLabel("ltrue"):
+    XBlock(None,[
+        XIMov(XCon(3), XRegister("rax")),
+        XIRet() 
+    ]),
+    XLabel("lfalse"):
+    XBlock(None,[
+        XIMov(XCon(0), XRegister("rax")),
+        XIRet() 
+    ])
+})
+
+xprog6 = XProgram([], {
+    XLabel("main"):
+    XBlock(None,[
+        XIMov(XCon(3), XRegister("rcx")),
+        XIMov(XCon(2), XRegister("rbx")),
+        XICmp(XRegister("rcx"), XRegister("rbx")),
+        XIJmpIf(XG(), XLabel("ltrue")),
+        XICmp(XRegister("rcx"), XRegister("rbx")),
+        XIJmpIf(XL(), XLabel("lfalse")),
+        XIRet()  
+    ]),
+    XLabel("ltrue"):
+    XBlock(None,[
+        XIMov(XCon(3), XRegister("rax")),
+        XIRet() 
+    ]),
+    XLabel("lfalse"):
+    XBlock(None,[
+        XIMov(XCon(0), XRegister("rax")),
+        XIRet() 
+    ])
+})
+
+xprog7 = XProgram([], {
+    XLabel("main"):XBlock(None,
+    [
+        XIMov(XCon(1), XRegister("rbx")),
+        XIJmp(XLabel("loop"))
+    ]),
+    XLabel("loop"):XBlock(None,
+    [
+        XIMov(XCon(5), XRegister("rcx")),
+        XICmp( XRegister("rbx"), XRegister("rcx")),
+        XIJmpIf(XL(),XLabel("inc")),
+        XIJmp(XLabel("finish"))
+    ]),
+    XLabel("inc"):XBlock(None,
+    [
+        XIAdd(XCon(1), XRegister("rbx")),
+        XIJmp(XLabel("loop"))
+    ]),
+    XLabel("finish"):XBlock(None,
+    [
+        XIMov(XRegister("rbx"), XRegister("rax")),
+        XIRet()
+    ])
+})
+
+xprog8 = XProgram([], {XLabel("main"):
+    XBlock(None,[
+        XIMovzb(XCon(20), XByteRegister("al")),
+        XIMovzb(XByteRegister("al"), XRegister("rax")),
+        XIRet()
+    ])
+})
+print(xprog1.emit())
+print("Ans: " + str(xprog1.interp()))
+print(xprog2.emit())
+print("Ans: " + str(xprog2.interp()))
+print(xprog3.emit())
+print("Ans: " + str(xprog3.interp()))
+print(xprog4.emit())
+print("Ans: " + str(xprog4.interp()))
+print(xprog5.emit())
+print("Ans: " + str(xprog5.interp()))
+print(xprog6.emit())
+print("Ans: " + str(xprog6.interp()))
+print(xprog7.emit())
+print("Ans: " + str(xprog7.interp()))
+print(xprog8.emit())
+print("Ans: " + str(xprog8.interp()))
 ######## Combined Testing Updated With R2 Uniquify ########
 print("\nCombined Tests\n")
 #s.bigTest(5)
