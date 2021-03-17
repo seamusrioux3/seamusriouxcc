@@ -275,6 +275,7 @@ class XEnv:
         self.var = {}
         self.mem = {}
         self.blk = {}
+        self.cmp =[]
         self.cntr = 0
 
 
@@ -550,31 +551,48 @@ class XByteRegister:
     def emit(self):
         return "%" + self.r
 
+    def interp(self, env):
+        if(self.r in env.reg.keys()):
+            return env.reg[self.r]
+        else:
+            env.reg[self.r] = 0
+            return env.reg[self.r]
+
+    def set(self, env, val):
+        env.reg[self.r] = val
+
+    def getName(self):
+        return self.r
+
 class XEq:
     def __init__(self):
-    
+        self.c = "e"
     def emit(self):
-        return "e"
+        return self.c
 
 class XLEq:
     def __init__(self):
+        self.c = "le"
     def emit(self):
-        return "le"
+        return self.c
 
 class XL:
     def __init__(self):
+        self.c = "l"
     def emit(self):
-        return "l"
+        return self.c
 
 class XGEq:
     def __init__(self):
+        self.c = "ge"
     def emit(self):
-        return "ge"
+        return self.c
 
 class XG:
     def __init__(self):
+        self.c = "g"
     def emit(self):
-        return "g"
+        return self.c
 
 class XIXor:
     def __init__(self, _l, _r):
@@ -583,6 +601,9 @@ class XIXor:
     
     def emit(self):
         return "xorq" + " " + self.l.emit() + " " + self.r.emit()
+    
+    def interp(self, env):
+        return self.l.interp(env) ^ self.r.interp(env)
 
 class XICmp:
     def __init__(self, _l, _r):
@@ -591,6 +612,9 @@ class XICmp:
     
     def emit(self):
         return "cmpq" + " " + self.l.emit() + " " + self.r.emit()
+    
+    def interp(self, env):
+        env.cmp.append([self.l, self.r])
 
 
 class XISet:
@@ -601,6 +625,10 @@ class XISet:
     def emit(self):
         return "set" + self.cc.emit() + " " + self.arg.emit()
 
+    def interp(self, env = XEnv()):
+        env = self.arg.set(self.cc)
+        return env
+
 class XIMovzb:
     def __init__(self, _l, _r):
         self.l =_l
@@ -608,6 +636,10 @@ class XIMovzb:
     
     def emit(self):
         return "movzbq" + " " + self.l.emit() + " " + self.r.emit()
+    
+    def interp(self, env):
+        env = self.r.set(env, self.l.interp(env))
+        return env
 
 
 class XIJmpIf:
@@ -616,7 +648,28 @@ class XIJmpIf:
         self.label =_label
     
     def emit(self):
-        return "j" +  self.cc.emit() + " " + self.r.emit()
+        return "j" +  self.cc.emit() + " " + self.label.emit()
+
+    def interp(self, env):
+        comp = env.cmp.pop(0)
+        l = comp[0].interp(env)
+        r = comp[1].interp(env)
+        #print(getTrueCmp(self.cc, l, r))
+        if(getTrueCmp(self.cc, l, r)):
+            env = env.blk[self.label.emit()].interp(env)
+        return env
+
+def getTrueCmp(cc, l, r):
+    if(isinstance(cc,XGEq)):
+        return l >= r
+    elif(isinstance(cc,XG)):
+        return l > r
+    elif(isinstance(cc,XLEq)):
+        return l <= r
+    elif(isinstance(cc,XL)):
+        return l < r
+    elif(isinstance(cc,XEq)):
+        return l == r
 
 
 ###### C0 Program Data Types ########
