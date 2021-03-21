@@ -1037,7 +1037,7 @@ def _optimizer(n, env):
             if(isinstance(r, RAdd) and isinstance(r.left, RNum)):
                 if(r.right.interp() == l.interp() and r.left.interp() > 0):
                     return RBool(True)
-        return n
+        return RCmp(op, _optimizer(l, env), _optimizer(r, env))
     elif(isinstance(n, RNot)):
         if(isinstance(n.e, RNot)):
             return _optimizer(n.e.e, env)
@@ -1097,9 +1097,9 @@ def _optimizer(n, env):
             if(l.interp() == False and r.interp() == True):
                 return _optimizer(var.var, env)
         elif(isinstance(var, RNot)):
-            return RIf(var.e, r, l)
+            return RIf(_optimizer(var.e, env), _optimizer(r, env), _optimizer(l, env))
         elif(l.interp() == r.interp()):
-            return RLet(RVar("_"), var, l)
+            return RLet(RVar("_"), _optimizer(var, env), _optimizer(l, env))
         return RIf(_optimizer(var, env), _optimizer(l, env), _optimizer(r, env))
 
     elif(isinstance(n, RVar)):
@@ -1223,9 +1223,9 @@ def _rcoLift(env, e):
 
 def _rco(env: RCOEnv, e):
     if(isinstance(e, RNum)):
-        return e #_rcoLift(env, e)
+        return _rcoLift(env, e)
     if(isinstance(e, RBool)):
-        return e#_rcoLift(env, e)
+        return _rcoLift(env, e)
     elif(isinstance(e, RRead)):
         return _rcoLift(env, e)
 
@@ -1302,11 +1302,14 @@ def rco_c(e, env: RCOEnv):
 ######## Explicate Control Pass ########
 class EconEnv:
     def __init__(self):
-        self.p = []
-
-    def addEnv(self, a):
-        self.p.append(a)
-
+        self.p = {}
+        self.cntr =0
+        self.curLab = "main"
+    def addEnv(self, lab, s):
+        if(lab in self.p):
+            self.p[lab].append(s)
+        else:
+            self.p.update({lab:[s]})
     def getEnv(self):
         return self.p
 
@@ -1314,8 +1317,10 @@ class EconEnv:
 def econ(r):
     env = EconEnv()
     rtn = econHelper(r, env)
-    env.addEnv(rtn)
-    p = CProgram(None, {CLabel("main"): CBlock([], env.getEnv())})
+    actualP = {}
+    for l,b in env.p.items():
+        actualP.update({CLabel(l):CBlock(None,b)})
+    p = CProgram(None, actualP)
     return p
 
 
@@ -1324,6 +1329,8 @@ def econArgs(r):
         return CNum(r.num)
     elif(isinstance(r, RVar)):
         return CVar(r.name)
+    elif(isinstance(r, RBool)):
+        return CBool(r.b)
     else:
         return "ERROR"
 
@@ -1333,21 +1340,79 @@ def econExp(r):
         return CRead()
     elif(isinstance(r, RNegate)):
         return CNeg(econArgs(r.num))
+    elif(isinstance(r, RNot)):
+        return CNot(econArgs(r.e))
     elif(isinstance(r, RAdd)):
         return CAdd(econArgs(r.left), econArgs(r.right))
+    elif(isinstance(r,RCmp)):
+        return getOp(r)
     else:
         return econArgs(r)
 
 
-def econHelper(r, env):
+def econHelper(r, env: EconEnv):
     if(isinstance(r, RLet)):
-        a = CSet(econArgs(r.var), econExp(r.l))
-        env.addEnv(a)
-        return econHelper(r.r, env)
+        if(isinstance(r.l, RIf)):
+                tp = r.l.l
+                fp = r.l.r
+                tlab = econLabel(tp, env)
+                flab = econLabel(fp, env)
+                env.addEnv(env.curLab, CSet(econExp(r.var), CIf(getOp(r.l.var), tlab, flab) ))
+                return econHelper(r.r, env) 
+        else:
+            a = CSet(econArgs(r.var), econExp(r.l))
+            env.addEnv(env.curLab, a)
+            return econHelper(r.r, env)
+
+    elif(isinstance(r, RIf)):
+        if(isinstance(r.var,RCmp)):
+            tp = r.l
+            fp = r.r
+            tlab = econLabel(tp, env)
+            flab = econLabel(fp, env)
+            env.addEnv(env.curLab, CIf(getOp(r.var), tlab, flab))
+            return
+        else:
+            tp = r.l
+            fp = r.r
+            tlab = econLabel(tp, env)
+            flab = econLabel(fp, env)
+            env.addEnv(env.curLab, CIf(econExp(r.var), tlab, flab))
+            return
     elif(isinstance(r, RVar)):
-        return CRet(econArgs(r))
+        return env.addEnv(env.curLab, CRet(econArgs(r)))
+    
     else:
-        return CRet(r)
+        return env.addEnv(env.curLab,CRet(econArgs(r)))
+
+
+def getOp(cmp:RCmp):
+    if(isinstance(cmp,RCmp)):
+        if(cmp.op == "=="):
+            return CEquals(econArgs(cmp.l),econArgs(cmp.r))
+        elif(cmp.op == ">"):
+            return CGreaterThan(econArgs(cmp.l),econArgs(cmp.r))
+        elif(cmp.op == ">="):
+            return CGreaterThanEqual(econArgs(cmp.l),econArgs(cmp.r))
+        elif(cmp.op == "<"):
+            return CLessThan(econArgs(cmp.l),econArgs(cmp.r))
+        elif(cmp.op == "<="):
+            return CLessThanEqual(econArgs(cmp.l),econArgs(cmp.r))
+        else:
+            return "ERROR"
+    else:
+        return econExp(cmp)
+
+def econLabel(e, env:EconEnv):
+    env.cntr = env.cntr+1
+    lTitle = "label" + str(env.cntr)
+    print("WORKING WITH IF LABVELS" + e.pp())
+    env.curLab = lTitle
+    newS = econHelper(e, env)
+    #print("WORKING WITH IF LABVELS" + newS.pp())
+    env.curLab = "main"
+    return CLabel(lTitle)
+
 
 
 ######## Select Instr Pass ########

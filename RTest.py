@@ -77,7 +77,7 @@ class Test:
         po = optimizer(p)
         pu = uniquify(po)
         pr = RCO(pu)
-        # pe = econ(pr)
+        pe = econ(pr)
         # xz = select(pe)
         # uncl = uncover_live(xz)
         # built = buildInt(uncl)
@@ -89,19 +89,27 @@ class Test:
         # print("econ: " + pe.pp())
         # print("sel: " + xz.emit())
 
-        #
+        
 
-        # print("original ans: " + str(p.interp()))
-        # print("optimized ans: " + str(po.interp()))
+        
         # print("uniquify ans: " + str(pu.interp()))
         # print("econ ans: " + str(pe.interp()))
         # print("sel ans: " + str(xz.interp()))
         # print("aloc ans: " + str(aloc.interp()))
         # print("patch ans: " + str(ptch.interp()))
         # print("real ans: " + str(real))
-        if (self.checkAll(p, [po, pu, pr], None)):
+        if (self.checkAll(p, [po, pu, pr ], None)):
+            #print(str(p.interp())+ " "+ str(po.interp())+" "+ str(pu.interp())+" "+ str(pr.interp())+" "+ str(pe.interp()))
+            print("original: " + p.pp())
+            print("original ans: " + str(p.interp()))
+            print("optimized: " + po.pp())
+            print("optimized ans: " + str(po.interp()))
+            print("uniquify: " + pu.pp())
+            print("uniquify ans: " + str(pu.interp()))
             print("rco: " + pr.pp())
             print("rco ans: " + str(pr.interp()))
+            print("econ: " + pe.pp())
+            print("econ ans: " + str(pe.interp()))
             actual = pr.interp()
         else:
             print("original: " + p.pp())
@@ -112,18 +120,20 @@ class Test:
             print("uniquify ans: " + str(pu.interp()))
             print("rco: " + pr.pp())
             print("rco ans: " + str(pr.interp()))
+            print("econ: " + pe.pp())
+            print("econ ans: " + str(pe.interp()))
             actual = not p.interp()
             exit(1)
 
         self.test(actual, p.interp())
     
     def bigTest(self,n):
-        for i in range(1000):
+        for i in range(4000):
           #for n in range(0, n):
             self.testAll(randomR2(1))
             self.testAll(randomR2(2))
             self.testAll(randomR2(3))
-            self.testAll(randomR2(4))
+            #self.testAll(randomR2(4))
             #self.testAll(randomR2(5))
 
 
@@ -547,25 +557,28 @@ xprog8 = XProgram([], {XLabel("main"):
         XIRet()
     ])
 })
-# print(xprog1.emit())
-# print("Ans: " + str(xprog1.interp()))
-# print(xprog2.emit())
-# print("Ans: " + str(xprog2.interp()))
-# print(xprog3.emit())
-# print("Ans: " + str(xprog3.interp()))
-# print(xprog4.emit())
-# print("Ans: " + str(xprog4.interp()))
-# print(xprog5.emit())
-# print("Ans: " + str(xprog5.interp()))
-# print(xprog6.emit())
-# print("Ans: " + str(xprog6.interp()))
-# print(xprog7.emit())
-# print("Ans: " + str(xprog7.interp()))
-# print(xprog8.emit())
-# print("Ans: " + str(xprog8.interp()))
+
+
+######## Econ R2 -> C1 Tests ########
+def getToRCO(r):
+    return RCO(uniquify(optimizer(r)))
+
+econ2prog1 = RCmp("<", RNegate(RRead()), RAdd(RRead(), RRead()))
+econ2prog1 = getToRCO(econ2prog1)
+econ2prog1 = econ(econ2prog1)
+print(econ2prog1.pp())
+print(str(econ2prog1.interp()))
+
+econ2prog2 = RAnd(RBool(False), RBool(False))
+econ2prog2 = getToRCO(econ2prog2)
+econ2prog2 = econ(econ2prog2)
+print(econ2prog2.pp())
+print(str(econ2prog2.interp()))
+
 ######## Combined Testing Updated With R2 Uniquify ########
 print("\nCombined Tests\n")
 s.bigTest(5)
+
 # s.testAll(letTest1)
 # s.testAll(letTest2)
 # s.testAll(letTest3)
