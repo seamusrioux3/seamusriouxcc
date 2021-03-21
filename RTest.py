@@ -76,7 +76,7 @@ class Test:
         actual = 0
         po = optimizer(p)
         pu = uniquify(po)
-        # pr = RCO(pu)
+        pr = RCO(pu)
         # pe = econ(pr)
         # xz = select(pe)
         # uncl = uncover_live(xz)
@@ -85,7 +85,7 @@ class Test:
         # ptch = patch(aloc)
         # real = self.testX0OnHardware(ptch)
 
-        # print("rco: " + pr.pp())
+        
         # print("econ: " + pe.pp())
         # print("sel: " + xz.emit())
 
@@ -94,14 +94,15 @@ class Test:
         # print("original ans: " + str(p.interp()))
         # print("optimized ans: " + str(po.interp()))
         # print("uniquify ans: " + str(pu.interp()))
-        # print("rco ans: " + str(pr.interp()))
         # print("econ ans: " + str(pe.interp()))
         # print("sel ans: " + str(xz.interp()))
         # print("aloc ans: " + str(aloc.interp()))
         # print("patch ans: " + str(ptch.interp()))
         # print("real ans: " + str(real))
-        if (self.checkAll(p, [po, pu], None)):
-            actual = pu.interp()
+        if (self.checkAll(p, [po, pu, pr], None)):
+            print("rco: " + pr.pp())
+            print("rco ans: " + str(pr.interp()))
+            actual = pr.interp()
         else:
             print("original: " + p.pp())
             print("original ans: " + str(p.interp()))
@@ -109,7 +110,8 @@ class Test:
             print("optimized ans: " + str(po.interp()))
             print("uniquify: " + pu.pp())
             print("uniquify ans: " + str(pu.interp()))
-
+            print("rco: " + pr.pp())
+            print("rco ans: " + str(pr.interp()))
             actual = not p.interp()
             exit(1)
 
@@ -117,8 +119,12 @@ class Test:
     
     def bigTest(self,n):
         for i in range(1000):
-          for n in range(0, n):
-            self.testAll(randomR2(n))
+          #for n in range(0, n):
+            self.testAll(randomR2(1))
+            self.testAll(randomR2(2))
+            self.testAll(randomR2(3))
+            self.testAll(randomR2(4))
+            #self.testAll(randomR2(5))
 
 
 s = Test()
@@ -400,20 +406,20 @@ cprog7 = CProgram([], {
 })
 
 
-print(cprog1.pp())
-print("Ans: " + str(cprog1.interp()))
-print(cprog2.pp())
-print("Ans: " + str(cprog2.interp()))
-print(cprog3.pp())
-print("Ans: " + str(cprog3.interp()))
-print(cprog4.pp())
-print("Ans: " + str(cprog4.interp()))
-print(cprog5.pp())
-print("Ans: " + str(cprog5.interp()))
-print(cprog6.pp())
-print("Ans: " + str(cprog6.interp()))
-print(cprog7.pp())
-print("Ans: " + str(cprog7.interp()))
+# print(cprog1.pp())
+# print("Ans: " + str(cprog1.interp()))
+# print(cprog2.pp())
+# print("Ans: " + str(cprog2.interp()))
+# print(cprog3.pp())
+# print("Ans: " + str(cprog3.interp()))
+# print(cprog4.pp())
+# print("Ans: " + str(cprog4.interp()))
+# print(cprog5.pp())
+# print("Ans: " + str(cprog5.interp()))
+# print(cprog6.pp())
+# print("Ans: " + str(cprog6.interp()))
+# print(cprog7.pp())
+# print("Ans: " + str(cprog7.interp()))
 
 ########  X1 Testing  ########
 print("\nX1  Testing")
@@ -541,25 +547,25 @@ xprog8 = XProgram([], {XLabel("main"):
         XIRet()
     ])
 })
-print(xprog1.emit())
-print("Ans: " + str(xprog1.interp()))
-print(xprog2.emit())
-print("Ans: " + str(xprog2.interp()))
-print(xprog3.emit())
-print("Ans: " + str(xprog3.interp()))
-print(xprog4.emit())
-print("Ans: " + str(xprog4.interp()))
-print(xprog5.emit())
-print("Ans: " + str(xprog5.interp()))
-print(xprog6.emit())
-print("Ans: " + str(xprog6.interp()))
-print(xprog7.emit())
-print("Ans: " + str(xprog7.interp()))
-print(xprog8.emit())
-print("Ans: " + str(xprog8.interp()))
+# print(xprog1.emit())
+# print("Ans: " + str(xprog1.interp()))
+# print(xprog2.emit())
+# print("Ans: " + str(xprog2.interp()))
+# print(xprog3.emit())
+# print("Ans: " + str(xprog3.interp()))
+# print(xprog4.emit())
+# print("Ans: " + str(xprog4.interp()))
+# print(xprog5.emit())
+# print("Ans: " + str(xprog5.interp()))
+# print(xprog6.emit())
+# print("Ans: " + str(xprog6.interp()))
+# print(xprog7.emit())
+# print("Ans: " + str(xprog7.interp()))
+# print(xprog8.emit())
+# print("Ans: " + str(xprog8.interp()))
 ######## Combined Testing Updated With R2 Uniquify ########
 print("\nCombined Tests\n")
-#s.bigTest(5)
+s.bigTest(5)
 # s.testAll(letTest1)
 # s.testAll(letTest2)
 # s.testAll(letTest3)

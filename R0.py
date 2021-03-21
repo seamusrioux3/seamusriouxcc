@@ -255,16 +255,6 @@ class RBool:
         return "BOOL"
 
 
-class RS64:
-    def __init__(self, _s):
-        self.s = _s
-
-    def pp(self):
-        return str(self.s)
-
-    def interp(self, env=None):
-        return self.s
-
 
 ############ X0 Programs ############
 
@@ -1052,6 +1042,10 @@ def _optimizer(n, env):
         if(isinstance(n.e, RNot)):
             return _optimizer(n.e.e, env)
         return RNot(_optimizer(n.e, env))
+    elif(isinstance(n,RAnd)):
+        return RIf(_optimizer(n.l, env), _optimizer(n.r, env), _optimizer(n.l, env))
+    elif(isinstance(n, ROr)):
+        return RIf(_optimizer(n.l, env), _optimizer(n.l, env), _optimizer(n.r, env))
     elif isinstance(n, RNegate):
         e = n.num
         if(isinstance(e, RNum)):
@@ -1069,29 +1063,29 @@ def _optimizer(n, env):
         l = n.left
         r = n.right
         if(isinstance(l, RNum) and isinstance(r, RNum)):
-            print("Add case 1")
+            #print("Add case 1")
             return RNum(l.interp() + r.interp())
 
         elif(isinstance(l, RNum) and isinstance(r, RAdd) and isinstance(r.left, RNum)):
-            print("Add case 2")
+            #print("Add case 2")
             return RAdd(RNum(l.interp() + r.left.interp()), _optimizer(r.right, env))
 
         elif(isinstance(l, RAdd) and isinstance(r, RNum) and isinstance(l.left, RNum)):
-            print("Add case 3")
+            #print("Add case 3")
             return RAdd(RNum(l.left.interp() + r.interp()), _optimizer(l.right, env))
 
         elif(isinstance(l, RAdd) and isinstance(l.left, RNum) and isinstance(r, RAdd) and isinstance(r.left, RNum)):
-            print("Add case 4")
+            #print("Add case 4")
             return RAdd(RNum(l.left.interp() + r.left.interp()), RAdd(_optimizer(l.right, env), _optimizer(r.right, env)))
 
         elif(not isinstance(l, RNum) and isinstance(r, RNum)):
-            print("Add case 5")
+            #print("Add case 5")
             return RAdd(r, _optimizer(l, env))
         else:
-            print("Add case 6")
+            #print("Add case 6")
             return RAdd(_optimizer(l, env), _optimizer(r, env))
     elif isinstance(n, RSub):
-        return RSub(_optimizer(n.l, env), _optimizer(n.r, env))
+        return _optimizer(RAdd(n.l, RNegate(n.r)), env)
     elif(isinstance(n, RIf)):
         var = n.var
         l = n.l
@@ -1194,6 +1188,7 @@ class RCOEnv:
         self.varCntr = 0
         self.lifts = []
         self.env = {}
+        self.rcoe_tail = False
 
     def getEnv(self):
         return self.env
@@ -1214,6 +1209,7 @@ class RCOEnv:
 
 def RCO(e):
     env = RCOEnv()
+    env.rcoe_tail = True
     rtn = _rco(env, e)
     return letStar(rtn, env)
 
@@ -1225,20 +1221,46 @@ def _rcoLift(env, e):
     return RVar(nv)
 
 
-def _rco(env, e):
+def _rco(env: RCOEnv, e):
     if(isinstance(e, RNum)):
-        return _rcoLift(env, e)
+        return e #_rcoLift(env, e)
+    if(isinstance(e, RBool)):
+        return e#_rcoLift(env, e)
     elif(isinstance(e, RRead)):
         return _rcoLift(env, e)
 
     elif(isinstance(e, RNegate)):
+        env.rcoe_tail = False
         ep = _rco(env, e.num)
         return _rcoLift(env, RNegate(ep))
+    elif(isinstance(e, RNot)):
+        env.rcoe_tail = False
+        ep = _rco(env, e.e)
+        return _rcoLift(env, RNot(ep))
+
 
     elif(isinstance(e, RAdd)):
+        env.rcoe_tail = False
         lp = _rco(env, e.left)
         rp = _rco(env, e.right)
         return _rcoLift(env, RAdd(lp, rp))
+    elif(isinstance(e, RCmp)):
+        env.rcoe_tail = False
+        lp = _rco(env, e.l)
+        rp = _rco(env, e.r)
+        return _rcoLift(env, RCmp(e.op, lp, rp))
+    elif(isinstance(e, RIf)):
+        t = _rco(env, e.l)
+        f = _rco(env, e.r)
+        env.rcoe_tail = False
+        ep = RIf(rco_c(env, e.var), t, f)
+        if(env.rcoe_tail):
+            return e
+        cmp = _rco(env, e.var)
+        lp = _rco(env, e.l)
+        rp = _rco(env, e.r)
+        return _rcoLift(env, RIf(cmp, lp, rp))
+
 
     elif(isinstance(e, RVar)):
         if(e.name in env.getEnv()):
@@ -1246,20 +1268,36 @@ def _rco(env, e):
         else:
             print("RCO UNBOUND")
             return "FAILURE"
-
     elif(isinstance(e, RLet)):
+        env.rcoe_tail = False
         lp = _rco(env, e.l)
         env.setEnv({e.var.name: lp})
         return _rco(env, e.r)
+    
+    else:
+        return e
 
 
-def letStar(fa, env):
+def letStar(fa, env: RCOEnv):
     if not env.getLift():
         return fa
     else:
         var, eq = env.getLift().pop()
         return RLet(var, eq, letStar(fa, env))
 
+
+def rco_c(e, env: RCOEnv):
+    if(isinstance(e,RCmp)):
+        l = _rco(e.l)
+        r = _rco(e.r)
+        return RCmp(e.op, l, r)
+    elif(isinstance(e,RLet)):
+        lp = _rco(env, e.l)
+        env.setEnv({e.var.name: lp})
+        return rco_c(env, e.r)
+    else:
+        ep = _rco(e, env)
+        return RCmp("==", True, ep)
 
 ######## Explicate Control Pass ########
 class EconEnv:
