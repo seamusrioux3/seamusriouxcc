@@ -78,6 +78,7 @@ class Test:
         pu = uniquify(po)
         pr = RCO(pu)
         pe = econ(pr)
+        local = uncoverLocal(pe)
         # xz = select(pe)
         # uncl = uncover_live(xz)
         # built = buildInt(uncl)
@@ -98,7 +99,7 @@ class Test:
         # print("aloc ans: " + str(aloc.interp()))
         # print("patch ans: " + str(ptch.interp()))
         # print("real ans: " + str(real))
-        if (self.checkAll(p, [po, pu, pr ], None)):
+        if (self.checkAll(p, [po, pu, pr, local ], None)):
             #print(str(p.interp())+ " "+ str(po.interp())+" "+ str(pu.interp())+" "+ str(pr.interp())+" "+ str(pe.interp()))
             print("original: " + p.pp())
             print("original ans: " + str(p.interp()))

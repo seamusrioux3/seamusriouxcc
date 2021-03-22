@@ -1414,6 +1414,17 @@ def econLabel(e, env:EconEnv):
     return CLabel(lTitle)
 
 
+######## Uncover Local Pass ########
+def uncoverLocal(e: CProgram):
+    varList =[]
+    for l,b in e.p.items():
+        for s in b.p:
+            if(isinstance(s, CSet)):
+                if(not s.var in varList):
+                    varList.append(s.var)
+    e.info = varList
+    return e
+
 
 ######## Select Instr Pass ########
 
