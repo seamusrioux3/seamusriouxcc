@@ -79,7 +79,29 @@ class Test:
         pr = RCO(pu)
         pe = econ(pr)
         local = uncoverLocal(pe)
-        # xz = select(pe)
+        xz = select(local)
+        xzAns = xz.interp()
+        #print("original: " + p.pp())
+       # print("original ans: " + str(p.interp()))
+        # print("optimized: " + po.pp())
+        # print("optimized ans: " + str(po.interp()))
+        # print("uniquify: " + pu.pp())
+        # print("uniquify ans: " + str(pu.interp()))
+        # print("rco: " + pr.pp())
+        # print("rco ans: " + str(pr.interp()))
+        # print("econ: " + pe.pp())
+        # print("econ ans: " + str(pe.interp()))
+
+        
+        #print("select: " + xz.emit())
+        print("original ans: " + str(p.interp()))
+        print("optimized ans: " + str(po.interp()))
+        print("uniquify ans: " + str(pu.interp()))
+        print("rco ans: " + str(pr.interp()))
+        print("econ ans: " + str(pe.interp()))
+        print("select ans: " + str(xzAns))
+        #
+        #xz = select(pe)
         # uncl = uncover_live(xz)
         # built = buildInt(uncl)
         # aloc = allocate_registers(built)
@@ -99,37 +121,28 @@ class Test:
         # print("aloc ans: " + str(aloc.interp()))
         # print("patch ans: " + str(ptch.interp()))
         # print("real ans: " + str(real))
-        if (self.checkAll(p, [po, pu, pr, local ], None)):
-            #print(str(p.interp())+ " "+ str(po.interp())+" "+ str(pu.interp())+" "+ str(pr.interp())+" "+ str(pe.interp()))
-            print("original: " + p.pp())
-            print("original ans: " + str(p.interp()))
-            print("optimized: " + po.pp())
-            print("optimized ans: " + str(po.interp()))
-            print("uniquify: " + pu.pp())
-            print("uniquify ans: " + str(pu.interp()))
-            print("rco: " + pr.pp())
-            print("rco ans: " + str(pr.interp()))
-            print("econ: " + pe.pp())
-            print("econ ans: " + str(pe.interp()))
-            actual = pr.interp()
+        if (self.checkAll(p, [po, pu, pr, pe], xzAns)):
+            actual = po.interp()
         else:
-            print("original: " + p.pp())
-            print("original ans: " + str(p.interp()))
-            print("optimized: " + po.pp())
-            print("optimized ans: " + str(po.interp()))
-            print("uniquify: " + pu.pp())
-            print("uniquify ans: " + str(pu.interp()))
-            print("rco: " + pr.pp())
-            print("rco ans: " + str(pr.interp()))
-            print("econ: " + pe.pp())
-            print("econ ans: " + str(pe.interp()))
+            # print("original: " + p.pp())
+            # print("original ans: " + str(p.interp()))
+            # print("optimized: " + po.pp())
+            # print("optimized ans: " + str(po.interp()))
+            # print("uniquify: " + pu.pp())
+            # print("uniquify ans: " + str(pu.interp()))
+            # print("rco: " + pr.pp())
+            # print("rco ans: " + str(pr.interp()))
+            # print("econ: " + pe.pp())
+            # print("econ ans: " + str(pe.interp()))
+            # 
+            # print("select ans: " + str(xz.interp()))
             actual = not p.interp()
-            exit(1)
+            #exit(1)
 
         self.test(actual, p.interp())
     
     def bigTest(self,n):
-        for i in range(4000):
+        for i in range(1000):
           #for n in range(0, n):
             self.testAll(randomR2(1))
             self.testAll(randomR2(2))
@@ -330,7 +343,7 @@ cprog2 = CProgram([], {
     [
         CSet(CVar("x"), CNum(1)),
         CSet(CVar("y"), CNum(2)),
-        CIf(CGreaterThanEqual(CVar("x"), CVar("y")), CLabel("xLabel"), CLabel("yLabel")),
+        CIf(CCmp(">=", CVar("x"), CVar("y")), CLabel("xLabel"), CLabel("yLabel")),
     ]),
     CLabel("xLabel"):CBlock(None,
     [
@@ -347,11 +360,11 @@ cprog3 = CProgram([], {
     [
         CSet(CVar("x"), CNum(1)),
         CSet(CVar("y"), CNum(2)),
-        CIf(CGreaterThanEqual(CVar("x"), CVar("y")), CLabel("xLabel"), CLabel("yLabel")),
+        CIf(CCmp(">=", CVar("x"), CVar("y")), CLabel("xLabel"), CLabel("yLabel")),
     ]),
     CLabel("xLabel"):CBlock(None,
     [
-        CSet(CVar("rb"), CEquals(CVar("x"), CVar("y"))),
+        CSet(CVar("rb"), CCmp("==", CVar("x"), CVar("y"))),
         CRet(CVar("rb"))
     ]),
     CLabel("yLabel"):CBlock(None,
@@ -365,16 +378,16 @@ cprog4 = CProgram([], {
     [
         CSet(CVar("x"), CNum(1)),
         CSet(CVar("y"), CNum(2)),
-        CIf(CGreaterThanEqual(CVar("x"), CVar("y")), CLabel("xLabel"), CLabel("yLabel")),
+        #CIf(CGreaterThanEqual(CVar("x"), CVar("y")), CLabel("xLabel"), CLabel("yLabel")),
     ]),
     CLabel("xLabel"):CBlock(None,
     [
-        CSet(CVar("rb"), CEquals(CVar("x"), CVar("y"))),
+        #CSet(CVar("rb"), CEquals(CVar("x"), CVar("y"))),
         CRet(CVar("rb"))
     ]),
     CLabel("yLabel"):CBlock(None,
     [
-        CSet(CVar("rb"), CEquals(CVar("x"), CVar("y"))),
+        #CSet(CVar("rb"), CEquals(CVar("x"), CVar("y"))),
         CSet(CVar("rb"), CNot(CVar("rb"))),
         CRet(CVar("rb"))
     ])
@@ -383,14 +396,14 @@ cprog4 = CProgram([], {
 cprog5 = CProgram([], {CLabel("main"): CBlock(None,[
     CSet(CVar("x"), CNum(1)),
     CSet(CVar("y"), CNum(2)),
-    CSet(CVar("z"), CLessThan(CVar("x"), CVar("y"))),
+    #CSet(CVar("z"), CLessThan(CVar("x"), CVar("y"))),
     CRet(CVar("z"))
 ])})
 
 cprog6 = CProgram([], {CLabel("main"): CBlock(None,[
     CSet(CVar("x"), CNum(1)),
     CSet(CVar("y"), CNum(2)),
-    CSet(CVar("z"), CGreaterThanEqual(CVar("x"), CVar("y"))),
+    #CSet(CVar("z"), CGreaterThanEqual(CVar("x"), CVar("y"))),
     CRet(CVar("z"))
 ])})
 
@@ -403,7 +416,7 @@ cprog7 = CProgram([], {
     ]),
     CLabel("loop"):CBlock(None,
     [
-        CIf(CLessThan(CVar("x"), CNum(5)), CLabel("inc"), CLabel("finish"))
+        #CIf(CLessThan(CVar("x"), CNum(5)), CLabel("inc"), CLabel("finish"))
     ]),
     CLabel("inc"):CBlock(None,
     [
@@ -559,22 +572,57 @@ xprog8 = XProgram([], {XLabel("main"):
     ])
 })
 
+xprog9 = XProgram([], {XLabel("main"):
+    XBlock(None, [
+        XIMov(XCon(1), XVar("x")),
+        XIMov(XCon(2), XVar("y")),
+        XICmp(XVar("x"), XVar("y")),
+        XISet(XG(), XByteRegister("al")),
+        XIMov(XByteRegister("al"), XRegister("rax")),
+        XIMov(XCon(3), XVar("x")),
+        XIMov(XCon(2), XVar("y")),
+        XICmp(XVar("x"), XVar("y")),
+        XISet(XG(), XByteRegister("al")),
+        XIMov(XByteRegister("al"), XRegister("rax")),
+        XIRet()
+    ])
+})
+
+#print(xprog9.interp())
 
 ######## Econ R2 -> C1 Tests ########
 def getToRCO(r):
-    return RCO(uniquify(optimizer(r)))
+    return select(uncoverLocal(econ(RCO(uniquify(optimizer(r))))))
 
-econ2prog1 = RCmp("<", RNegate(RRead()), RAdd(RRead(), RRead()))
-econ2prog1 = getToRCO(econ2prog1)
-econ2prog1 = econ(econ2prog1)
-print(econ2prog1.pp())
-print(str(econ2prog1.interp()))
+# econ2prog1 = RCmp("<", RNegate(RRead()), RAdd(RRead(), RRead()))
+# econ2prog1 = getToRCO(econ2prog1)
+# econ2prog1 = econ(econ2prog1)
+# print(econ2prog1.pp())
+# print(str(econ2prog1.interp()))
 
-econ2prog2 = RAnd(RBool(False), RBool(False))
-econ2prog2 = getToRCO(econ2prog2)
-econ2prog2 = econ(econ2prog2)
-print(econ2prog2.pp())
-print(str(econ2prog2.interp()))
+# econ2prog2 = RAnd(RBool(False), RBool(False))
+# econ2prog2 = getToRCO(econ2prog2)
+# econ2prog2 = econ(econ2prog2)
+# print(econ2prog2.pp())
+# print(str(econ2prog2.interp()))
+
+####### Tests With X1 #########
+#econ2prog3 = RIf(RCmp("<", RRead(), RRead()), RBool(True), RBool(True))
+# print(econ2prog3.pp())
+# econ2prog3 = getToRCO(econ2prog3)
+# print(econ2prog3.pp())
+
+# econ2prog4 = RAnd(RIf (RCmp("<=", RNum(8), RRead()), RBool(False), RBool(True)), RLet(RVar("V0"),  RBool(True), RBool(True)))
+# econ2prog4 = getToRCO(econ2prog4)
+# print(str(econ2prog4.interp()))
+# print(econ2prog4.pp())
+# econ2prog4 = econ(econ2prog4)
+# print(econ2prog4.pp())
+
+selprog1 = RIf(RCmp(">=", RRead(), RRead()), RNum(0), RRead())
+#print(selprog1.pp())
+selprog1 = getToRCO(selprog1)
+#print(selprog1.interp())
 
 ######## Combined Testing Updated With R2 Uniquify ########
 print("\nCombined Tests\n")

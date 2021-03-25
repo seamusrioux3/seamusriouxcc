@@ -255,17 +255,17 @@ class RBool:
         return "BOOL"
 
 
-
 ############ X0 Programs ############
 
 
 class XEnv:
     def __init__(self):
+        self.curlab = ""
         self.reg = {}
         self.var = {}
         self.mem = {}
         self.blk = {}
-        self.cmp =[]
+        self.cmp = []
         self.cntr = 0
 
 
@@ -282,8 +282,10 @@ class XProgram:
         for a, b in self.p.items():
             env.blk[a.interp(env)] = b
         if("main" in env.blk):
+            env.curlab = "main"
             env.blk["main"].interp(env)
         else:
+            env.curlab = next(iter(env.blk))
             env.blk[next(iter(env.blk))].interp(env)
         # print(env.reg)
         # print(env.var)
@@ -326,7 +328,10 @@ class XVar:
         return "!" + self.name
 
     def interp(self, env):
-        return env.var[self.name]
+        if(isinstance(env.var[self.name], int)):
+            return env.var[self.name]
+        else:
+            return env.var[self.name].interp(env)
 
     def set(self, env, val):
         env.var[self.name] = val
@@ -492,7 +497,10 @@ class XICall:
             pass
             # print(env.reg["RDI"])
         else:
+            tem = env.curlab
+            env.curlab = temp
             env.blk[temp].interp(env)
+            env.curlab = tem
         return env
 
 
@@ -504,7 +512,10 @@ class XIJmp:
         return "jmp" + " " + self.src.emit()
 
     def interp(self, env):
+        tem = env.curlab
+        env.curlab = self.src.interp(env)
         env.blk[self.src.interp(env)].interp(env)
+        env.curlab = tem
         return env
 
 
@@ -534,10 +545,12 @@ class XIPop:
         return
 
 ###### X1 Program Data Types ########
+
+
 class XByteRegister:
     def __init__(self, _r):
-        self.r =_r
-    
+        self.r = _r
+
     def emit(self):
         return "%" + self.r
 
@@ -554,79 +567,109 @@ class XByteRegister:
     def getName(self):
         return self.r
 
+
 class XEq:
     def __init__(self):
         self.c = "e"
+        self.l = 0
+        self.r = 0
+
     def emit(self):
         return self.c
+
 
 class XLEq:
     def __init__(self):
         self.c = "le"
+        self.l = 0
+        self.r = 0
+
     def emit(self):
         return self.c
+
+
 
 class XL:
     def __init__(self):
         self.c = "l"
+        self.l = 0
+        self.r = 0
+
     def emit(self):
         return self.c
+
+
 
 class XGEq:
     def __init__(self):
         self.c = "ge"
+        self.l = 0
+        self.r = 0
+
     def emit(self):
         return self.c
+
+
 
 class XG:
     def __init__(self):
         self.c = "g"
+        self.l = 0
+        self.r = 0
+
     def emit(self):
         return self.c
 
+
+
 class XIXor:
     def __init__(self, _l, _r):
-        self.l =_l
-        self.r =_r
-    
+        self.l = _l
+        self.r = _r
+
     def emit(self):
         return "xorq" + " " + self.l.emit() + " " + self.r.emit()
-    
+
     def interp(self, env):
-        return self.l.interp(env) ^ self.r.interp(env)
+        env = self.r.set(env, self.l.interp(env) ^ self.r.interp(env))
+        return env
+
 
 class XICmp:
     def __init__(self, _l, _r):
-        self.l =_l
-        self.r =_r
-    
+        self.l = _l
+        self.r = _r
+
     def emit(self):
         return "cmpq" + " " + self.l.emit() + " " + self.r.emit()
-    
+
     def interp(self, env):
         env.cmp.append([self.l, self.r])
 
 
 class XISet:
     def __init__(self, _cc, _arg):
-        self.cc =_cc
-        self.arg =_arg
-    
+        self.cc = _cc
+        self.arg = _arg
+
     def emit(self):
         return "set" + self.cc.emit() + " " + self.arg.emit()
 
-    def interp(self, env = XEnv()):
-        env = self.arg.set(self.cc)
+    def interp(self, env=XEnv()):
+        c = env.cmp.pop(0)
+        c = getTrueCmp(self.cc, c[0].interp(env), c[1].interp(env))
+        env = self.arg.set(env, c)
         return env
+
 
 class XIMovzb:
     def __init__(self, _l, _r):
-        self.l =_l
-        self.r =_r
-    
+        self.l = _l
+        self.r = _r
+
     def emit(self):
         return "movzbq" + " " + self.l.emit() + " " + self.r.emit()
-    
+
     def interp(self, env):
         env = self.r.set(env, self.l.interp(env))
         return env
@@ -634,31 +677,35 @@ class XIMovzb:
 
 class XIJmpIf:
     def __init__(self, _cc, _label):
-        self.cc =_cc
-        self.label =_label
-    
+        self.cc = _cc
+        self.label = _label
+
     def emit(self):
-        return "j" +  self.cc.emit() + " " + self.label.emit()
+        return "j" + self.cc.emit() + " " + self.label.emit()
 
     def interp(self, env):
-        comp = env.cmp.pop(0)
-        l = comp[0].interp(env)
-        r = comp[1].interp(env)
-        #print(getTrueCmp(self.cc, l, r))
-        if(getTrueCmp(self.cc, l, r)):
+        camp = env.cmp.pop()
+        if(getTrueCmp(self.cc, camp[0].interp(env), camp[1].interp(env))):
+            tem = env.curlab
+            #print(tem)
+            env.curlab = self.label.interp(env)
+            a = env.blk[tem].blk.index(self)
+            #print(str(a))
+            env.blk[tem].blk.remove(env.blk[tem].blk[a+1])
             env = env.blk[self.label.emit()].interp(env)
         return env
 
+
 def getTrueCmp(cc, l, r):
-    if(isinstance(cc,XGEq)):
+    if(isinstance(cc, XGEq)):
         return l >= r
-    elif(isinstance(cc,XG)):
+    elif(isinstance(cc, XG)):
         return l > r
-    elif(isinstance(cc,XLEq)):
+    elif(isinstance(cc, XLEq)):
         return l <= r
-    elif(isinstance(cc,XL)):
+    elif(isinstance(cc, XL)):
         return l < r
-    elif(isinstance(cc,XEq)):
+    elif(isinstance(cc, XEq)):
         return l == r
 
 
@@ -818,64 +865,27 @@ class CBool:
         return self.b
 
 
-class CEquals:
-    def __init__(self, _l, _r):
+class CCmp:
+    def __init__(self, _op, _l, _r):
+        self.op = _op
         self.l = _l
         self.r = _r
 
     def pp(self):
-        return "(" + self.l.pp() + " == " + self.r.pp() + ")"
-    
-    def interp(self, env):
-        return self.l.interp(env) == self.r.interp(env)
+        return "(" + self.op + " " + self.l.pp() + " " + self.r.pp() + ")"
 
-
-class CLessThan:
-    def __init__(self, _l, _r):
-        self.l = _l
-        self.r = _r
-
-    def pp(self):
-        return "(" + self.l.pp() + " < " + self.r.pp() + ")"
-
-    def interp(self, env):
-        return self.l.interp(env) < self.r.interp(env)
-
-
-class CGreaterThan:
-    def __init__(self, _l, _r):
-        self.l = _l
-        self.r = _r
-
-    def pp(self):
-        return "(" + self.l.pp() + " > " + self.r.pp() + ")"
-    
-    def interp(self, env):
-        return self.l.interp(env) > self.r.interp(env)
-
-
-class CGreaterThanEqual:
-    def __init__(self, _l, _r):
-        self.l = _l
-        self.r = _r
-
-    def pp(self):
-        return "(" + self.l.pp() + " >= " + self.r.pp() + ")"
-    
-    def interp(self, env):
-        return self.l.interp(env) >= self.r.interp(env)
-
-
-class CLessThanEqual:
-    def __init__(self, _l, _r):
-        self.l = _l
-        self.r = _r
-
-    def pp(self):
-        return "(" + self.l.pp() + " <= " + self.r.pp() + ")"
-    
-    def interp(self, env):
-        return self.l.interp(env) <= self.r.interp(env)
+    def interp(self, env=None):
+        if(self.op == "=="):
+            return self.l.interp(env) == self.r.interp(env)
+        elif(self.op == ">="):
+            return self.l.interp(env) >= self.r.interp(env)
+        elif(self.op == ">"):
+            return self.l.interp(env) > self.r.interp(env)
+        elif(self.op == "<="):
+            return self.l.interp(env) <= self.r.interp(env)
+        elif(self.op == "<"):
+            return self.l.interp(env) < self.r.interp(env)
+        return "ERROR"
 
 
 class CNot:
@@ -884,7 +894,7 @@ class CNot:
 
     def pp(self):
         return "not(" + self.e.pp() + ")"
-    
+
     def interp(self, env):
         return not self.e.interp(env)
 
@@ -895,7 +905,7 @@ class CGoto:
 
     def pp(self):
         return "goto " + self.label.pp()
-    
+
     def interp(self, env):
         rtn = "ERROR"
         return env.blk[self.label.interp()].interp(env)
@@ -909,7 +919,7 @@ class CIf:
 
     def pp(self):
         return "goto-if(" + self.cmp.pp() + " " + self.l.pp() + " " + self.r.pp() + ")"
-    
+
     def interp(self, env):
         rtn = "ERROR"
         if(self.cmp.interp(env)):
@@ -923,67 +933,58 @@ class CIf:
 
 def randomR2(n):
     random.seed(datetime.now())
-    r = random.choice([_randomR2Bool(n, []), _randomR2(n, [])])
+    typ = random.choice(["NUM", "BOOL"])
+    r = _randomR2(typ, n, [])
     return r
 
 
-def _randomR2(n, v):
+def ranNeg(t, n, v): return RNegate(_randomR2(t, n-1, v))
+def ranAdd(t, n, v): return RAdd(_randomR2(t, n-1, v), _randomR2(t, n-1, v))
+def ranNot(t, n, v): return RNot(_randomR2(t, n-1, v))
+
+
+def _randomR2(typ, n, v):
     random.seed(datetime.now())
     ret = 0
     ranNum = RNum(random.randint(0, 16))
-    def ranNeg(n): return RNegate(_randomR2(n-1, v))
-    def ranAdd(n): return RAdd(_randomR2(n-1, v), _randomR2(n-1, v))
-    def ranSub(n): return RSub(_randomR2(n-1, v), _randomR2(n-1, v))
-    if(n == 0):
-        if(v):
-            chosenVar = random.choice(v)
-            ret = random.choice(
-                [ranNum, chosenVar, RRead()])
-        else:
-            ret = random.choice([ranNum, RRead()])
-    else:
-
-        ret = random.choice(
-            [ranAdd(n), ranNeg(n), ranLet("NUM", n, v), ranSub(n), ranIf(n, v)])
-    return ret
-
-
-def _randomR2Bool(n, v):
-    random.seed(datetime.now())
-    ret = 0
     ranBool = RBool(random.choice([True, False]))
-    def ranNot(n): return RNot(_randomR2Bool(n-1, v))
-    def ranAnd(n): return RAnd(_randomR2Bool(n-1, v), _randomR2Bool(n-1, v))
-    def ranOR(n): return ROr(_randomR2Bool(n-1, v), _randomR2Bool(n-1, v))
-    def ranCmp(n): return RCmp(random.choice(
-        ["==", ">=", ">", "<=", "<"]), _randomR2(n-1, v), _randomR2(n-1, v))
     if(n == 0):
         if(v):
-            chosenVar = random.choice(v)
-            ret = random.choice(
-                [chosenVar, ranBool])
+            chosenVar = [random.choice(v)]
+        else:
+            chosenVar = []
+        if(typ == "NUM"):
+            ret = random.choice([ranNum, RRead()])
         else:
             ret = random.choice([ranBool])
+        ret = random.choice([ret] + chosenVar)
     else:
-
-        ret = random.choice([ranNot(n), ranAnd(n), ranOR(
-            n), ranCmp(n), ranLet("BOOL", n, v), ranIf(n, v)])
+        if(typ == "NUM"):
+            ret = random.choice(
+                [ranAdd(typ, n, v), ranNeg(typ, n, v), ranLet(typ, n, v), ranIf(typ, n, v)])
+        else:
+            ret = random.choice([ranCmp(typ, n, v), ranNot(
+                typ, n, v), ranLet(typ, n, v), ranIf(typ, n, v)])
     return ret
 
 
 def ranLet(t, n, v):
     newVar = RVar("V" + str(len(v)))
     if(t == "BOOL"):
-        return RLet(newVar,  _randomR2Bool(n-1, []),  _randomR2Bool(n-1, []))
+        return RLet(newVar,  _randomR2(t, n-1, []),  _randomR2(t, n-1, []))
     elif(t == "NUM"):
-        return RLet(newVar,  _randomR2(n-1, []),  _randomR2(n-1, []))
+        return RLet(newVar,  _randomR2(t, n-1, []),  _randomR2(t, n-1, []))
     print("ERROR in RAN")
     exit(1)
     return "ERROR"
 
 
-def ranIf(n, v):
-    return RIf(_randomR2Bool(n-1, v), _randomR2Bool(n-1, v), _randomR2Bool(n-1, v))
+def ranCmp(t, n, v): return RCmp(random.choice(
+    ["==", ">=", ">", "<=", "<"]), _randomR2("NUM", n-1, v), _randomR2("NUM", n-1, v))
+
+
+def ranIf(t, n, v):
+    return RIf(ranCmp(t, n, v), _randomR2(t, n-1, v), _randomR2(t, n-1, v))
 
 
 ######## Optimizer Function ########
@@ -1031,21 +1032,29 @@ def _optimizer(n, env):
         op = n.op
         l = n.l
         r = n.r
-        if(isinstance(l, RNum) and isinstance(r, RNum) and op == "==" and l.interp() == r.interp()):
-            return RBool(n.interp())
-        elif(op == "<"):
-            if(isinstance(r, RAdd) and isinstance(r.left, RNum)):
-                if(r.right.interp() == l.interp() and r.left.interp() > 0):
-                    return RBool(True)
+        # if(isinstance(l, RNum) and isinstance(r, RNum) and op == "==" and l.interp() == r.interp()):
+        #     return RBool(n.interp())
+        # elif(op == "<"):
+        #     if(isinstance(r, RAdd) and isinstance(r.left, RNum)):
+        #         if(r.right.interp() == l.interp() and r.left.interp() > 0):
+        #             return RBool(True)
         return RCmp(op, _optimizer(l, env), _optimizer(r, env))
     elif(isinstance(n, RNot)):
         if(isinstance(n.e, RNot)):
             return _optimizer(n.e.e, env)
         return RNot(_optimizer(n.e, env))
-    elif(isinstance(n,RAnd)):
-        return RIf(_optimizer(n.l, env), _optimizer(n.r, env), _optimizer(n.l, env))
-    elif(isinstance(n, ROr)):
-        return RIf(_optimizer(n.l, env), _optimizer(n.l, env), _optimizer(n.r, env))
+    # elif(isinstance(n,RAnd)):
+    #     if(n.l.interp() and n.r.interp()):
+    #         return RBool(True)
+    #     else:
+    #         return RBool(False)
+    #     #return RCmp("==", _optimizer(n.l, env),  _optimizer(n.r, env))#RIf(_optimizer(n.l, env), _optimizer(n.r, env), _optimizer(n.l, env))
+    # elif(isinstance(n, ROr)):
+    #     if(n.l.interp() or n.r.interp()):
+    #         return RBool(True)
+    #     else:
+    #         return RBool(False)
+    #     #return RIf(_optimizer(n.l, env), _optimizer(n.l, env), _optimizer(n.r, env))
     elif isinstance(n, RNegate):
         e = n.num
         if(isinstance(e, RNum)):
@@ -1084,8 +1093,8 @@ def _optimizer(n, env):
         else:
             #print("Add case 6")
             return RAdd(_optimizer(l, env), _optimizer(r, env))
-    elif isinstance(n, RSub):
-        return _optimizer(RAdd(n.l, RNegate(n.r)), env)
+    # elif isinstance(n, RSub):
+    #     return _optimizer(RAdd(n.l, RNegate(n.r)), env)
     elif(isinstance(n, RIf)):
         var = n.var
         l = n.l
@@ -1098,8 +1107,8 @@ def _optimizer(n, env):
                 return _optimizer(var.var, env)
         elif(isinstance(var, RNot)):
             return RIf(_optimizer(var.e, env), _optimizer(r, env), _optimizer(l, env))
-        elif(l.interp() == r.interp()):
-            return RLet(RVar("_"), _optimizer(var, env), _optimizer(l, env))
+        # elif(l.interp() == r.interp()):
+        #     return RLet(RVar("_"), _optimizer(var, env), _optimizer(l, env))
         return RIf(_optimizer(var, env), _optimizer(l, env), _optimizer(r, env))
 
     elif(isinstance(n, RVar)):
@@ -1188,7 +1197,6 @@ class RCOEnv:
         self.varCntr = 0
         self.lifts = []
         self.env = {}
-        self.rcoe_tail = False
 
     def getEnv(self):
         return self.env
@@ -1209,8 +1217,8 @@ class RCOEnv:
 
 def RCO(e):
     env = RCOEnv()
-    env.rcoe_tail = True
-    rtn = _rco(env, e)
+    isTail = True
+    rtn = _rco(isTail, env, e)
     return letStar(rtn, env)
 
 
@@ -1221,7 +1229,7 @@ def _rcoLift(env, e):
     return RVar(nv)
 
 
-def _rco(env: RCOEnv, e):
+def _rco(isTail, env: RCOEnv, e):
     if(isinstance(e, RNum)):
         return _rcoLift(env, e)
     if(isinstance(e, RBool)):
@@ -1230,37 +1238,29 @@ def _rco(env: RCOEnv, e):
         return _rcoLift(env, e)
 
     elif(isinstance(e, RNegate)):
-        env.rcoe_tail = False
-        ep = _rco(env, e.num)
+        ep = _rco(False, env, e.num)
         return _rcoLift(env, RNegate(ep))
     elif(isinstance(e, RNot)):
-        env.rcoe_tail = False
-        ep = _rco(env, e.e)
+        ep = _rco(False, env, e.e)
         return _rcoLift(env, RNot(ep))
 
-
     elif(isinstance(e, RAdd)):
-        env.rcoe_tail = False
-        lp = _rco(env, e.left)
-        rp = _rco(env, e.right)
+        lp = _rco(False, env, e.left)
+        rp = _rco(False, env, e.right)
         return _rcoLift(env, RAdd(lp, rp))
     elif(isinstance(e, RCmp)):
-        env.rcoe_tail = False
-        lp = _rco(env, e.l)
-        rp = _rco(env, e.r)
+        lp = _rco(False, env, e.l)
+        rp = _rco(False, env, e.r)
         return _rcoLift(env, RCmp(e.op, lp, rp))
     elif(isinstance(e, RIf)):
-        t = _rco(env, e.l)
-        f = _rco(env, e.r)
-        env.rcoe_tail = False
-        ep = RIf(rco_c(env, e.var), t, f)
-        if(env.rcoe_tail):
-            return e
-        cmp = _rco(env, e.var)
-        lp = _rco(env, e.l)
-        rp = _rco(env, e.r)
-        return _rcoLift(env, RIf(cmp, lp, rp))
-
+        t = _rco(isTail, env, e.l)
+        f = _rco(isTail, env, e.r)
+        cmpp = rco_c(False, e.var, env)
+        ifp = RIf(cmpp, t, f)
+        if(isTail):
+            return ifp
+        else:
+            return _rcoLift(env, ifp)
 
     elif(isinstance(e, RVar)):
         if(e.name in env.getEnv()):
@@ -1269,11 +1269,10 @@ def _rco(env: RCOEnv, e):
             print("RCO UNBOUND")
             return "FAILURE"
     elif(isinstance(e, RLet)):
-        env.rcoe_tail = False
-        lp = _rco(env, e.l)
+        lp = _rco(False, env, e.l)
         env.setEnv({e.var.name: lp})
-        return _rco(env, e.r)
-    
+        return _rco(isTail, env, e.r)
+
     else:
         return e
 
@@ -1286,30 +1285,34 @@ def letStar(fa, env: RCOEnv):
         return RLet(var, eq, letStar(fa, env))
 
 
-def rco_c(e, env: RCOEnv):
-    if(isinstance(e,RCmp)):
-        l = _rco(e.l)
-        r = _rco(e.r)
+def rco_c(isTail, e, env: RCOEnv):
+    if(isinstance(e, RCmp)):
+        l = _rco(isTail, env, e.l)
+        r = _rco(isTail, env, e.r)
         return RCmp(e.op, l, r)
-    elif(isinstance(e,RLet)):
-        lp = _rco(env, e.l)
+    elif(isinstance(e, RLet)):
+        lp = _rco(isTail, env, e.l)
         env.setEnv({e.var.name: lp})
-        return rco_c(env, e.r)
+        return rco_c(isTail, env, e.r)
     else:
-        ep = _rco(e, env)
-        return RCmp("==", True, ep)
+        ep = _rco(isTail, env, e)
+        return RCmp("==", RBool(True), ep)
 
 ######## Explicate Control Pass ########
+
+
 class EconEnv:
     def __init__(self):
         self.p = {}
-        self.cntr =0
+        self.cntr = 0
         self.curLab = "main"
+
     def addEnv(self, lab, s):
         if(lab in self.p):
             self.p[lab].append(s)
         else:
-            self.p.update({lab:[s]})
+            self.p.update({lab: [s]})
+
     def getEnv(self):
         return self.p
 
@@ -1318,8 +1321,8 @@ def econ(r):
     env = EconEnv()
     rtn = econHelper(r, env)
     actualP = {}
-    for l,b in env.p.items():
-        actualP.update({CLabel(l):CBlock(None,b)})
+    for l, b in env.p.items():
+        actualP.update({CLabel(l): CBlock(None, b)})
     p = CProgram(None, actualP)
     return p
 
@@ -1344,80 +1347,88 @@ def econExp(r):
         return CNot(econArgs(r.e))
     elif(isinstance(r, RAdd)):
         return CAdd(econArgs(r.left), econArgs(r.right))
-    elif(isinstance(r,RCmp)):
+    elif(isinstance(r, RCmp)):
         return getOp(r)
     else:
         return econArgs(r)
 
 
 def econHelper(r, env: EconEnv):
+    #print(env.curLab + " "+ r.pp())
     if(isinstance(r, RLet)):
         if(isinstance(r.l, RIf)):
-                tp = r.l.l
-                fp = r.l.r
-                tlab = econLabel(tp, env)
-                flab = econLabel(fp, env)
-                env.addEnv(env.curLab, CSet(econExp(r.var), CIf(getOp(r.l.var), tlab, flab) ))
-                return econHelper(r.r, env) 
+            tp = r.l.l
+            fp = r.l.r
+            blab = "label" + str(env.cntr+3)
+            tlab = econLabel(tp, env)
+            temp = env.getEnv()[tlab.label][-1]
+            if(isinstance(temp, CRet)):
+                setvar = temp.var
+                env.getEnv()[tlab.label][-1] = CSet(CVar(r.var.pp()), setvar)
+                env.addEnv(tlab.label, CGoto(CLabel(blab)))
+            flab = econLabel(fp, env)
+            temp = env.getEnv()[flab.label][-1]
+            if(isinstance(temp, CRet)):
+                setvar = temp.var
+                env.getEnv()[flab.label][-1] = CSet(CVar(r.var.pp()), setvar)
+                env.addEnv(flab.label, CGoto(CLabel(blab)))
+            env.addEnv(env.curLab, CIf(getOp(r.l.var), tlab, flab))
+            env.cntr = env.cntr+1
+            env.curLab = blab
+            return econHelper(r.r, env)
         else:
             a = CSet(econArgs(r.var), econExp(r.l))
             env.addEnv(env.curLab, a)
             return econHelper(r.r, env)
 
     elif(isinstance(r, RIf)):
-        if(isinstance(r.var,RCmp)):
+        if(isinstance(r.var, RCmp)):
             tp = r.l
             fp = r.r
             tlab = econLabel(tp, env)
             flab = econLabel(fp, env)
             env.addEnv(env.curLab, CIf(getOp(r.var), tlab, flab))
             return
-        else:
-            tp = r.l
-            fp = r.r
-            tlab = econLabel(tp, env)
-            flab = econLabel(fp, env)
-            env.addEnv(env.curLab, CIf(econExp(r.var), tlab, flab))
-            return
     elif(isinstance(r, RVar)):
         return env.addEnv(env.curLab, CRet(econArgs(r)))
-    
+
     else:
-        return env.addEnv(env.curLab,CRet(econArgs(r)))
+        return env.addEnv(env.curLab, CRet(econArgs(r)))
 
 
-def getOp(cmp:RCmp):
-    if(isinstance(cmp,RCmp)):
+def getOp(cmp: RCmp):
+    if(isinstance(cmp, RCmp)):
         if(cmp.op == "=="):
-            return CEquals(econArgs(cmp.l),econArgs(cmp.r))
+            return CCmp("==", econExp(cmp.l), econExp(cmp.r))
         elif(cmp.op == ">"):
-            return CGreaterThan(econArgs(cmp.l),econArgs(cmp.r))
+            return CCmp(">", econExp(cmp.l), econExp(cmp.r))
         elif(cmp.op == ">="):
-            return CGreaterThanEqual(econArgs(cmp.l),econArgs(cmp.r))
+            return CCmp(">=", econExp(cmp.l), econExp(cmp.r))
         elif(cmp.op == "<"):
-            return CLessThan(econArgs(cmp.l),econArgs(cmp.r))
+            return CCmp("<", econExp(cmp.l), econExp(cmp.r))
         elif(cmp.op == "<="):
-            return CLessThanEqual(econArgs(cmp.l),econArgs(cmp.r))
+            return CCmp("<=", econExp(cmp.l), econExp(cmp.r))
         else:
             return "ERROR"
     else:
         return econExp(cmp)
 
-def econLabel(e, env:EconEnv):
+
+def econLabel(e, env: EconEnv):
     env.cntr = env.cntr+1
     lTitle = "label" + str(env.cntr)
-    print("WORKING WITH IF LABVELS" + e.pp())
+    temp = env.curLab
     env.curLab = lTitle
-    newS = econHelper(e, env)
+    t = econHelper(e, env)
     #print("WORKING WITH IF LABVELS" + newS.pp())
-    env.curLab = "main"
+    env.curLab = temp
     return CLabel(lTitle)
 
 
 ######## Uncover Local Pass ########
 def uncoverLocal(e: CProgram):
-    varList =[]
-    for l,b in e.p.items():
+    varList = []
+    for l, b in e.p.items():
         for s in b.p:
             if(isinstance(s, CSet)):
                 if(not s.var in varList):
@@ -1442,7 +1453,7 @@ class SelEnv:
         return self.vars
 
 
-def select(cp):
+def select(cp: CProgram):
     env = SelEnv()
     blk = {}
     for lab, lin in cp.p.items():
@@ -1462,10 +1473,21 @@ def select(cp):
 def _selectT(cp, env):
     if isinstance(cp, CRet):
         return [XIMov(_selectA(cp.var, env), XRegister("rax")), XIRet()]
-    if(isinstance(cp, CSet)):
+    elif(isinstance(cp, CSet)):
         src = cp.exp
         dst = cp.var
         return _selectE(src, dst, env)
+    elif(isinstance(cp, CIf)):
+        cmp = cp.cmp
+        actualCmp = None
+        op = None
+        if(isinstance(cmp, CCmp)):
+            actualCmp = XICmp(_selectA(cmp.l, env), _selectA(cmp.r, env))
+            op = _selectC(cmp)
+            return [actualCmp, XIJmpIf(op, XLabel(cp.l.pp())), XIJmp(XLabel(cp.r.pp()))]
+        return []
+    elif(isinstance(cp, CGoto)):
+        return XIJmp(XLabel(cp.label.pp()))
 
 
 def _selectE(cp, dst, env):
@@ -1475,6 +1497,11 @@ def _selectE(cp, dst, env):
         return [XIMov(_selectA(cp.n, env), _selectA(dst, env)), XINeg(_selectA(dst, env))]
     elif(isinstance(cp, CAdd)):
         return [XIMov(_selectA(cp.l, env), _selectA(dst, env)), XIAdd(_selectA(cp.r, env), _selectA(dst, env))]
+    elif(isinstance(cp, CNot)):
+        return [XIMov(_selectA(cp.e, env), _selectA(dst, env)), XIXor(XCon(1), _selectA(dst, env))]
+    elif(isinstance(cp, CCmp)):
+        return [XICmp(_selectA(cp.l, env), _selectA(cp.r, env)), XISet(_selectC(cp), XByteRegister("al")),
+                XIMovzb(XByteRegister("al"), _selectA(dst, env))]
     else:
         return XIMov(_selectA(cp, env), _selectA(dst, env))
 
@@ -1484,6 +1511,21 @@ def _selectA(cp, env):
         return XCon(cp.n)
     elif(isinstance(cp, CVar)):
         return XVar(cp.pp())
+    elif(isinstance(cp, CBool)):
+        return XCon(int(cp.b))
+
+
+def _selectC(cp: CCmp):
+    if(cp.op == ">"):
+        return XG()
+    elif(cp.op == ">="):
+        return XGEq()
+    elif(cp.op == "<"):
+        return XL()
+    elif(cp.op == "<="):
+        return XLEq()
+    elif(cp.op == "=="):
+        return XEq()
 
 
 ######## Uncover Live ########
