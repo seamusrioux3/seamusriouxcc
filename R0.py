@@ -280,7 +280,7 @@ class XProgram:
     def interp(self):
         env = XEnv()
         for a, b in self.p.items():
-            env.blk[a.interp(env)] = b
+            env.blk[a.interp(env)] = XBlock(None, list(b.blk))
         if("main" in env.blk):
             env.curlab = "main"
             env.blk["main"].interp(env)
@@ -1531,20 +1531,25 @@ def _selectC(cp: CCmp):
 ######## Uncover Live ########
 
 def uncover_live(xp: XProgram):
-    for l in xp.p.values():
+    prog:dict = xp.p
+    m = {}
+    for l, b in prog.items():
         d = {}
         before = set([])
-        if(isinstance(l, XBlock)):
-            for i in reversed(l.blk[:-1]):
+        m.update({l.emit():before})
+        for i in reversed(b.blk[:-1]):
+            if(isinstance(i, XIJmp) or isinstance(i, XIJmpIf)):
+                 m.update({i.label.emit():before})
+            else:
                 d.update({i: before})
+                m.update({l:before})
                 #print("Live before: " + str(n) +" = " + str(before), end=' ')
                 # print(w)
                 # print(r)
                 before = before - _uncoverW(i)
                 before = before.union(_uncoverR(i))
-                #print("Live after: " + str(n) +" = " + str(before) )
-            # printUncover(d)
-            l.aux = d
+            #print("Live after: " + str(before) )
+        b.aux = d
     return xp
 
 
@@ -1553,6 +1558,8 @@ def _uncoverW(i):
         return _uncoverM(i.src)
     elif(isinstance(i, XIAdd)):
         return _uncoverM(i.dst)
+    elif(isinstance(i, XIXor)):
+        return _uncoverM(i.r)
     elif(isinstance(i, XISub)):
         return _uncoverM(i.dst)
     elif(isinstance(i, XIMov)):
@@ -1571,6 +1578,8 @@ def _uncoverR(i):
         return _uncoverM(i.dst).union(_uncoverM(i.src))
     elif(isinstance(i, XISub)):
         return _uncoverM(i.dst).union(_uncoverM(i.src))
+    elif(isinstance(i, XIXor)):
+        return _uncoverM(i.r).union(_uncoverM(i.l))
     elif(isinstance(i, XIMov)):
         return _uncoverM(i.src)
     elif(isinstance(i, XIPush)):
@@ -1585,17 +1594,22 @@ def _uncoverM(a):
         return set([a.emit()])
     elif(isinstance(a, XVar)):
         return set([a.emit()])
+    elif(isinstance(a, XByteRegister)):
+        return set([a.emit()])
     else:
         return set([])
 
 
-def printUncover(uncl: dict):
-    for l, afterSet in uncl.items():
-        print(l.emit() + " After set: ", end="")
-        for e in afterSet:
-            print(e, end=" ")
-        print()
-    print("\n")
+def printUncover(xp:XProgram):
+    d:dict =xp.p
+    for l, b in d.items():
+        print(l.emit() + ": ")
+        for l, afterSet in b.aux.items():
+            print(l.emit() + " After set: ", end="")
+            for e in afterSet:
+                print(e, end=" ")
+            print()
+        print("\n")
     return
 
 ######## Build Interferences ########
