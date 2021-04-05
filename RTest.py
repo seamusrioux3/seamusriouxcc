@@ -80,7 +80,7 @@ class Test:
         pe = econ(pr)
         local = uncoverLocal(pe)
         xz = select(local)
-        xzAns = xz.interp()
+        unclXZ = uncover_live(xz)
         #print("original: " + p.pp())
        # print("original ans: " + str(p.interp()))
         # print("optimized: " + po.pp())
@@ -92,15 +92,13 @@ class Test:
         # print("econ: " + pe.pp())
         # print("econ ans: " + str(pe.interp()))
 
-        
         #print("select: " + xz.emit())
         print("original ans: " + str(p.interp()))
         print("optimized ans: " + str(po.interp()))
         print("uniquify ans: " + str(pu.interp()))
         print("rco ans: " + str(pr.interp()))
         print("econ ans: " + str(pe.interp()))
-        print("select ans: " + str(xzAns))
-        #
+        
         #xz = select(pe)
         # uncl = uncover_live(xz)
         # built = buildInt(uncl)
@@ -108,20 +106,16 @@ class Test:
         # ptch = patch(aloc)
         # real = self.testX0OnHardware(ptch)
 
-        
         # print("econ: " + pe.pp())
         # print("sel: " + xz.emit())
 
-        
-
-        
         # print("uniquify ans: " + str(pu.interp()))
         # print("econ ans: " + str(pe.interp()))
         # print("sel ans: " + str(xz.interp()))
         # print("aloc ans: " + str(aloc.interp()))
         # print("patch ans: " + str(ptch.interp()))
         # print("real ans: " + str(real))
-        if (self.checkAll(p, [po, pu, pr, pe], xzAns)):
+        if (self.checkAll(p, [po, pu, pr, pe, xz, unclXZ], None)):
             actual = po.interp()
         else:
             # print("original: " + p.pp())
@@ -134,21 +128,31 @@ class Test:
             # print("rco ans: " + str(pr.interp()))
             # print("econ: " + pe.pp())
             # print("econ ans: " + str(pe.interp()))
-            # 
+            #
             # print("select ans: " + str(xz.interp()))
             actual = not p.interp()
-            #exit(1)
+            # exit(1)
 
         self.test(actual, p.interp())
-    
-    def bigTest(self,n):
-        for i in range(1000):
-          #for n in range(0, n):
+
+    def bigTest(self, n):
+        for i in range(10000):
+          # for n in range(0, n):
             self.testAll(randomR2(1))
             self.testAll(randomR2(2))
             self.testAll(randomR2(3))
-            #self.testAll(randomR2(4))
-            #self.testAll(randomR2(5))
+            # self.testAll(randomR2(4))
+            # self.testAll(randomR2(5))
+
+
+def getToX1(p):
+    po = optimizer(p)
+    pu = uniquify(po)
+    pr = RCO(pu)
+    pe = econ(pr)
+    local = uncoverLocal(pe)
+    xz = select(local)
+    return xz
 
 
 s = Test()
@@ -331,7 +335,7 @@ optEx1 = optimizer(RIf(RCmp("==", RNum(1), RNum(2)), RBool(True), RBool(True)))
 print(optEx1.pp() + "-->" + str(optEx1.interp()))
 
 ########  C1 Testing  ########
-cprog1 = CProgram([], {CLabel("main"): CBlock(None,[
+cprog1 = CProgram([], {CLabel("main"): CBlock(None, [
     CSet(CVar("x"), CNum(1)),
     CSet(CVar("y"), CBool(False)),
     CSet(CVar("z"), CNot(CVar("y"))),
@@ -339,68 +343,71 @@ cprog1 = CProgram([], {CLabel("main"): CBlock(None,[
 ])})
 
 cprog2 = CProgram([], {
-    CLabel("main"):CBlock(None,
-    [
-        CSet(CVar("x"), CNum(1)),
-        CSet(CVar("y"), CNum(2)),
-        CIf(CCmp(">=", CVar("x"), CVar("y")), CLabel("xLabel"), CLabel("yLabel")),
-    ]),
-    CLabel("xLabel"):CBlock(None,
-    [
-        CRet(CVar("x"))
-    ]),
-    CLabel("yLabel"):CBlock(None,
-    [
-        CRet(CVar("y"))
-    ])
+    CLabel("main"): CBlock(None,
+                           [
+                               CSet(CVar("x"), CNum(1)),
+                               CSet(CVar("y"), CNum(2)),
+                               CIf(CCmp(">=", CVar("x"), CVar("y")),
+                                   CLabel("xLabel"), CLabel("yLabel")),
+                           ]),
+    CLabel("xLabel"): CBlock(None,
+                             [
+                                 CRet(CVar("x"))
+                             ]),
+    CLabel("yLabel"): CBlock(None,
+                             [
+                                 CRet(CVar("y"))
+                             ])
 })
 
 cprog3 = CProgram([], {
-    CLabel("main"):CBlock(None,
-    [
-        CSet(CVar("x"), CNum(1)),
-        CSet(CVar("y"), CNum(2)),
-        CIf(CCmp(">=", CVar("x"), CVar("y")), CLabel("xLabel"), CLabel("yLabel")),
-    ]),
-    CLabel("xLabel"):CBlock(None,
-    [
-        CSet(CVar("rb"), CCmp("==", CVar("x"), CVar("y"))),
-        CRet(CVar("rb"))
-    ]),
-    CLabel("yLabel"):CBlock(None,
-    [
-        CRet(CVar("y"))
-    ])
+    CLabel("main"): CBlock(None,
+                           [
+                               CSet(CVar("x"), CNum(1)),
+                               CSet(CVar("y"), CNum(2)),
+                               CIf(CCmp(">=", CVar("x"), CVar("y")),
+                                   CLabel("xLabel"), CLabel("yLabel")),
+                           ]),
+    CLabel("xLabel"): CBlock(None,
+                             [
+                                 CSet(CVar("rb"), CCmp(
+                                     "==", CVar("x"), CVar("y"))),
+                                 CRet(CVar("rb"))
+                             ]),
+    CLabel("yLabel"): CBlock(None,
+                             [
+                                 CRet(CVar("y"))
+                             ])
 })
 
 cprog4 = CProgram([], {
-    CLabel("main"):CBlock(None,
-    [
-        CSet(CVar("x"), CNum(1)),
-        CSet(CVar("y"), CNum(2)),
-        #CIf(CGreaterThanEqual(CVar("x"), CVar("y")), CLabel("xLabel"), CLabel("yLabel")),
-    ]),
-    CLabel("xLabel"):CBlock(None,
-    [
-        #CSet(CVar("rb"), CEquals(CVar("x"), CVar("y"))),
-        CRet(CVar("rb"))
-    ]),
-    CLabel("yLabel"):CBlock(None,
-    [
-        #CSet(CVar("rb"), CEquals(CVar("x"), CVar("y"))),
-        CSet(CVar("rb"), CNot(CVar("rb"))),
-        CRet(CVar("rb"))
-    ])
+    CLabel("main"): CBlock(None,
+                           [
+                               CSet(CVar("x"), CNum(1)),
+                               CSet(CVar("y"), CNum(2)),
+                               #CIf(CGreaterThanEqual(CVar("x"), CVar("y")), CLabel("xLabel"), CLabel("yLabel")),
+                           ]),
+    CLabel("xLabel"): CBlock(None,
+                             [
+                                 #CSet(CVar("rb"), CEquals(CVar("x"), CVar("y"))),
+                                 CRet(CVar("rb"))
+                             ]),
+    CLabel("yLabel"): CBlock(None,
+                             [
+                                 #CSet(CVar("rb"), CEquals(CVar("x"), CVar("y"))),
+                                 CSet(CVar("rb"), CNot(CVar("rb"))),
+                                 CRet(CVar("rb"))
+                             ])
 })
 
-cprog5 = CProgram([], {CLabel("main"): CBlock(None,[
+cprog5 = CProgram([], {CLabel("main"): CBlock(None, [
     CSet(CVar("x"), CNum(1)),
     CSet(CVar("y"), CNum(2)),
     #CSet(CVar("z"), CLessThan(CVar("x"), CVar("y"))),
     CRet(CVar("z"))
 ])})
 
-cprog6 = CProgram([], {CLabel("main"): CBlock(None,[
+cprog6 = CProgram([], {CLabel("main"): CBlock(None, [
     CSet(CVar("x"), CNum(1)),
     CSet(CVar("y"), CNum(2)),
     #CSet(CVar("z"), CGreaterThanEqual(CVar("x"), CVar("y"))),
@@ -409,26 +416,25 @@ cprog6 = CProgram([], {CLabel("main"): CBlock(None,[
 
 
 cprog7 = CProgram([], {
-    CLabel("main"):CBlock(None,
-    [
-        CSet(CVar("x"), CNum(1)),
-        CGoto(CLabel("loop"))
-    ]),
-    CLabel("loop"):CBlock(None,
-    [
-        #CIf(CLessThan(CVar("x"), CNum(5)), CLabel("inc"), CLabel("finish"))
-    ]),
-    CLabel("inc"):CBlock(None,
-    [
-        CSet(CVar("x"),CAdd(CVar("x"), CNum(1))),
-        CGoto(CLabel("loop"))
-    ]),
-    CLabel("finish"):CBlock(None,
-    [
-        CRet(CVar("x"))
-    ])
+    CLabel("main"): CBlock(None,
+                           [
+                               CSet(CVar("x"), CNum(1)),
+                               CGoto(CLabel("loop"))
+                           ]),
+    CLabel("loop"): CBlock(None,
+                           [
+                               #CIf(CLessThan(CVar("x"), CNum(5)), CLabel("inc"), CLabel("finish"))
+                           ]),
+    CLabel("inc"): CBlock(None,
+                          [
+                              CSet(CVar("x"), CAdd(CVar("x"), CNum(1))),
+                              CGoto(CLabel("loop"))
+                          ]),
+    CLabel("finish"): CBlock(None,
+                             [
+                                 CRet(CVar("x"))
+                             ])
 })
-
 
 # print(cprog1.pp())
 # print("Ans: " + str(cprog1.interp()))
@@ -450,179 +456,180 @@ print("\nX1  Testing")
 
 
 xprog1 = XProgram([], {XLabel("main"):
-    XBlock(None,[
-        XIMov(XCon(1), XRegister("rax")),
-        XIXor(XCon(1), XRegister("rax")),
-        XIRet()
-    ])
-})
+                       XBlock(None, [
+                           XIMov(XCon(1), XRegister("rax")),
+                           XIXor(XCon(1), XRegister("rax")),
+                           XIRet()
+                       ])
+                       })
 
 xprog2 = XProgram([], {XLabel("main"):
-    XBlock(None,[
-        XIMov(XCon(0), XRegister("rax")),
-        XIMov(XCon(0), XRegister("rbx")),
-        XIXor(XRegister("rbx"), XRegister("rax")),
-        XIRet()
-    ])
-})
+                       XBlock(None, [
+                           XIMov(XCon(0), XRegister("rax")),
+                           XIMov(XCon(0), XRegister("rbx")),
+                           XIXor(XRegister("rbx"), XRegister("rax")),
+                           XIRet()
+                       ])
+                       })
 
 xprog3 = XProgram([], {XLabel("main"):
-    XBlock(None,[
-        XIMov(XCon(1), XRegister("rax")),
-        XIMov(XCon(0), XRegister("rbx")),
-        XIXor(XRegister("rbx"), XRegister("rax")),
-        XIMov(XCon(1), XRegister("rbx")),
-        XIXor(XRegister("rbx"), XRegister("rax")),
-        XIRet()
-    ])
-})
+                       XBlock(None, [
+                           XIMov(XCon(1), XRegister("rax")),
+                           XIMov(XCon(0), XRegister("rbx")),
+                           XIXor(XRegister("rbx"), XRegister("rax")),
+                           XIMov(XCon(1), XRegister("rbx")),
+                           XIXor(XRegister("rbx"), XRegister("rax")),
+                           XIRet()
+                       ])
+                       })
 
 xprog4 = XProgram([], {
     XLabel("main"):
-    XBlock(None,[
+    XBlock(None, [
         XIMov(XCon(3), XRegister("rcx")),
         XIMov(XCon(2), XRegister("rbx")),
         XICmp(XRegister("rcx"), XRegister("rbx")),
         XIJmpIf(XGEq(), XLabel("ltrue")),
-        XIRet()  
+        XIRet()
     ]),
     XLabel("ltrue"):
-    XBlock(None,[
+    XBlock(None, [
         XIMov(XCon(3), XRegister("rax")),
-        XIRet() 
+        XIRet()
     ])
 })
 
 xprog5 = XProgram([], {
     XLabel("main"):
-    XBlock(None,[
+    XBlock(None, [
         XIMov(XCon(3), XRegister("rcx")),
         XIMov(XCon(2), XRegister("rbx")),
         XICmp(XRegister("rcx"), XRegister("rbx")),
         XIJmpIf(XL(), XLabel("ltrue")),
         XICmp(XRegister("rcx"), XRegister("rbx")),
         XIJmpIf(XG(), XLabel("lfalse")),
-        XIRet()  
+        XIRet()
     ]),
     XLabel("ltrue"):
-    XBlock(None,[
+    XBlock(None, [
         XIMov(XCon(3), XRegister("rax")),
-        XIRet() 
+        XIRet()
     ]),
     XLabel("lfalse"):
-    XBlock(None,[
+    XBlock(None, [
         XIMov(XCon(0), XRegister("rax")),
-        XIRet() 
+        XIRet()
     ])
 })
 
 xprog6 = XProgram([], {
     XLabel("main"):
-    XBlock(None,[
+    XBlock(None, [
         XIMov(XCon(3), XRegister("rcx")),
         XIMov(XCon(2), XRegister("rbx")),
         XICmp(XRegister("rcx"), XRegister("rbx")),
         XIJmpIf(XG(), XLabel("ltrue")),
         XICmp(XRegister("rcx"), XRegister("rbx")),
         XIJmpIf(XL(), XLabel("lfalse")),
-        XIRet()  
+        XIRet()
     ]),
     XLabel("ltrue"):
-    XBlock(None,[
+    XBlock(None, [
         XIMov(XCon(3), XRegister("rax")),
-        XIRet() 
+        XIRet()
     ]),
     XLabel("lfalse"):
-    XBlock(None,[
+    XBlock(None, [
         XIMov(XCon(0), XRegister("rax")),
-        XIRet() 
+        XIRet()
     ])
 })
 
 xprog7 = XProgram([], {
-    XLabel("main"):XBlock(None,
-    [
-        XIMov(XCon(1), XRegister("rbx")),
-        XIJmp(XLabel("loop"))
-    ]),
-    XLabel("loop"):XBlock(None,
-    [
-        XIMov(XCon(5), XRegister("rcx")),
-        XICmp( XRegister("rbx"), XRegister("rcx")),
-        XIJmpIf(XL(),XLabel("inc")),
-        XIJmp(XLabel("finish"))
-    ]),
-    XLabel("inc"):XBlock(None,
-    [
-        XIAdd(XCon(1), XRegister("rbx")),
-        XIJmp(XLabel("loop"))
-    ]),
-    XLabel("finish"):XBlock(None,
-    [
-        XIMov(XRegister("rbx"), XRegister("rax")),
-        XIRet()
-    ])
+    XLabel("main"): XBlock(None,
+                           [
+                               XIMov(XCon(1), XRegister("rbx")),
+                               XIJmp(XLabel("loop"))
+                           ]),
+    XLabel("loop"): XBlock(None,
+                           [
+                               XIMov(XCon(5), XRegister("rcx")),
+                               XICmp(XRegister("rbx"), XRegister("rcx")),
+                               XIJmpIf(XL(), XLabel("inc")),
+                               XIJmp(XLabel("finish"))
+                           ]),
+    XLabel("inc"): XBlock(None,
+                          [
+                              XIAdd(XCon(1), XRegister("rbx")),
+                              XIJmp(XLabel("loop"))
+                          ]),
+    XLabel("finish"): XBlock(None,
+                             [
+                                 XIMov(XRegister("rbx"), XRegister("rax")),
+                                 XIRet()
+                             ])
 })
 
 xprog8 = XProgram([], {XLabel("main"):
-    XBlock(None,[
-        XIMovzb(XCon(20), XByteRegister("al")),
-        XIMovzb(XByteRegister("al"), XRegister("rax")),
-        XIRet()
-    ])
-})
+                       XBlock(None, [
+                           XIMovzb(XCon(20), XByteRegister("al")),
+                           XIMovzb(XByteRegister("al"), XRegister("rax")),
+                           XIRet()
+                       ])
+                       })
 
 xprog9 = XProgram([], {XLabel("main"):
-    XBlock(None, [
-        XIMov(XCon(1), XVar("x")),
-        XIMov(XCon(2), XVar("y")),
-        XICmp(XVar("x"), XVar("y")),
-        XISet(XG(), XByteRegister("al")),
-        XIMov(XByteRegister("al"), XRegister("rax")),
-        XIMov(XCon(3), XVar("x")),
-        XIMov(XCon(2), XVar("y")),
-        XICmp(XVar("x"), XVar("y")),
-        XISet(XG(), XByteRegister("al")),
-        XIMov(XByteRegister("al"), XRegister("rax")),
-        XIRet()
-    ])
-})
+                       XBlock(None, [
+                           XIMov(XCon(1), XVar("x")),
+                           XIMov(XCon(2), XVar("y")),
+                           XICmp(XVar("x"), XVar("y")),
+                           XISet(XG(), XByteRegister("al")),
+                           XIMov(XByteRegister("al"), XRegister("rax")),
+                           XIMov(XCon(3), XVar("x")),
+                           XIMov(XCon(2), XVar("y")),
+                           XICmp(XVar("x"), XVar("y")),
+                           XISet(XG(), XByteRegister("al")),
+                           XIMov(XByteRegister("al"), XRegister("rax")),
+                           XIRet()
+                       ])
+                       })
 
-#print(xprog9.interp())
+# print(xprog9.interp())
 
 ######## Econ R2 -> C1 Tests ########
+
+
 def getToRCO(r):
     return select(uncoverLocal(econ(RCO(uniquify(optimizer(r))))))
 
-# econ2prog1 = RCmp("<", RNegate(RRead()), RAdd(RRead(), RRead()))
-# econ2prog1 = getToRCO(econ2prog1)
-# econ2prog1 = econ(econ2prog1)
-# print(econ2prog1.pp())
-# print(str(econ2prog1.interp()))
 
-# econ2prog2 = RAnd(RBool(False), RBool(False))
-# econ2prog2 = getToRCO(econ2prog2)
-# econ2prog2 = econ(econ2prog2)
-# print(econ2prog2.pp())
-# print(str(econ2prog2.interp()))
+econ2prog1 = RCmp("<", RNegate(RRead()), RAdd(RRead(), RRead()))
+econ2prog1 = getToRCO(econ2prog1)
+econ2prog1 = econ(econ2prog1)
+
+econ2prog2 = RAnd(RBool(False), RBool(False))
+econ2prog2 = getToRCO(econ2prog2)
+econ2prog2 = econ(econ2prog2)
+
 
 ####### Tests With X1 #########
-#econ2prog3 = RIf(RCmp("<", RRead(), RRead()), RBool(True), RBool(True))
-# print(econ2prog3.pp())
-# econ2prog3 = getToRCO(econ2prog3)
-# print(econ2prog3.pp())
+econ2prog3 = RIf(RCmp("<", RRead(), RRead()), RBool(True), RBool(True))
+econ2prog3 = getToRCO(econ2prog3)
 
-# econ2prog4 = RAnd(RIf (RCmp("<=", RNum(8), RRead()), RBool(False), RBool(True)), RLet(RVar("V0"),  RBool(True), RBool(True)))
-# econ2prog4 = getToRCO(econ2prog4)
-# print(str(econ2prog4.interp()))
-# print(econ2prog4.pp())
-# econ2prog4 = econ(econ2prog4)
-# print(econ2prog4.pp())
+econ2prog4 = RAnd(RIf(RCmp("<=", RNum(8), RRead()), RBool(
+    False), RBool(True)), RLet(RVar("V0"),  RBool(True), RBool(True)))
+econ2prog4 = getToRCO(econ2prog4)
 
 selprog1 = RIf(RCmp(">=", RRead(), RRead()), RNum(0), RRead())
-#print(selprog1.pp())
 selprog1 = getToRCO(selprog1)
-#print(selprog1.interp())
+
+
+########## Uncover Live Tests ##########
+unclX1 = uncover_live(getToX1(randomR2(2)))
+print(unclX1.emit())
+print("\nLive Sets\n")
+print(printUncover(unclX1))
+
 
 ######## Combined Testing Updated With R2 Uniquify ########
 print("\nCombined Tests\n")
@@ -668,8 +675,6 @@ s.bigTest(5)
 # s.testAll(RAdd(RNum(22), RAdd(RNum(23), RNum(20))))
 # s.testAll(RNegate(RLet(RVar("V0"), RNegate(RLet(RVar("V0"), RNum(2), RVar(
 #     "V0"))), RAdd(RAdd(RNum(2), RRead()), RAdd(RNum(4), RVar("V0"))))))
-
-
 
 
 s.endSuite()
