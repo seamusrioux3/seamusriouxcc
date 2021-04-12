@@ -18,3 +18,7 @@ int read_int(){
 void print_int(int x){
     printf("%d", x);
 }
+
+void print_bool(int x){
+    printf(x ? "true": "false");
+}
