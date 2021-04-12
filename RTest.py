@@ -76,13 +76,13 @@ class Test:
         pr = RCO(pu)
         pe = econ(pr)
         xz = select(pe)
-
-        # print(po.pp())
-        #print(xz.emit())
-
         aloc = allocate_registers(xz, t)
+        # print(po.pp())
+        print(aloc.emit())
+
+        #
         #print(aloc.emit())
-        machine = self.testX0OnHardware(aloc)
+        #machine = self.testX0OnHardware(aloc)
         # print("Machine Level Ans:", machine)
         #print("original: " + p.pp())
        # print("original ans: " + str(p.interp()))
@@ -102,7 +102,7 @@ class Test:
         # ptch = patch(aloc)
         # real = self.testX0OnHardware(ptch)
 
-        if (self.checkAll(p, [po, pu, pr, pe], machine)):
+        if (self.checkAll(p, [po, pu, pr, pe, xz, aloc], None)):
             actual = po.interp()
         else:
             # print("original: " + p.pp())
@@ -122,8 +122,8 @@ class Test:
         self.test(actual, p.interp())
 
     def bigTest(self, n):
-        for i in range(1):
-            #self.testAll(randomR2(1))
+        for i in range(1500):
+            self.testAll(randomR2(1))
             self.testAll(randomR2(2))
             #self.testAll(randomR2(3))
 
@@ -581,8 +581,20 @@ xprog9 = XProgram([], {XLabel("main"):
 
 ######## Tests With Alloc #######
 alc0 = RNegate(RIf(RCmp(">=", RNum(11), RNum(0)), RNum(14), RNum(2)))
-#s.testAll(alc0)
 
+######## Tests With Conditional Moves #######
+def getToEcon(x):
+    return  RCO(uniquify(optimizer(x)))
+condMov1 = RLet(RVar("x"), RIf(RCmp("<", RNum(12), RNum(13)), RNum(5), RNum(6)), RVar("x"))
+condMov1 = getToEcon(condMov1)
+print(condMov1.pp())
+print(condMov1.interp())
+condMov1 = econ(condMov1)
+print(condMov1.pp())
+print(condMov1.interp())
+condMov1 = select(condMov1)
+print(condMov1.emit())
+print(condMov1.interp())
 ######## Combined Testing Updated With R2 Uniquify ########
 print("\nCombined Tests\n")
 s.bigTest(5)

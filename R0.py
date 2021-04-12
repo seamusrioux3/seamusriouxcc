@@ -457,6 +457,28 @@ class XIMov:
         env = self.dst.set(env, self.src.interp(env))
         return env
 
+class XICMov:
+    def __init__(self, _cc, _src, _dst):
+        self.src = _src
+        self.dst = _dst
+        self.cc = _cc
+
+    def emit(self):
+        return "cmovq" + " " +self.cc.emit() + " "+  self.src.emit() + ", " + self.dst.emit()
+    
+    def interp(self, env):
+        camp = env.cmp.pop()
+        if(getTrueCmp(self.cc, camp[0].interp(env), camp[1].interp(env))):
+            env = self.dst.set(env, self.src.interp(env))
+            # tem = env.curlab
+            # #print(tem)
+            # env.curlab = self.label.interp(env)
+            # a = env.blk[tem].blk.index(self)
+            # #print(str(a))
+            # env.blk[tem].blk.remove(env.blk[tem].blk[a+1])
+            # env = env.blk[self.label.emit()].interp(env)
+        return env
+
 
 class XIRet:
     def __init__(self, _src=None):
@@ -642,7 +664,7 @@ class XICmp:
         self.r = _r
 
     def emit(self):
-        return "cmpq" + " " + self.l.emit() + ", " + self.r.emit()
+        return "cmpq" + " " + self.r.emit() + ", " + self.l.emit()
 
     def interp(self, env):
         env.cmp.append([self.l, self.r])
@@ -852,6 +874,7 @@ class CSet:
         env.setVar({self.var.pp(): self.exp.interp(env)})
         return 0
 
+
 ###### C1 Program Data Types ########
 
 
@@ -887,6 +910,25 @@ class CCmp:
         elif(self.op == "<"):
             return self.l.interp(env) < self.r.interp(env)
         return "ERROR"
+
+
+class CSetCC:
+    def __init__(self, _cmp, _var, _t, _f):
+        self.cmp = _cmp
+        self.var = _var
+        self.t = _t
+        self.f = _f
+
+    def pp(self):
+        return "(setc! " + self.cmp.pp() + " " + self.var.pp() + " "+  self.t.pp() + " " + self.f.pp() + ")"
+
+    def interp(self, env):
+        if(self.cmp.interp(env)):
+            env.setVar({self.var.pp(): self.t.interp(env)})
+        else:
+            env.setVar({self.var.pp(): self.f.interp(env)})
+        return 0
+
 
 
 class CNot:
@@ -1044,18 +1086,6 @@ def _optimizer(n, env):
         if(isinstance(n.e, RNot)):
             return _optimizer(n.e.e, env)
         return RNot(_optimizer(n.e, env))
-    # elif(isinstance(n,RAnd)):
-    #     if(n.l.interp() and n.r.interp()):
-    #         return RBool(True)
-    #     else:
-    #         return RBool(False)
-    #     #return RCmp("==", _optimizer(n.l, env),  _optimizer(n.r, env))#RIf(_optimizer(n.l, env), _optimizer(n.r, env), _optimizer(n.l, env))
-    # elif(isinstance(n, ROr)):
-    #     if(n.l.interp() or n.r.interp()):
-    #         return RBool(True)
-    #     else:
-    #         return RBool(False)
-    #     #return RIf(_optimizer(n.l, env), _optimizer(n.l, env), _optimizer(n.r, env))
     elif isinstance(n, RNegate):
         e = n.num
         if(isinstance(e, RNum)):
@@ -1124,8 +1154,8 @@ def _optimizer(n, env):
             return _optimizer(n.r, env)
         else:
             env.setEnv({n.var.name: xe})
-            be = _optimizer(n.r, env)
-            return RLet(n.var, xe, be)
+            #be = _optimizer(n.r, env)
+            return RLet(n.var, xe, n.r)
 
     return n
 
@@ -1353,11 +1383,18 @@ def econExp(r):
     else:
         return econArgs(r)
 
+def getForm(a):
+    if(isinstance(a, RNum) or isinstance(a, RBool) or isinstance(a, RRead) or isinstance(a, RVar)):
+        return True
+    return False
 
 def econHelper(r, env: EconEnv):
     #print(env.curLab + " "+ r.pp())
     if(isinstance(r, RLet)):
         if(isinstance(r.l, RIf)):
+            if(getForm(r.l.l) and getForm(r.l.r)):
+                env.addEnv(env.curLab, CSetCC(getOp(r.l.var), econArgs(r.var), econArgs(r.l.l), econArgs(r.l.r)))
+                return econHelper(r.r, env)
             tp = r.l.l
             fp = r.l.r
             blab = "label" + str(env.cntr+3)
@@ -1395,6 +1432,8 @@ def econHelper(r, env: EconEnv):
 
     else:
         return env.addEnv(env.curLab, CRet(econArgs(r)))
+
+
 
 
 def getOp(cmp: RCmp):
@@ -1480,6 +1519,16 @@ def _selectT(cp, env):
         src = cp.exp
         dst = cp.var
         return _selectE(src, dst, env)
+    elif(isinstance(cp, CSetCC)):
+        cmp = cp.cmp
+        actualCmp = None
+        op = None
+        
+        if(isinstance(cmp, CCmp)):
+            actualCmp = XICmp(_selectA(cmp.l, env), _selectA(cmp.r, env))
+            op = _selectC(cmp)
+            return [actualCmp, XIMov(_selectA(cp.f, env), _selectA(cp.var, env)), XICMov(op, _selectA(cp.t, env), _selectA(cp.var, env))]
+        return []
     elif(isinstance(cp, CIf)):
         cmp = cp.cmp
         actualCmp = None
@@ -1583,6 +1632,8 @@ def _uncoverW(i):
         return _uncoverM(i.dst)
     elif(isinstance(i, XIMov)):
         return _uncoverM(i.dst)
+    elif(isinstance(i, XICMov)):
+        return _uncoverM(i.dst)
     elif(isinstance(i, XIPush)):
         return set([])
     elif(isinstance(i, XIPop)):
@@ -1610,7 +1661,9 @@ def _uncoverR(i):
     elif(isinstance(i, XISub)):
         return _uncoverM(i.dst).union(_uncoverM(i.src))
     elif(isinstance(i, XIMov)):
-        return _uncoverM(i.dst)
+        return _uncoverM(i.src)
+    elif(isinstance(i, XICMov)):
+        return _uncoverM(i.src)
     elif(isinstance(i, XIPush)):
         return _uncoverM(i.src)
     elif(isinstance(i, XIPop)):
@@ -1692,6 +1745,10 @@ def buildInt(xp: XProgram, live):
                 elif(isinstance(i, XISet)):
                     if(s):
                         addlike(s, i.arg, g)
+                
+                elif(isinstance(i, XICMov)):
+                    if(s):
+                        movlike(s, i.dst, i.src, m, g)
                 
                 elif(isinstance(i, XIMovzb)):
                     if(s):
@@ -1884,10 +1941,14 @@ def _assign(xp, regs):
         return XIPop(_assignA(xp.src, regs))
     elif(isinstance(xp, XIMovzb)):
         return XIMovzb(_assignA(xp.l,  regs), _assignA(xp.r, regs))
+    elif(isinstance(xp, XICMov)):
+        return XICMov(xp.cc, _assignA(xp.src,  regs), _assignA(xp.dst, regs))
     elif(isinstance(xp, XIXor)):
         return XIXor(_assignA(xp.l,  regs), _assignA(xp.r,  regs))
     elif(isinstance(xp, XICmp)):
         return XICmp(_assignA(xp.l,  regs), _assignA(xp.r,  regs))
+    elif(isinstance(xp, XISet)):
+        return XISet(xp.cc, _assignA(xp.arg,  regs))
     else:
         return xp
 
