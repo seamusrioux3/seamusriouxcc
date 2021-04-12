@@ -1834,7 +1834,7 @@ def allocate_registers(xp: XProgram) -> XProgram:
     
     newXp = assign_register(newXp)
     newXp = mainpass(newXp, mStackAllocSize)
-    #return newXp
+    newXp = patch(newXp)
     return newXp
 
 ################ Assign Registers ################
@@ -1950,4 +1950,20 @@ def _patch(i):
             return []
         if(isinstance(i.src, XMem) and isinstance(i.dst, XMem)):
             return [XIMov(i.src, XRegister("rax")), XIMov(XRegister("rax"), i.dst)]
+    elif(isinstance(i, XIMovzb)):
+        if(i.r.emit() == i.l.emit()):
+            return []
+        if(isinstance(i.l, XMem) and isinstance(i.r, XMem)):
+            return [XIMovzb(i.l, XRegister("al")), XIMovzb(XRegister("al"), i.r)]
+        elif(isinstance(i.l, XCon)):
+            return [XIMovzb(i.l, XRegister("al")), XIMovzb(XRegister("al"), i.r)]
+        elif(isinstance(i.r, XCon)):
+            return [XIMovzb(i.r, XRegister("al")), XIMovzb(XRegister("al"), i.l)]
+    elif(isinstance(i, XICmp)):
+        if(isinstance(i.l, XMem) and isinstance(i.r, XMem)):
+            return [XIMov(i.l, XRegister("rax")), XICmp(XRegister("rax"), i.r)]
+        elif(isinstance(i.l, XCon)):
+            return [XIMov(i.l, XRegister("rax")), XICmp(XRegister("rax"), i.r)]
+        elif(isinstance(i.r, XCon)):
+            return [XIMov(i.r, XRegister("rax")), XICmp(XRegister("rax"), i.l)]
     return [i]
