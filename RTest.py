@@ -51,7 +51,13 @@ class Test:
         if os.path.exists(binName):
             os.remove(binName)
 
-        return int(stdout)
+        print(stdout)
+        ans = stdout
+        if(stdout == b'true'):
+            ans = 1
+        elif(stdout == b'false'):
+            ans = 0
+        return int(ans)
 
     def checkAll(self, org: RLet, arr, real: int):
         for a in arr:
@@ -64,11 +70,20 @@ class Test:
     def testAll(self, p):
         actual = 0
         po = optimizer(p)
+        print(po.typec())
+        t = po.typec()
         pu = uniquify(po)
         pr = RCO(pu)
         pe = econ(pr)
         xz = select(pe)
-        aloc = allocate_registers(xz)
+
+        # print(po.pp())
+        #print(xz.emit())
+
+        aloc = allocate_registers(xz, t)
+        #print(aloc.emit())
+        machine = self.testX0OnHardware(aloc)
+        # print("Machine Level Ans:", machine)
         #print("original: " + p.pp())
        # print("original ans: " + str(p.interp()))
         # print("optimized: " + po.pp())
@@ -77,18 +92,17 @@ class Test:
         # print("uniquify ans: " + str(pu.interp()))
         # print("rco: " + pr.pp())
         # print("rco ans: " + str(pr.interp()))
-        # print("econ: " + pe.pp())
+        #print("econ: " + pe.pp())
         # print("econ ans: " + str(pe.interp()))
 
         
-        print(po.pp())
-        print(xz.emit())
-        print(aloc.emit())
+        
+        #print(aloc.emit())
         
         # ptch = patch(aloc)
         # real = self.testX0OnHardware(ptch)
 
-        if (self.checkAll(p, [po, pu, pr, pe, xz, aloc], None)):
+        if (self.checkAll(p, [po, pu, pr, pe], machine)):
             actual = po.interp()
         else:
             # print("original: " + p.pp())
@@ -108,10 +122,10 @@ class Test:
         self.test(actual, p.interp())
 
     def bigTest(self, n):
-        for i in range(1000):
-            self.testAll(randomR2(1))
+        for i in range(1):
+            #self.testAll(randomR2(1))
             self.testAll(randomR2(2))
-            self.testAll(randomR2(3))
+            #self.testAll(randomR2(3))
 
 
 def getToX1(p):

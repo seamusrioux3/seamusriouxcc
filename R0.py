@@ -495,7 +495,8 @@ class XICall:
             XIMov(XCon(env.cntr), XRegister("rax")).interp(env)
         elif(temp == "print_int"):
             pass
-            # print(env.reg["RDI"])
+        elif(temp == "print_bool"):
+            pass
         else:
             tem = env.curlab
             env.curlab = temp
@@ -628,7 +629,7 @@ class XIXor:
         self.r = _r
 
     def emit(self):
-        return "xorq" + " " + self.l.emit() + " " + self.r.emit()
+        return "xorq" + " " + self.l.emit() + ", " + self.r.emit()
 
     def interp(self, env):
         env = self.r.set(env, self.l.interp(env) ^ self.r.interp(env))
@@ -641,7 +642,7 @@ class XICmp:
         self.r = _r
 
     def emit(self):
-        return "cmpq" + " " + self.l.emit() + " " + self.r.emit()
+        return "cmpq" + " " + self.l.emit() + ", " + self.r.emit()
 
     def interp(self, env):
         env.cmp.append([self.l, self.r])
@@ -668,7 +669,7 @@ class XIMovzb:
         self.r = _r
 
     def emit(self):
-        return "movzbq" + " " + self.l.emit() + " " + self.r.emit()
+        return "movzbq" + " " + self.l.emit() + ", " + self.r.emit()
 
     def interp(self, env):
         env = self.r.set(env, self.l.interp(env))
@@ -1468,12 +1469,13 @@ def select(cp: CProgram):
         # if(lab.interp() == "main"):
         #     tempBlk.append(XIJmp(XLabel("end")))
         blk.update({tempLabel: XBlock([], tempBlk)})
+    blk.update({XLabel("end"):XBlock([],[XIRet()])})
     return XProgram(cp.info, blk)
 
 
 def _selectT(cp, env):
     if isinstance(cp, CRet):
-        return [XIMov(_selectA(cp.var, env), XRegister("rax")), XIRet()]
+        return [XIMov(_selectA(cp.var, env), XRegister("rax")), XIJmp(XLabel("end"))]
     elif(isinstance(cp, CSet)):
         src = cp.exp
         dst = cp.var
@@ -1812,7 +1814,7 @@ def color(xp: XProgram) -> XProgram:
 
 ################ Allocate Registers ################
 
-def allocate_registers(xp: XProgram) -> XProgram:
+def allocate_registers(xp: XProgram, type:str) -> XProgram:
     mStackAllocSize =0
     live = uncover_live(xp)
     #printUncover(live)
@@ -1833,7 +1835,7 @@ def allocate_registers(xp: XProgram) -> XProgram:
     # print(newXp.emit())
     
     newXp = assign_register(newXp)
-    newXp = mainpass(newXp, mStackAllocSize)
+    newXp = mainpass(newXp, mStackAllocSize, type)
     newXp = patch(newXp)
     return newXp
 
@@ -1855,7 +1857,8 @@ def assign_register(xp: XProgram) -> XProgram:
             originalMain = blk.blk
             for instr in originalMain:
                 body.append(_assign(instr, regs))
-            #body.append(XIJmp(XLabel("end")))
+            body = body[:-1]
+            body.append(XIJmp(XLabel("end")))
             progm.update({XLabel("body"):XBlock([], body)})
         else:
             temp = blk.blk
@@ -1900,18 +1903,34 @@ def _assignA(a, v):
 
 ######## Main Pass ########
 
-def mainpass(xp: XProgram, alloc: int):
-    mainBdy = [XIPush(XRegister("rbp")), XIMov(
-        XRegister("rsp"), XRegister("rbp")), XIPush(XRegister("rbx"))]
-    endBlk = [XIAdd(XCon(alloc), XRegister("rsp")), XIPop(
-        XRegister("rbx")), XIPop(XRegister("rbp"))]
-
-    for r in calleeSavedRegs:
-        mainBdy.append(XIPush(r))
-        endBlk.append(XIPop(r))
-    mainBdy = mainBdy + \
+def mainpass(xp: XProgram, alloc: int, type:str):
+    mainBdy =[]
+    endBlk = []
+    for lab in xp.p.keys():
+        if(lab.emit() == "end"):
+            xp.p.pop(lab)
+            break
+    if(alloc > 0):
+        mainBdy = [XIPush(XRegister("rbp")), XIMov(
+            XRegister("rsp"), XRegister("rbp")), XIPush(XRegister("rbx"))]
+        endBlk = [XIAdd(XCon(alloc), XRegister("rsp")), XIPop(
+            XRegister("rbx")), XIPop(XRegister("rbp"))]
+        for r in calleeSavedRegs:
+            mainBdy.append(XIPush(r))
+            endBlk.append(XIPop(r))
+        mainBdy = mainBdy + \
         [XISub(XCon(alloc), XRegister("rsp")), XIJmp(XLabel("body"))]
-    endBlk = endBlk + [XIMov(XRegister("rax"), XRegister("rdi")),
+    else:
+        for r in calleeSavedRegs:
+            mainBdy.append(XIPush(r))
+            endBlk.append(XIPop(r))
+        mainBdy = mainBdy + \
+        [XIJmp(XLabel("body"))]
+    if(type == "BOOL"):
+        endBlk = endBlk + [XIMov(XRegister("rax"), XRegister("rdi")),
+                        XICall(XLabel("print_bool")), XIRet()]
+    else:
+        endBlk = endBlk + [XIMov(XRegister("rax"), XRegister("rdi")),
                        XICall(XLabel("print_int")), XIRet()]
 
     main = {XLabel("main"): XBlock([], mainBdy)}
