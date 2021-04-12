@@ -1433,8 +1433,7 @@ def uncoverLocal(e: CProgram):
             if(isinstance(s, CSet)):
                 if(not s.var in varList):
                     varList.append(s.var)
-    e.info = varList
-    return e
+    return varList
 
 
 ######## Select Instr Pass ########
@@ -1466,6 +1465,8 @@ def select(cp: CProgram):
                     tempBlk = tempBlk + rtn
                 else:
                     tempBlk.append(rtn)
+        # if(lab.interp() == "main"):
+        #     tempBlk.append(XIJmp(XLabel("end")))
         blk.update({tempLabel: XBlock([], tempBlk)})
     return XProgram(cp.info, blk)
 
@@ -1529,28 +1530,46 @@ def _selectC(cp: CCmp):
 
 
 ######## Uncover Live ########
-
-def uncover_live(xp: XProgram):
-    prog:dict = xp.p
+def uncover_live(xp:XProgram):
     m = {}
-    for l, b in prog.items():
-        d = {}
-        before = set([])
-        m.update({l.emit():before})
-        for i in reversed(b.blk[:-1]):
-            if(isinstance(i, XIJmp) or isinstance(i, XIJmpIf)):
-                 m.update({i.label.emit():before})
+    for lab, blk in xp.p.items():
+        m =live_e(blk, m, lab.emit())
+    return m
+
+def live_e(blk, m, lab):
+    if(isinstance(blk, XBlock)):
+        #if(lab != "end"):
+        before =set([])
+        for i in reversed(blk.blk):
+            if(lab in m):
+                before= live_i(before, i, m, lab)
             else:
-                d.update({i: before})
-                m.update({l:before})
-                #print("Live before: " + str(n) +" = " + str(before), end=' ')
-                # print(w)
-                # print(r)
-                before = before - _uncoverW(i)
-                before = before.union(_uncoverR(i))
-            #print("Live after: " + str(before) )
-        b.aux = d
-    return xp
+                m[lab] ={}
+                before = live_i(before, i, m, lab)
+        # else:
+        #     m["end"] = {XIRet():set([XRegister("rax").emit()])}
+    return m
+
+def live_i(before, i, m, lab):
+    
+    if(isinstance(i, XIJmp)):
+            m[lab].update({i:before})
+            m[i.src.emit()] = m[lab]
+            # m[i.src.emit()].update({i.src.emit():before})
+    elif(isinstance(i, XIJmpIf)):
+            m[lab].update({i:before})
+            m[i.label.emit()] = m[lab]
+            # m[i.label.emit()].update({i.label.emit():before})
+    else:
+        m[lab].update({i:before})
+        #print("Live before: " + str(n) +" = " + str(before), end=' ')
+        # print(w)
+        # print(r)
+        before = before - _uncoverW(i)
+        before = before.union(_uncoverR(i))
+    return before
+    #print("Live after: " + str(before) )
+
 
 
 def _uncoverW(i):
@@ -1558,8 +1577,6 @@ def _uncoverW(i):
         return _uncoverM(i.src)
     elif(isinstance(i, XIAdd)):
         return _uncoverM(i.dst)
-    elif(isinstance(i, XIXor)):
-        return _uncoverM(i.r)
     elif(isinstance(i, XISub)):
         return _uncoverM(i.dst)
     elif(isinstance(i, XIMov)):
@@ -1568,6 +1585,18 @@ def _uncoverW(i):
         return set([])
     elif(isinstance(i, XIPop)):
         return _uncoverM(i.src)
+    elif(isinstance(i, XIMovzb)):
+        return _uncoverM(i.r)
+    elif(isinstance(i, XIXor)):
+        return _uncoverM(i.r)
+    elif(isinstance(i, XICmp)):
+        return set([])
+    elif(isinstance(i, XISet)):
+        return _uncoverM(i.arg)
+    elif(isinstance(i, XIJmp)):
+        return set([])
+    elif(isinstance(i, XIJmpIf)):
+        return set([])
     return set([])
 
 
@@ -1578,13 +1607,23 @@ def _uncoverR(i):
         return _uncoverM(i.dst).union(_uncoverM(i.src))
     elif(isinstance(i, XISub)):
         return _uncoverM(i.dst).union(_uncoverM(i.src))
-    elif(isinstance(i, XIXor)):
-        return _uncoverM(i.r).union(_uncoverM(i.l))
     elif(isinstance(i, XIMov)):
-        return _uncoverM(i.src)
+        return _uncoverM(i.dst)
     elif(isinstance(i, XIPush)):
         return _uncoverM(i.src)
     elif(isinstance(i, XIPop)):
+        return set([])
+    elif(isinstance(i, XIXor)):
+        return _uncoverM(i.r).union(_uncoverM(i.l))
+    elif(isinstance(i, XIMovzb)):
+        return _uncoverM(i.l)
+    elif(isinstance(i, XICmp)):
+        return _uncoverM(i.r).union(_uncoverM(i.l))
+    elif(isinstance(i, XISet)):
+        return _uncoverM(i.arg)
+    elif(isinstance(i, XIJmp)):
+        return set([])
+    elif(isinstance(i, XIJmpIf)):
         return set([])
     return set([])
 
@@ -1600,65 +1639,81 @@ def _uncoverM(a):
         return set([])
 
 
-def printUncover(xp:XProgram):
-    d:dict =xp.p
-    for l, b in d.items():
-        print(l.emit() + ": ")
-        for l, afterSet in b.aux.items():
-            print(l.emit() + " After set: ", end="")
-            for e in afterSet:
-                print(e, end=" ")
-            print()
-        print("\n")
-    return
+def printUncover(liv:dict):
+    for lab, values in liv.items():
+        print(lab)
+        print(values)
 
 ######## Build Interferences ########
 
 
-def buildInt(xp: XProgram):
+def buildInt(xp: XProgram, live):
     g = Graph()
     m = Graph()
-    for blk in xp.p.values():
+    for lab, blk in xp.p.items():
         if(isinstance(blk, XBlock)):
-            for i, s in blk.aux.items():
+            for i, s in live[lab.emit()].items():
                 if(isinstance(i, XIMov)):
                     if(s):
-                        d = i.dst.emit()
-                        sr = i.src.emit()
-                        for e in s:
-                            if(not (d == e or e == sr)):
-                                g.add_edge(d, str(e))
-                            m.add_edge(sr, d)
+                        movlike(s, i.dst, i.src, m, g)
+
                 elif(isinstance(i, XIAdd)):
                     if(s):
-                        d = i.dst.emit()
-                        sr = i.src.emit()
-                        for e in s:
-                            if(not d == e):
-                                g.add_edge(d, str(e))
+                        addlike(s, i.dst, g)
+
                 elif(isinstance(i, XINeg)):
                     if(s):
-                        d = i.src.emit()
-                        for e in s:
-                            if(not d == e):
-                                g.add_edge(d, str(e))
+                        addlike(s, i.src, g)
+
                 elif(isinstance(i, XICall)):
                     if(s):
                         for e in s:
                             for u in callerSavedRegs:
                                 if(not u == e):
                                     g.add_edge(u.emit(), str(e))
-                else:
+                elif(isinstance(i, XIPop)):
                     if(s):
-                        d = i.dst.emit()
-                        for e in s:
-                            if(not d == e):
-                                g.add_edge(d, str(e))
-            # printGrph(g)
-            # printGrph(m)
-            blk.aux = (g, m)
+                        addlike(s, i.src, g)
+                
+                elif(isinstance(i, XIRet)):
+                    pass
+                
+                elif(isinstance(i, XIJmp)):
+                    pass
+
+                elif(isinstance(i, XIXor)):
+                    if(s):
+                        addlike(s, i.r, g)
+
+                elif(isinstance(i, XICmp)):
+                    pass
+                elif(isinstance(i, XISet)):
+                    if(s):
+                        addlike(s, i.arg, g)
+                
+                elif(isinstance(i, XIMovzb)):
+                    if(s):
+                        movlike(s, i.r, i.l, m, g)
+                
+                elif(isinstance(i, XIJmpIf)):
+                    pass
+            blk.aux = (g,m)
     return xp
 
+
+def movlike(s, d, sr, m:Graph, g:Graph):
+    d = d.emit()
+    sr = sr.emit()
+    for e in s:
+        if(not (d == e or e == sr)):
+            g.add_edge(d, str(e))
+        m.add_edge(sr, d)
+
+def addlike(s, i, g:Graph):
+    d = i.emit()
+    for e in s:
+        if(not d == e):
+            g.add_edge(d, str(e))
 
 def printGrph(g: Graph):
     print("\n")
@@ -1725,8 +1780,8 @@ def color(xp: XProgram) -> XProgram:
             # print(regColorList)
             maxKey = max([int(s) for s in colorList.values()])
             ss = 0
-            # print(maxKey)
-            if(maxKey > len(regColorList)):
+            print(maxKey)
+            if(maxKey >= len(regColorList)):
                 stackSize = maxKey
                 i = len(regColorList)
 
@@ -1737,50 +1792,77 @@ def color(xp: XProgram) -> XProgram:
                 ss = cntr + 8
                 if(not ss % 2 == 0):
                     ss += 1
+            print("REGCOLORLIST: " + str(regColorList))
             for v, c in colorList.items():
-                colorList.update({v: regColorList[c]})
-            blk.aux = (colorList, ss)
-            # print(colorList)
+                if c in regColorList:
+                    colorList.update({v: regColorList[c]})
+            blk.aux = colorList,ss
+            print(colorList)
         else:
             blk.aux = ({}, 0)
-    return xp
+    mStackAllocSize =0
+    for blk in xp.p.values():
+        temp = blk.aux[1]
+        if(mStackAllocSize <= temp):
+            mStackAllocSize = temp
+        blk.aux = blk.aux[0]
+
+    return (xp,mStackAllocSize)
 
 
 ################ Allocate Registers ################
 
 def allocate_registers(xp: XProgram) -> XProgram:
-    newXp = color(xp)
+    mStackAllocSize =0
+    live = uncover_live(xp)
+    #printUncover(live)
+    bld = buildInt(xp, live)
+    # for lab, blk in xp.p.items():
+    #     printGrph(blk.aux[0])
+    #     printGrph(blk.aux[1])
+    newXp,mStackAllocSize = color(bld)
+    # for lab, blk in newXp.p.items():
+    #     print(lab.emit())
+    #     for key, value in blk.aux.items():
+    #         print(key +":" + value.emit())
+    print(mStackAllocSize)
     # Gets whatever is the first block in program assumes it is main
     # Because Xprogram should only have one block to start
-    firstBlock: XBlock = list(newXp.p.values())[0]
-    colorList, stackSize = firstBlock.aux
-    print(newXp.emit())
-    print(colorList)
-    print(stackSize)
-    newXp = assign_register(newXp, colorList)
-    newXp = mainpass(newXp, stackSize)
+    # firstBlock: XBlock = list(newXp.p.values())[0]
+    # colorList, stackSize = firstBlock.aux
+    # print(newXp.emit())
+    
+    newXp = assign_register(newXp)
+    newXp = mainpass(newXp, mStackAllocSize)
+    #return newXp
     return newXp
 
 ################ Assign Registers ################
 
 
-def assign_register(xp: XProgram, regs: dict) -> XProgram:
+def assign_register(xp: XProgram) -> XProgram:
     originalMain = []
     body = []
-    for lab, blk in xp.p.items():
-        if(lab.emit() == "main"):
-            if(isinstance(blk, XBlock)):
-                originalMain = blk.blk
-
-    for instr in originalMain:
-        body.append(_assign(instr, regs))
-    body = body[:-1]
-
-    body.append(XIJmp(XLabel("end")))
-    bdy = {XLabel("body"): XBlock([], body)}
-
     progm = {}
-    progm.update(bdy)
+    for lab, blk in xp.p.items():
+        body =[]
+        if(isinstance(blk.aux,dict)):
+            regs = blk.aux
+        else:
+            regs, stackSize = blk.aux
+        print(regs)
+        if(lab.emit() == "main"):
+            originalMain = blk.blk
+            for instr in originalMain:
+                body.append(_assign(instr, regs))
+            #body.append(XIJmp(XLabel("end")))
+            progm.update({XLabel("body"):XBlock([], body)})
+        else:
+            temp = blk.blk
+            for instr in temp:
+                body.append(_assign(instr, regs))
+            progm.update({lab:XBlock([], body)})
+            
     return XProgram(xp.info, progm)
 
 
@@ -1796,7 +1878,13 @@ def _assign(xp, regs):
     elif(isinstance(xp, XIPush)):
         return XIPush(_assignA(xp.src,  regs))
     elif(isinstance(xp, XIPop)):
-        return XIPush(_assignA(xp.src, regs))
+        return XIPop(_assignA(xp.src, regs))
+    elif(isinstance(xp, XIMovzb)):
+        return XIMovzb(_assignA(xp.l,  regs), _assignA(xp.r, regs))
+    elif(isinstance(xp, XIXor)):
+        return XIXor(_assignA(xp.l,  regs), _assignA(xp.r,  regs))
+    elif(isinstance(xp, XICmp)):
+        return XICmp(_assignA(xp.l,  regs), _assignA(xp.r,  regs))
     else:
         return xp
 

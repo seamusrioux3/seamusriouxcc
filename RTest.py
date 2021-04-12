@@ -53,17 +53,6 @@ class Test:
 
         return int(stdout)
 
-    def getToXP(self, r):
-        pu = uniquify(r)
-        prco = RCO(pu)
-        pecon = econ(prco)
-        xp = select(pecon)
-        uncl = uncover_live(xp)
-        built = buildInt(uncl)
-        aloc = allocate_registers(built)
-        ptch = patch(aloc)
-        return ptch
-
     def checkAll(self, org: RLet, arr, real: int):
         for a in arr:
             if(not org.interp() == a.interp()):
@@ -78,9 +67,8 @@ class Test:
         pu = uniquify(po)
         pr = RCO(pu)
         pe = econ(pr)
-        local = uncoverLocal(pe)
-        xz = select(local)
-        unclXZ = uncover_live(xz)
+        xz = select(pe)
+        aloc = allocate_registers(xz)
         #print("original: " + p.pp())
        # print("original ans: " + str(p.interp()))
         # print("optimized: " + po.pp())
@@ -92,30 +80,15 @@ class Test:
         # print("econ: " + pe.pp())
         # print("econ ans: " + str(pe.interp()))
 
-        #print("select: " + xz.emit())
-        print("original ans: " + str(p.interp()))
-        print("optimized ans: " + str(po.interp()))
-        print("uniquify ans: " + str(pu.interp()))
-        print("rco ans: " + str(pr.interp()))
-        print("econ ans: " + str(pe.interp()))
         
-        #xz = select(pe)
-        # uncl = uncover_live(xz)
-        # built = buildInt(uncl)
-        # aloc = allocate_registers(built)
+        print(po.pp())
+        print(xz.emit())
+        print(aloc.emit())
+        
         # ptch = patch(aloc)
         # real = self.testX0OnHardware(ptch)
 
-        # print("econ: " + pe.pp())
-        # print("sel: " + xz.emit())
-
-        # print("uniquify ans: " + str(pu.interp()))
-        # print("econ ans: " + str(pe.interp()))
-        # print("sel ans: " + str(xz.interp()))
-        # print("aloc ans: " + str(aloc.interp()))
-        # print("patch ans: " + str(ptch.interp()))
-        # print("real ans: " + str(real))
-        if (self.checkAll(p, [po, pu, pr, pe, xz, unclXZ], None)):
+        if (self.checkAll(p, [po, pu, pr, pe, xz, aloc], None)):
             actual = po.interp()
         else:
             # print("original: " + p.pp())
@@ -128,7 +101,6 @@ class Test:
             # print("rco ans: " + str(pr.interp()))
             # print("econ: " + pe.pp())
             # print("econ ans: " + str(pe.interp()))
-            #
             # print("select ans: " + str(xz.interp()))
             actual = not p.interp()
             # exit(1)
@@ -136,13 +108,10 @@ class Test:
         self.test(actual, p.interp())
 
     def bigTest(self, n):
-        for i in range(10000):
-          # for n in range(0, n):
+        for i in range(1000):
             self.testAll(randomR2(1))
             self.testAll(randomR2(2))
             self.testAll(randomR2(3))
-            # self.testAll(randomR2(4))
-            # self.testAll(randomR2(5))
 
 
 def getToX1(p):
@@ -594,42 +563,11 @@ xprog9 = XProgram([], {XLabel("main"):
                        ])
                        })
 
-# print(xprog9.interp())
-
-######## Econ R2 -> C1 Tests ########
 
 
-def getToRCO(r):
-    return select(uncoverLocal(econ(RCO(uniquify(optimizer(r))))))
-
-
-econ2prog1 = RCmp("<", RNegate(RRead()), RAdd(RRead(), RRead()))
-econ2prog1 = getToRCO(econ2prog1)
-econ2prog1 = econ(econ2prog1)
-
-econ2prog2 = RAnd(RBool(False), RBool(False))
-econ2prog2 = getToRCO(econ2prog2)
-econ2prog2 = econ(econ2prog2)
-
-
-####### Tests With X1 #########
-econ2prog3 = RIf(RCmp("<", RRead(), RRead()), RBool(True), RBool(True))
-econ2prog3 = getToRCO(econ2prog3)
-
-econ2prog4 = RAnd(RIf(RCmp("<=", RNum(8), RRead()), RBool(
-    False), RBool(True)), RLet(RVar("V0"),  RBool(True), RBool(True)))
-econ2prog4 = getToRCO(econ2prog4)
-
-selprog1 = RIf(RCmp(">=", RRead(), RRead()), RNum(0), RRead())
-selprog1 = getToRCO(selprog1)
-
-
-########## Uncover Live Tests ##########
-unclX1 = uncover_live(getToX1(randomR2(2)))
-print(unclX1.emit())
-print("\nLive Sets\n")
-print(printUncover(unclX1))
-
+######## Tests With Alloc #######
+alc0 = RNegate(RIf(RCmp(">=", RNum(11), RNum(0)), RNum(14), RNum(2)))
+#s.testAll(alc0)
 
 ######## Combined Testing Updated With R2 Uniquify ########
 print("\nCombined Tests\n")
