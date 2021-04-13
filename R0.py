@@ -258,21 +258,32 @@ class RBool:
 ############ R3 Programs ############
 class RVector:
     def __init__(self, *_args):
-        self.args = _args
-    
+        self.args = list(_args)
+
     def pp(self):
-        out ="vector "
+        out = "vector "
         for a in self.args:
-            out+= a.pp() + " "
+            out += a.pp() + " "
         out = out[:-1]
         return out
+
+    def interp(self, env):
+        return self
+
+
 class RVectorRef:
     def __init__(self, _exp, _ref):
         self.exp = _exp
         self.ref = _ref
-    
+
     def pp(self):
-        return "vector-ref" + " "+ self.exp.pp() + " " + self.ref.pp()
+        return "vector-ref" + " " + self.exp.pp() + " " + self.ref.pp()
+
+    def interp(self, env: REnv):
+        vec = self.exp.interp(env)
+        if(isinstance(vec, RVector)):
+            return vec.args[self.ref.interp(env)].interp(env)
+
 
 class RVectorSet:
     def __init__(self, _exp, _ref, _var):
@@ -281,7 +292,13 @@ class RVectorSet:
         self.var = _var
 
     def pp(self):
-        return "vector-set!" + " "+ self.exp.pp() + " " + self.ref.pp() + " " +self.var.pp()
+        return "vector-set!" + " " + self.exp.pp() + " " + self.ref.pp() + " " + self.var.pp()
+
+    def interp(self, env: REnv):
+        vec = self.exp.interp(env)
+        if(isinstance(vec, RVector)):
+            vec.args[self.ref.interp(env)] = self.var
+
 
 ############ X0 Programs ############
 
@@ -485,6 +502,7 @@ class XIMov:
         env = self.dst.set(env, self.src.interp(env))
         return env
 
+
 class XICMov:
     def __init__(self, _cc, _src, _dst):
         self.src = _src
@@ -492,8 +510,8 @@ class XICMov:
         self.cc = _cc
 
     def emit(self):
-        return "cmov" +self.cc.emit() + " "+  self.src.emit() + ", " + self.dst.emit()
-    
+        return "cmov" + self.cc.emit() + " " + self.src.emit() + ", " + self.dst.emit()
+
     def interp(self, env):
         camp = env.cmp.pop()
         if(getTrueCmp(self.cc, camp[0].interp(env), camp[1].interp(env))):
@@ -639,7 +657,6 @@ class XLEq:
         return self.c
 
 
-
 class XL:
     def __init__(self):
         self.c = "l"
@@ -648,7 +665,6 @@ class XL:
 
     def emit(self):
         return self.c
-
 
 
 class XGEq:
@@ -661,7 +677,6 @@ class XGEq:
         return self.c
 
 
-
 class XG:
     def __init__(self):
         self.c = "g"
@@ -670,7 +685,6 @@ class XG:
 
     def emit(self):
         return self.c
-
 
 
 class XIXor:
@@ -738,10 +752,10 @@ class XIJmpIf:
         camp = env.cmp.pop()
         if(getTrueCmp(self.cc, camp[0].interp(env), camp[1].interp(env))):
             tem = env.curlab
-            #print(tem)
+            # print(tem)
             env.curlab = self.label.interp(env)
             a = env.blk[tem].blk.index(self)
-            #print(str(a))
+            # print(str(a))
             env.blk[tem].blk.remove(env.blk[tem].blk[a+1])
             env = env.blk[self.label.emit()].interp(env)
         return env
@@ -948,7 +962,7 @@ class CSetCC:
         self.f = _f
 
     def pp(self):
-        return "(setc! " + self.cmp.pp() + " " + self.var.pp() + " "+  self.t.pp() + " " + self.f.pp() + ")"
+        return "(setc! " + self.cmp.pp() + " " + self.var.pp() + " " + self.t.pp() + " " + self.f.pp() + ")"
 
     def interp(self, env):
         if(self.cmp.interp(env)):
@@ -956,7 +970,6 @@ class CSetCC:
         else:
             env.setVar({self.var.pp(): self.f.interp(env)})
         return 0
-
 
 
 class CNot:
@@ -1411,17 +1424,20 @@ def econExp(r):
     else:
         return econArgs(r)
 
+
 def getForm(a):
     if(isinstance(a, RNum) or isinstance(a, RBool) or isinstance(a, RRead) or isinstance(a, RVar)):
         return True
     return False
+
 
 def econHelper(r, env: EconEnv):
     #print(env.curLab + " "+ r.pp())
     if(isinstance(r, RLet)):
         if(isinstance(r.l, RIf)):
             if(getForm(r.l.l) and getForm(r.l.r)):
-                env.addEnv(env.curLab, CSetCC(getOp(r.l.var), econArgs(r.var), econArgs(r.l.l), econArgs(r.l.r)))
+                env.addEnv(env.curLab, CSetCC(getOp(r.l.var), econArgs(
+                    r.var), econArgs(r.l.l), econArgs(r.l.r)))
                 return econHelper(r.r, env)
             tp = r.l.l
             fp = r.l.r
@@ -1460,8 +1476,6 @@ def econHelper(r, env: EconEnv):
 
     else:
         return env.addEnv(env.curLab, CRet(econArgs(r)))
-
-
 
 
 def getOp(cmp: RCmp):
@@ -1536,7 +1550,7 @@ def select(cp: CProgram):
         # if(lab.interp() == "main"):
         #     tempBlk.append(XIJmp(XLabel("end")))
         blk.update({tempLabel: XBlock([], tempBlk)})
-    blk.update({XLabel("end"):XBlock([],[XIRet()])})
+    blk.update({XLabel("end"): XBlock([], [XIRet()])})
     return XProgram(cp.info, blk)
 
 
@@ -1551,7 +1565,7 @@ def _selectT(cp, env):
         cmp = cp.cmp
         actualCmp = None
         op = None
-        
+
         if(isinstance(cmp, CCmp)):
             actualCmp = XICmp(_selectA(cmp.l, env), _selectA(cmp.r, env))
             op = _selectC(cmp)
@@ -1609,38 +1623,40 @@ def _selectC(cp: CCmp):
 
 
 ######## Uncover Live ########
-def uncover_live(xp:XProgram):
+def uncover_live(xp: XProgram):
     m = {}
     for lab, blk in xp.p.items():
-        m =live_e(blk, m, lab.emit())
+        m = live_e(blk, m, lab.emit())
     return m
+
 
 def live_e(blk, m, lab):
     if(isinstance(blk, XBlock)):
-        #if(lab != "end"):
-        before =set([])
+        # if(lab != "end"):
+        before = set([])
         for i in reversed(blk.blk):
             if(lab in m):
-                before= live_i(before, i, m, lab)
+                before = live_i(before, i, m, lab)
             else:
-                m[lab] ={}
+                m[lab] = {}
                 before = live_i(before, i, m, lab)
         # else:
         #     m["end"] = {XIRet():set([XRegister("rax").emit()])}
     return m
 
+
 def live_i(before, i, m, lab):
-    
+
     if(isinstance(i, XIJmp)):
-            m[lab].update({i:before})
-            m[i.src.emit()] = m[lab]
-            # m[i.src.emit()].update({i.src.emit():before})
+        m[lab].update({i: before})
+        m[i.src.emit()] = m[lab]
+        # m[i.src.emit()].update({i.src.emit():before})
     elif(isinstance(i, XIJmpIf)):
-            m[lab].update({i:before})
-            m[i.label.emit()] = m[lab]
-            # m[i.label.emit()].update({i.label.emit():before})
+        m[lab].update({i: before})
+        m[i.label.emit()] = m[lab]
+        # m[i.label.emit()].update({i.label.emit():before})
     else:
-        m[lab].update({i:before})
+        m[lab].update({i: before})
         #print("Live before: " + str(n) +" = " + str(before), end=' ')
         # print(w)
         # print(r)
@@ -1648,7 +1664,6 @@ def live_i(before, i, m, lab):
         before = before.union(_uncoverR(i))
     return before
     #print("Live after: " + str(before) )
-
 
 
 def _uncoverW(i):
@@ -1722,7 +1737,7 @@ def _uncoverM(a):
         return set([])
 
 
-def printUncover(liv:dict):
+def printUncover(liv: dict):
     for lab, values in liv.items():
         print(lab)
         print(values)
@@ -1757,10 +1772,10 @@ def buildInt(xp: XProgram, live):
                 elif(isinstance(i, XIPop)):
                     if(s):
                         addlike(s, i.src, g)
-                
+
                 elif(isinstance(i, XIRet)):
                     pass
-                
+
                 elif(isinstance(i, XIJmp)):
                     pass
 
@@ -1773,22 +1788,22 @@ def buildInt(xp: XProgram, live):
                 elif(isinstance(i, XISet)):
                     if(s):
                         addlike(s, i.arg, g)
-                
+
                 elif(isinstance(i, XICMov)):
                     if(s):
                         movlike(s, i.dst, i.src, m, g)
-                
+
                 elif(isinstance(i, XIMovzb)):
                     if(s):
                         movlike(s, i.r, i.l, m, g)
-                
+
                 elif(isinstance(i, XIJmpIf)):
                     pass
-            blk.aux = (g,m)
+            blk.aux = (g, m)
     return xp
 
 
-def movlike(s, d, sr, m:Graph, g:Graph):
+def movlike(s, d, sr, m: Graph, g: Graph):
     d = d.emit()
     sr = sr.emit()
     for e in s:
@@ -1796,11 +1811,13 @@ def movlike(s, d, sr, m:Graph, g:Graph):
             g.add_edge(d, str(e))
         m.add_edge(sr, d)
 
-def addlike(s, i, g:Graph):
+
+def addlike(s, i, g: Graph):
     d = i.emit()
     for e in s:
         if(not d == e):
             g.add_edge(d, str(e))
+
 
 def printGrph(g: Graph):
     print("\n")
@@ -1883,31 +1900,31 @@ def color(xp: XProgram) -> XProgram:
             for v, c in colorList.items():
                 if c in regColorList:
                     colorList.update({v: regColorList[c]})
-            blk.aux = colorList,ss
+            blk.aux = colorList, ss
             print(colorList)
         else:
             blk.aux = ({}, 0)
-    mStackAllocSize =0
+    mStackAllocSize = 0
     for blk in xp.p.values():
         temp = blk.aux[1]
         if(mStackAllocSize <= temp):
             mStackAllocSize = temp
         blk.aux = blk.aux[0]
 
-    return (xp,mStackAllocSize)
+    return (xp, mStackAllocSize)
 
 
 ################ Allocate Registers ################
 
-def allocate_registers(xp: XProgram, type:str) -> XProgram:
-    mStackAllocSize =0
+def allocate_registers(xp: XProgram, type: str) -> XProgram:
+    mStackAllocSize = 0
     live = uncover_live(xp)
-    #printUncover(live)
+    # printUncover(live)
     bld = buildInt(xp, live)
     # for lab, blk in xp.p.items():
     #     printGrph(blk.aux[0])
     #     printGrph(blk.aux[1])
-    newXp,mStackAllocSize = color(bld)
+    newXp, mStackAllocSize = color(bld)
     # for lab, blk in newXp.p.items():
     #     print(lab.emit())
     #     for key, value in blk.aux.items():
@@ -1918,7 +1935,7 @@ def allocate_registers(xp: XProgram, type:str) -> XProgram:
     # firstBlock: XBlock = list(newXp.p.values())[0]
     # colorList, stackSize = firstBlock.aux
     # print(newXp.emit())
-    
+
     newXp = assign_register(newXp)
     newXp = mainpass(newXp, mStackAllocSize, type)
     newXp = patch(newXp)
@@ -1932,8 +1949,8 @@ def assign_register(xp: XProgram) -> XProgram:
     body = []
     progm = {}
     for lab, blk in xp.p.items():
-        body =[]
-        if(isinstance(blk.aux,dict)):
+        body = []
+        if(isinstance(blk.aux, dict)):
             regs = blk.aux
         else:
             regs, stackSize = blk.aux
@@ -1944,13 +1961,13 @@ def assign_register(xp: XProgram) -> XProgram:
                 body.append(_assign(instr, regs))
             body = body[:-1]
             body.append(XIJmp(XLabel("end")))
-            progm.update({XLabel("body"):XBlock([], body)})
+            progm.update({XLabel("body"): XBlock([], body)})
         else:
             temp = blk.blk
             for instr in temp:
                 body.append(_assign(instr, regs))
-            progm.update({lab:XBlock([], body)})
-            
+            progm.update({lab: XBlock([], body)})
+
     return XProgram(xp.info, progm)
 
 
@@ -1992,8 +2009,8 @@ def _assignA(a, v):
 
 ######## Main Pass ########
 
-def mainpass(xp: XProgram, alloc: int, type:str):
-    mainBdy =[]
+def mainpass(xp: XProgram, alloc: int, type: str):
+    mainBdy = []
     endBlk = []
     for lab in xp.p.keys():
         if(lab.emit() == "end"):
@@ -2008,19 +2025,19 @@ def mainpass(xp: XProgram, alloc: int, type:str):
             mainBdy.append(XIPush(r))
             endBlk.append(XIPop(r))
         mainBdy = mainBdy + \
-        [XISub(XCon(alloc), XRegister("rsp")), XIJmp(XLabel("body"))]
+            [XISub(XCon(alloc), XRegister("rsp")), XIJmp(XLabel("body"))]
     else:
         for r in calleeSavedRegs:
             mainBdy.append(XIPush(r))
             endBlk.append(XIPop(r))
         mainBdy = mainBdy + \
-        [XIJmp(XLabel("body"))]
+            [XIJmp(XLabel("body"))]
     if(type == "BOOL"):
         endBlk = endBlk + [XIMov(XRegister("rax"), XRegister("rdi")),
-                        XICall(XLabel("print_bool")), XIRet()]
+                           XICall(XLabel("print_bool")), XIRet()]
     else:
         endBlk = endBlk + [XIMov(XRegister("rax"), XRegister("rdi")),
-                       XICall(XLabel("print_int")), XIRet()]
+                           XICall(XLabel("print_int")), XIRet()]
 
     main = {XLabel("main"): XBlock([], mainBdy)}
     end = {XLabel("end"): XBlock([], endBlk)}
