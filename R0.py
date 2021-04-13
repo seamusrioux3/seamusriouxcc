@@ -255,6 +255,23 @@ class RBool:
         return "BOOL"
 
 
+############ R3 Programs ############
+class RVector:
+    def __init__(self, _arr):
+        self.arr = _arr
+
+class RVectorRef:
+    def __init__(self, _exp, _ref):
+        self.exp = _exp
+        self.ref = _ref
+
+class RVectorSet:
+    def __init__(self, _exp, _ref, _var):
+        self.exp = _exp
+        self.ref = _ref
+        self.var = _var
+
+
 ############ X0 Programs ############
 
 
@@ -464,7 +481,7 @@ class XICMov:
         self.cc = _cc
 
     def emit(self):
-        return "cmovq" + " " +self.cc.emit() + " "+  self.src.emit() + ", " + self.dst.emit()
+        return "cmov" +self.cc.emit() + " "+  self.src.emit() + ", " + self.dst.emit()
     
     def interp(self, env):
         camp = env.cmp.pop()
