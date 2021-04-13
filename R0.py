@@ -257,13 +257,22 @@ class RBool:
 
 ############ R3 Programs ############
 class RVector:
-    def __init__(self, _arr):
-        self.arr = _arr
-
+    def __init__(self, *_args):
+        self.args = _args
+    
+    def pp(self):
+        out ="vector "
+        for a in self.args:
+            out+= a.pp() + " "
+        out = out[:-1]
+        return out
 class RVectorRef:
     def __init__(self, _exp, _ref):
         self.exp = _exp
         self.ref = _ref
+    
+    def pp(self):
+        return "vector-ref" + " "+ self.exp.pp() + " " + self.ref.pp()
 
 class RVectorSet:
     def __init__(self, _exp, _ref, _var):
@@ -271,6 +280,8 @@ class RVectorSet:
         self.ref = _ref
         self.var = _var
 
+    def pp(self):
+        return "vector-set!" + " "+ self.exp.pp() + " " + self.ref.pp() + " " +self.var.pp()
 
 ############ X0 Programs ############
 
