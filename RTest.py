@@ -82,7 +82,7 @@ class Test:
 
         #
         #print(aloc.emit())
-        #machine = self.testX0OnHardware(aloc)
+        machine = self.testX0OnHardware(aloc)
         # print("Machine Level Ans:", machine)
         #print("original: " + p.pp())
        # print("original ans: " + str(p.interp()))
@@ -102,7 +102,7 @@ class Test:
         # ptch = patch(aloc)
         # real = self.testX0OnHardware(ptch)
 
-        if (self.checkAll(p, [po, pu, pr, pe, xz, aloc], None)):
+        if (self.checkAll(p, [po, pu, pr, pe, xz, aloc], machine)):
             actual = po.interp()
         else:
             # print("original: " + p.pp())
@@ -122,7 +122,7 @@ class Test:
         self.test(actual, p.interp())
 
     def bigTest(self, n):
-        for i in range(1500):
+        for i in range(100):
             self.testAll(randomR2(1))
             self.testAll(randomR2(2))
             #self.testAll(randomR2(3))
@@ -587,17 +587,30 @@ def getToEcon(x):
     return  RCO(uniquify(optimizer(x)))
 condMov1 = RLet(RVar("x"), RIf(RCmp("<", RNum(12), RNum(13)), RNum(5), RNum(6)), RVar("x"))
 condMov1 = getToEcon(condMov1)
-print(condMov1.pp())
-print(condMov1.interp())
+# print(condMov1.pp())
+# print(condMov1.interp())
 condMov1 = econ(condMov1)
-print(condMov1.pp())
-print(condMov1.interp())
+# print(condMov1.pp())
+# print(condMov1.interp())
 condMov1 = select(condMov1)
-print(condMov1.emit())
-print(condMov1.interp())
+# print(condMov1.emit())
+# print(condMov1.interp())
+
+######## Tests With Vectors #######
+print("Vector Testing")
+vec1 = RLet(RVar("x"), RNum(17), RLet(RVar("v1"), RVector(RVar("x"), RNum(1), RBool(True)), RVar("y")))
+print(vec1.pp())
+vec2 = RLet(RVar("x"), RNum(2), RLet(RVar("v1"), RVector(RVar("x"), RNum(1), RBool(True)), RLet(RVar("y"), RVectorRef(RVar("v1"), RNum(1)), RAdd(RVar('y'), RNum(2)))))
+print(vec2.pp())
+vec3 = RLet(RVar("x"), RNum(4), RLet(RVar("v1"), RVector(RVar("x"), RNum(1), RBool(True)), RVectorSet(RVar("v1"), RNum(2), RNum(2))))
+print(vec3.pp())
+vec4 = RLet(RVar("x"), RNum(4), RLet(RVar("v1"), RVector(RVar("x"), RNum(1), RBool(True)), RLet(RVar("_"), RVectorSet(RVar("v1"), RNum(2), RNum(2)), RAdd(RVectorRef(RVar("v1"), RNum(1)), RVectorRef(RVar("v1"), RNum(2))))))
+print(vec4.pp())
+vec5 = RLet(RVar("v1"), RVector(RNum(2), RNum(2)), RAdd(RVectorRef(RVar("v1"), RNum(0)), RVectorRef(RVar("v1"), RNum(1))))
+print(vec5.pp())
 ######## Combined Testing Updated With R2 Uniquify ########
-print("\nCombined Tests\n")
-s.bigTest(5)
+#print("\nCombined Tests\n")
+#s.bigTest(5)
 
 # s.testAll(letTest1)
 # s.testAll(letTest2)

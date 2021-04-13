@@ -2,38 +2,21 @@
 
 
 body:
-movq $1, %rcx
-movq $2, %rcx
-callq read_int
-callq read_int
-movq $13, %rcx
-movq $11, %r8
-movq $4, %r10
-movq $7, %r9
-callq read_int
-movq %rax, %rcx
-cmpq %rcx, %r9
-movq %r10, %rcx
-cmovq l %r8, %rcx
 callq read_int
 movq %rax, %rdx
+movq $6, %rsi
+callq read_int
+movq %rax, %r8
+movq $0, %rdi
+callq read_int
+movq %rax, %rcx
+cmpq %rcx, %rdi
+movq %r8, %rcx
+cmove %rsi, %rcx
 movq %rdx, %rbx
-negq %rbx
-cmpq %rbx, %rcx
-jl label1
+addq %rcx, %rbx
+movq %rbx, %rax
 jmp end
-label1:
-movq %rcx, %rax
-jmp end
-label3:
-movq %rcx, %rax
-jmp end
-label4:
-jmp end
-label2:
-cmpq %rcx, %rax
-je label3
-jmp label4
 main:
 pushq %r12
 pushq %r13
