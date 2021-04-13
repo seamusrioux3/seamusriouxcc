@@ -620,6 +620,7 @@ print(vec6.interp())
 ######## Tests With Typing Vectors #######
 print("\nVector Type Testing")
 vec0 = RVector(RNum(1), RNum(2), RBool(True), RBool(False))
+vec7 = RLet(RVar("v1"), RVector(RBool(True), RNum(2), RNum(3)), RAdd(RVectorRef(RVar("v1"), RNum(0)), RCmp(">", RVectorRef(RVar("v1"), RNum(1)), RVectorRef(RVar("v1"), RNum(2)))))
 print(vec0.pp())
 print(vec0.typec())
 print(vec1.pp())
@@ -634,6 +635,8 @@ print(vec5.pp())
 print(vec5.typec())
 print(vec6.pp())
 print(vec6.typec())
+print(vec7.pp())
+print(vec7.typec())
 
 ######## Combined Testing Updated With R2 Uniquify ########
 #print("\nCombined Tests\n")

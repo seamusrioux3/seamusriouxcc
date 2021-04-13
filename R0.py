@@ -7,6 +7,7 @@ from graph import Vertex, Graph
 class REnv:
     def __init__(self):
         self.env = {}
+        self.type ={}
 
     def getEnv(self):
         return self.env
@@ -99,7 +100,7 @@ class RVar:
 
     def typec(self, env=None):
         if(self.name in env.getEnv()):
-            return env.getEnv()[self.name]
+            return env.type[self.name]
         return "ERROR"
 
 
@@ -121,9 +122,10 @@ class RLet:
     def typec(self, env=None):
         if(not env):
             env = REnv()
-        env.setEnv(self.var.name, self.l.typec(env))
-        if(self.l.typec(env) == self.r.typec(env)):
-            return self.l.typec(env)
+        env.type.update({self.var.name: self.l.typec(env)})
+        env.setEnv(self.var.name, self.l.interp(env))
+        if(self.l.typec(env) == self.r.typec(env) or self.r.typec(env) == "VECTOR" or self.l.typec(env) == "VECTOR"):
+            return self.r.typec(env) 
         return "ERROR"
 
 
@@ -269,6 +271,9 @@ class RVector:
 
     def interp(self, env):
         return self
+    
+    def typec(self, env=None):
+        return "VECTOR"
 
 
 class RVectorRef:
@@ -284,6 +289,11 @@ class RVectorRef:
         if(isinstance(vec, RVector)):
             return vec.args[self.ref.interp(env)].interp(env)
 
+    def typec(self, env: REnv):
+        vec = self.exp.interp(env)
+        if(isinstance(vec, RVector)):
+            return vec.args[self.ref.interp(env)].typec(env)
+
 
 class RVectorSet:
     def __init__(self, _exp, _ref, _var):
@@ -298,6 +308,9 @@ class RVectorSet:
         vec = self.exp.interp(env)
         if(isinstance(vec, RVector)):
             vec.args[self.ref.interp(env)] = self.var
+    
+    def typec(self, env: REnv):
+        return self.var.typec(env)
 
 
 ############ X0 Programs ############
