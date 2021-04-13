@@ -22,6 +22,8 @@ class RNum:
 
     def pp(self):
         return str(self.num)
+    def tp(self):
+        return "RNum("+str(self.num) + ")"
 
     def interp(self, e=None):
         return self.num
@@ -36,6 +38,8 @@ class RNegate:
 
     def pp(self):
         return "-(" + str(self.num.pp()) + ")"
+    def tp(self):
+        return "RNegate("+self.num.tp() +")"
 
     def interp(self, e=None):
         return -1*self.num.interp(e)
@@ -53,6 +57,9 @@ class RAdd:
 
     def pp(self):
         return "(+ " + self.left.pp() + " " + self.right.pp() + ")"
+    
+    def tp(self):
+        return "RAdd( " + self.left.tp() + ", " + self.right.tp() + ")"
 
     def interp(self, e=None):
         return self.left.interp(e) + self.right.interp(e)
@@ -69,6 +76,9 @@ class RRead:
 
     def pp(self):
         return "Read"
+    
+    def tp(self):
+        return "RRead()"
 
     def interp(self,  e=None):
         return 1
@@ -92,6 +102,9 @@ class RVar:
 
     def pp(self):
         return str(self.name)
+    
+    def tp(self):
+        return "RVar(" +"\""+str(self.name)+"\""+")"
 
     def interp(self, e=None):
         if(self.name in e.getEnv()):
@@ -112,6 +125,9 @@ class RLet:
 
     def pp(self):
         return "Let " + self.var.pp() + " = " + self.l.pp() + " in " + self.r.pp()
+    
+    def tp(self):
+        return "RLet(" + self.var.tp() + ", " + self.l.tp() + ", " + self.r.tp() +")"
 
     def interp(self, e=None):
         if(not e):
@@ -189,6 +205,9 @@ class RCmp:
 
     def pp(self):
         return "(" + self.op + " " + self.l.pp() + " " + self.r.pp() + ")"
+    
+    def tp(self):
+        return "RCmp(" + self.op + ", " + self.l.tp() + ", " + self.r.tp() + ")"
 
     def interp(self, env=None):
         if(self.op == "=="):
@@ -215,6 +234,9 @@ class RIf:
 
     def pp(self):
         return "(if " + self.var.pp() + " " + self.l.pp() + " " + self.r.pp() + ")"
+    
+    def tp(self):
+        return "RIf(" + self.var.tp() + ", " + self.l.tp() + ", " + self.r.tp() + ")"
 
     def interp(self, env=None):
         return self.l.interp(env) if self.var.interp(env) else self.r.interp(env)
@@ -249,6 +271,9 @@ class RBool:
 
     def pp(self):
         return str(self.b)
+    
+    def tp(self):
+        return "RBool("+str(self.b) + ")"
 
     def interp(self, env=None):
         return self.b
@@ -268,6 +293,13 @@ class RVector:
             out += a.pp() + " "
         out = out[:-1]
         return out
+    
+    def tp(self):
+        out = "RVector("
+        for a in self.args:
+            out += a.tp() + ", "
+        out = out[:-2]
+        return out +")"
 
     def interp(self, env):
         return self
@@ -282,7 +314,10 @@ class RVectorRef:
         self.ref = _ref
 
     def pp(self):
-        return "vector-ref" + " " + self.exp.pp() + " " + self.ref.pp()
+        return "vector-ref " + self.exp.pp() + " " + self.ref.pp()
+    
+    def tp(self):
+        return "RVectorRef(" + self.exp.tp() + ", " + self.ref.tp() +")"
 
     def interp(self, env: REnv):
         vec = self.exp.interp(env)
@@ -303,6 +338,9 @@ class RVectorSet:
 
     def pp(self):
         return "vector-set!" + " " + self.exp.pp() + " " + self.ref.pp() + " " + self.var.pp()
+
+    def tp(self):
+        return "RVectorSet( "+ self.exp.tp() + " " + self.ref.tp() + " " + self.var.tp() +")"
 
     def interp(self, env: REnv):
         vec = self.exp.interp(env)
@@ -1027,61 +1065,138 @@ class CIf:
 
 ###################### Functions ######################
 
+class RNGEnv:
+    def __init__(self):
+        self.varList =[]
+        self.vecList ={}
+    
+    def setVarList(self, v):
+        self.varList.append(v)
+    
+    def setVecList(self, v, i):
+        self.vecList.update({v:i})
+    
+    def getVarList(self):
+        return self.varList
+    
+    def getVecList(self):
+        return self.vecList
+
 
 def randomR2(n):
     random.seed(datetime.now())
     typ = random.choice(["NUM", "BOOL"])
-    r = _randomR2(typ, n, [])
+    env = RNGEnv()
+    r = _randomR2(typ, n, env)
     return r
 
 
-def ranNeg(t, n, v): return RNegate(_randomR2(t, n-1, v))
-def ranAdd(t, n, v): return RAdd(_randomR2(t, n-1, v), _randomR2(t, n-1, v))
-def ranNot(t, n, v): return RNot(_randomR2(t, n-1, v))
+def ranNeg(t, n, env): return RNegate(_randomR2(t, n-1, env))
+def ranAdd(t, n, env): return RAdd(_randomR2(t, n-1, env), _randomR2(t, n-1, RNGEnv()))
+def ranNot(t, n, env): return RNot(_randomR2(t, n-1, env))
 
 
-def _randomR2(typ, n, v):
+def _randomR2(typ, n, env:RNGEnv):
     random.seed(datetime.now())
     ret = 0
     ranNum = RNum(random.randint(0, 16))
     ranBool = RBool(random.choice([True, False]))
     if(n == 0):
-        if(v):
-            chosenVar = [random.choice(v)]
+        if(env.getVarList()):
+            chosenVar = [RVar(random.choice(env.getVarList()))]
         else:
             chosenVar = []
+        if(env.getVecList()):
+            idx =1
+            if(typ == "NUM"):
+                idx = 0
+            chosenVec = [RVectorRef(RVar(random.choice(list(env.getVecList().keys()))), RNum(idx))]
+        else:
+            chosenVec = []
         if(typ == "NUM"):
             ret = random.choice([ranNum, RRead()])
         else:
             ret = random.choice([ranBool])
-        ret = random.choice([ret] + chosenVar)
+        ret = random.choice([ret] + chosenVar + chosenVec)
     else:
         if(typ == "NUM"):
-            ret = random.choice(
-                [ranAdd(typ, n, v), ranNeg(typ, n, v), ranLet(typ, n, v), ranIf(typ, n, v)])
-        else:
-            ret = random.choice([ranCmp(typ, n, v), ranNot(
-                typ, n, v), ranLet(typ, n, v), ranIf(typ, n, v)])
+            vecAvail =[]
+            if(env.getVecList()):
+                vecAvail = ["set"]
+            ret = random.choice(["add", "neg", "let", "if", "vec" ]+ vecAvail)
+            if(ret == "add"):
+               ret = ranAdd(typ, n, env)
+            elif(ret == "neg"):
+                ret =ranNeg(typ, n, env)
+            elif(ret == "let"):
+                ret = ranLet(typ, n, env)
+            elif(ret == "if"):
+                ret = ranIf(typ, n, env)
+            elif(ret == "vec"):
+                ret = ranVec(typ, n, env)
+            elif(ret == "set"):
+                ret = ranVecSet(typ, n, env)
+        elif(typ == "BOOL"):
+            vecAvail =[]
+            if(env.getVecList()):
+                vecAvail = ["set"]
+            ret = random.choice(["cmp", "let", "if", "vec"] + vecAvail)
+            if(ret == "cmp"):
+                ret = ranCmp(typ, n, env)
+            elif(ret == "let"):
+                ret = ranLet(typ, n, env)
+            elif(ret == "if"):
+                ret = ranIf(typ, n, env)
+            elif(ret == "vec"):
+                ret = ranVec(typ, n, env)
+            elif(ret == "set"):
+                ret = ranVecSet(typ, n, env)
     return ret
 
 
-def ranLet(t, n, v):
-    newVar = RVar("V" + str(len(v)))
+def ranLet(t, n, env:RNGEnv):
+    name = "V" + str(len(env.getVarList()))
+    newVar = RVar(name)
     if(t == "BOOL"):
-        return RLet(newVar,  _randomR2(t, n-1, []),  _randomR2(t, n-1, []))
+        l = _randomR2(t, n-1, env)
+        env.setVarList(name)
+        r = _randomR2(t, n-1, env)
+        return RLet(newVar, l, r)
     elif(t == "NUM"):
-        return RLet(newVar,  _randomR2(t, n-1, []),  _randomR2(t, n-1, []))
+        l = _randomR2(t, n-1, env)
+        env.setVarList(name)
+        r = _randomR2(t, n-1, env)
+        return RLet(newVar, l, r)
     print("ERROR in RAN")
     exit(1)
     return "ERROR"
 
 
-def ranCmp(t, n, v): return RCmp(random.choice(
-    ["==", ">=", ">", "<=", "<"]), _randomR2("NUM", n-1, v), _randomR2("NUM", n-1, v))
+def ranCmp(t, n, env:RNGEnv): return RCmp(random.choice(
+    ["==", ">=", ">", "<=", "<"]), _randomR2("NUM", n-1, env), _randomR2("NUM", n-1, RNGEnv()))
 
 
-def ranIf(t, n, v):
-    return RIf(ranCmp(t, n, v), _randomR2(t, n-1, v), _randomR2(t, n-1, v))
+def ranIf(t, n, env:RNGEnv):
+    return RIf(ranCmp(t, n, env), _randomR2(t, n-1, env), _randomR2(t, n-1, RNGEnv()))
+
+def ranVec(t, n, env:RNGEnv):
+    name = "VE" + str(len(env.getVecList().keys()))
+    newVar = RVar(name)
+    newVec =RVector(RNum(random.randint(0, 16)), RBool(random.choice([True, False])))
+    env.setVecList(name, newVec)
+    #env.setVarList(name)
+    return RLet(newVar, newVec, _randomR2(t, n-1, env))
+
+def ranVecSet(t, n, env:RNGEnv):
+    name = random.choice(list(env.getVecList().keys()))
+    setVal = RNum(random.randint(0, 16))
+    print(name)
+    vecChoice = RVar(name)
+    idx = 0
+    if(t == "BOOL"):
+        idx =1
+        setVal = RBool(random.choice([True, False]))
+    return RLet(RVar("_"), RVectorSet(vecChoice, RNum(idx), setVal), _randomR2(t, n, env))
 
 
 ######## Optimizer Function ########
