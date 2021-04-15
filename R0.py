@@ -284,9 +284,9 @@ class RBool:
 
 ############ R3 Programs ############
 class RVector:
-    def __init__(self, *_args):
-        self.args = list(_args)
-
+    def __init__(self, args):
+        self.args = args
+        
     def pp(self):
         out = "vector "
         for a in self.args:
@@ -1064,7 +1064,6 @@ class CIf:
 
 
 ###################### Functions ######################
-
 class RNGEnv:
     def __init__(self):
         self.varList =[]
@@ -1197,6 +1196,25 @@ def ranVecSet(t, n, env:RNGEnv):
         idx =1
         setVal = RBool(random.choice([True, False]))
     return RLet(RVar("_"), RVectorSet(vecChoice, RNum(idx), setVal), _randomR2(t, n, env))
+
+
+######## Big Mem Function ########
+
+def bigMem(n, m):
+    ans = _bigMem(n, m)
+    return ans
+
+def _bigMem(n, m):
+    nums =[RNum(i) for i in range(0, m)]
+    if(n == 0):
+        nums.append(RNum(0))
+        return RVector(nums)
+    nums.append(RVectorRef(RVar("out"), RNum(0)))
+    e = RLet(RVar("out"), _bigMem(n-1, m), RLet(RVar("in"), RVector(nums), RVectorSet(RVar("in"), RNum(0), 
+    RAdd(RNum(1), RVectorRef(RVar("in"), RNum(0))))))
+    return e
+
+    
 
 
 ######## Optimizer Function ########
