@@ -641,6 +641,37 @@ print(vec7.typec())
 res = bigMem(128, 1024)
 print(res.pp())
 print(res.interp())
+
+######## Optimizer Testing #######
+optvec1 = RLet(RVar("x"), RAdd(RNum(1), RNum(2)), RVectorRef(RVector([RNum(3), RNum(4)]), RNum(0)))
+print("original ans: ",optvec1.pp())
+optvec1 = optimizer(optvec1)
+print("optimized ans: ", optvec1.pp())
+
+optvec1 = RLet(RVar("x"), RAdd(RNum(7), RNum(2)), RVectorRef(RVector([RVar("x"), RNum(4)]), RNum(0)))
+print("original ans: ",optvec1.pp())
+optvec1 = optimizer(optvec1)
+print("optimized ans: ", optvec1.pp())
+
+optvec1 = RLet(RVar("x"), RNegate(RNum(7)), RVectorRef(RVector([RVar("x"), RNum(4)]), RNum(0)))
+print("original ans: ",optvec1.pp())
+optvec1 = optimizer(optvec1)
+print("optimized ans: ", optvec1.pp())
+
+optvec1 = RLet(RVar("x"), RNegate(RNum(7)), RVectorRef(RVector([RVar("x"), RNum(4)]), RRead()))
+print("original ans: ",optvec1.pp())
+optvec1 = optimizer(optvec1)
+print("optimized ans: ", optvec1.pp())
+
+optvec1 = RLet(RVar("x"), RNegate(RNum(7)), RVectorSet(RVector([RNum(3), RNum(4)]), RNum(0), RAdd(RNum(1), RNum(1))))
+print("original ans: ",optvec1.pp())
+optvec1 = optimizer(optvec1)
+print("optimized ans: ", optvec1.pp())
+
+optvec1 = RLet(RVar("x"), RVector([RNegate(RNegate(RNum(7))), RAdd(RNum(1), RNum(3))]), RVectorRef(RVar("x"), RNum(0)))
+print("original ans: ",optvec1.pp())
+optvec1 = optimizer(optvec1)
+print("optimized ans: ", optvec1.pp())
 ######## Combined Testing Updated With R2 Uniquify ########
 #print("\nCombined Tests\n")
 #s.bigTest(5)
