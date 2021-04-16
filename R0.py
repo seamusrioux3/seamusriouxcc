@@ -19,9 +19,11 @@ class REnv:
 class RNum:
     def __init__(self, _num):
         self.num = _num
+        self.has_type ="NUM"
 
     def pp(self):
         return str(self.num)
+        
     def tp(self):
         return "RNum("+str(self.num) + ")"
 
@@ -29,15 +31,17 @@ class RNum:
         return self.num
 
     def typec(self, env=None):
-        return "NUM"
+        return self.has_type
 
 
 class RNegate:
     def __init__(self, _num):
         self.num = _num
+        self.has_type = "NUM"
 
     def pp(self):
         return "-(" + str(self.num.pp()) + ")"
+
     def tp(self):
         return "RNegate("+self.num.tp() +")"
 
@@ -45,7 +49,7 @@ class RNegate:
         return -1*self.num.interp(e)
 
     def typec(self, env=None):
-        if(self.num.typec(env) == "NUM"):
+        if(self.has_type == "NUM"):
             return "NUM"
         return "ERROR"
 
@@ -54,6 +58,7 @@ class RAdd:
     def __init__(self, _left, _right):
         self.left = _left
         self.right = _right
+        self.has_type ="NUM"
 
     def pp(self):
         return "(+ " + self.left.pp() + " " + self.right.pp() + ")"
@@ -65,14 +70,15 @@ class RAdd:
         return self.left.interp(e) + self.right.interp(e)
 
     def typec(self, env=None):
-        if(self.left.typec(env) == self.right.typec(env) == "NUM"):
-            return self.left.typec(env)
+        if(self.left.typec(env) == self.right.typec(env) == self.has_type):
+            return self.has_type
         return "ERROR"
 
 
 class RRead:
     def __init__(self):
         self.num = 0
+        self.has_type ="NUM"
 
     def pp(self):
         return "Read"
@@ -90,7 +96,7 @@ class RRead:
         return self.num
 
     def typec(self, env=None):
-        return "NUM"
+        return self.has_type
 
 
 ###### R1 data types ######
@@ -122,6 +128,7 @@ class RLet:
         self.var = _var
         self.l = _l
         self.r = _r
+        self.has_type = "NUM"
 
     def pp(self):
         return "Let " + self.var.pp() + " = " + self.l.pp() + " in " + self.r.pp()
@@ -141,7 +148,9 @@ class RLet:
         env.type.update({self.var.name: self.l.typec(env)})
         env.setEnv(self.var.name, self.l.interp(env))
         if(self.l.typec(env) == self.r.typec(env) or self.r.typec(env) == "VECTOR" or self.l.typec(env) == "VECTOR"):
-            return self.r.typec(env) 
+            rt = self.r.typec(env) 
+            self.has_type = rt
+            return rt
         return "ERROR"
 
 
@@ -202,6 +211,7 @@ class RCmp:
         self.op = _op
         self.l = _l
         self.r = _r
+        self.has_type ="BOOL"
 
     def pp(self):
         return "(" + self.op + " " + self.l.pp() + " " + self.r.pp() + ")"
@@ -231,6 +241,7 @@ class RIf:
         self.var = _var
         self.l = _l
         self.r = _r
+        self.has_type = "BOOL"
 
     def pp(self):
         return "(if " + self.var.pp() + " " + self.l.pp() + " " + self.r.pp() + ")"
@@ -242,10 +253,14 @@ class RIf:
         return self.l.interp(env) if self.var.interp(env) else self.r.interp(env)
 
     def typec(self, env=None):
+        lt = self.l.typec(env)
+        rt = self.r.typec(env)
         if(self.var.interp(env)):
-            return self.l.typec(env)
+            self.has_type = lt
+            return lt
         else:
-            return self.r.typec(env)
+            self.has_type = rt
+            return rt
 
 
 class RSub:
@@ -268,6 +283,7 @@ class RSub:
 class RBool:
     def __init__(self, _b):
         self.b = _b
+        self.has_type ="BOOL"
 
     def pp(self):
         return str(self.b)
@@ -279,19 +295,24 @@ class RBool:
         return self.b
 
     def typec(self, env=None):
-        return "BOOL"
+        return self.has_type
 
 
 ############ R3 Programs ############
 class RUnit:
     def pp(self):
         return "Unit"
+    
+    def typec(self):
+        return "Unit"
+
     def interp(self):
         return "Unit"
 
 class RVector:
     def __init__(self, args):
         self.args = args
+        self.has_type = "VECTOR"
         
     def pp(self):
         out = "Vector("
@@ -311,7 +332,15 @@ class RVector:
         return self
     
     def typec(self, env=None):
-        return "VECTOR"
+        intp = "VECTOR"
+        for i in self.args:
+            temp = i.typec(env)
+            if(intp == "VECTOR"):
+                intp = temp
+            elif(not temp == intp):
+                return "VECTOR"
+        self.has_type = intp       
+        return intp
 
 
 class RVectorRef:

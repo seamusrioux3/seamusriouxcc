@@ -140,7 +140,7 @@ def getToX1(p):
 
 s = Test()
 # Variable and Let testing
-print("\nR1 Tests")
+#print("\nR1 Tests")
 letTest1 = RLet(RVar("x"), RNum(2), RAdd(RVar("x"), RNum(3)))
 letTest2 = RLet(RVar("x"), RNum(2), RLet(
     RVar("y"), RNum(1), RAdd(RVar("x"), RVar("y"))))
@@ -160,7 +160,7 @@ letTest10 = RLet(RVar("x"), RRead(), RLet(RVar("y"), RRead(),
                                           RAdd(RAdd(RVar("x"), RVar("y")), RNum(42))))
 
 # ####### Uniquify Tests ###########
-print("\n Uniquify Tests\n")
+#print("\n Uniquify Tests\n")
 Uprog1 = RLet(RVar("A"), RNum(1), RLet(RVar("A"), RRead(), RVar("A")))
 Uprog2 = RLet(RVar("A"), RNum(1), RLet(
     RVar("A"), RNum(2), RAdd(RVar("A"), RVar("A"))))
@@ -173,7 +173,7 @@ Uprog6 = RLet(RVar("A"), RLet(RVar("A"), RLet(RVar("A"), RNum(2), RAdd(
     RVar("A"), RVar("A"))), RAdd(RVar("A"), RVar("A"))), RAdd(RVar("A"), RVar("A")))
 
 # ####### RCO Tests ###########
-print("\nRCO Tests\n")
+#print("\nRCO Tests\n")
 Rcoprog1 = RAdd(RAdd(RNum(2), RNum(3)), RLet(
     RVar("x"), RRead(), RAdd(RVar("x"), RVar("x"))))
 Rcoprog2 = RLet(RVar("R1"), RAdd(RNum(2), RNum(3)), RLet(RVar("R2"), RAdd(RNum(
@@ -241,25 +241,25 @@ r2prog13 = RIf(r2prog6, RAdd(RNum(5), RNum(1)), RNum(2))
 r2prog14 = RLet(RVar("v"), RNum(10), RLet(RVar("y"), RNum(10), RIf(
     RCmp("==", RVar("v"), RVar("y")), RVar("v"), RVar("y"))))
 
-print(rTrue.pp())
-print(rFalse.pp())
-print(r2prog1.pp())
-print(r2prog2.pp())
-print(r2prog3.pp())
-print(r2prog4.pp())
-print(r2prog5.pp())
-print(r2prog6.pp())
-print(r2prog7.pp())
-print(r2prog8.pp())
-print(r2prog9.pp())
-print(r2prog10.pp())
-print(r2prog11.pp())
-print(r2prog12.pp())
-print(r2prog13.pp())
-print(r2prog14.pp())
+# print(rTrue.pp())
+# print(rFalse.pp())
+# print(r2prog1.pp())
+# print(r2prog2.pp())
+# print(r2prog3.pp())
+# print(r2prog4.pp())
+# print(r2prog5.pp())
+# print(r2prog6.pp())
+# print(r2prog7.pp())
+# print(r2prog8.pp())
+# print(r2prog9.pp())
+# print(r2prog10.pp())
+# print(r2prog11.pp())
+# print(r2prog12.pp())
+# print(r2prog13.pp())
+# print(r2prog14.pp())
 
 ########### R2 Type Testing ##############
-print("\nR2 Type Testing \n")
+#print("\nR2 Type Testing \n")
 bad1 = RAdd(RBool(True), RNum(2))
 bad2 = RSub(RBool(False), RNum(7))
 bad3 = RAnd(RBool(True), RAdd(RNum(7), RNum(5)))
@@ -418,7 +418,7 @@ cprog7 = CProgram([], {
 # print("Ans: " + str(cprog7.interp()))
 
 ########  X1 Testing  ########
-print("\nX1  Testing")
+#print("\nX1  Testing")
 
 
 xprog1 = XProgram([], {XLabel("main"):
@@ -579,31 +579,36 @@ condMov1 = select(condMov1)
 # print(condMov1.emit())
 # print(condMov1.interp())
 
+######## R3 Testing #######
+
 ######## Tests With Vectors #######
 print("Vector Testing")
 vec1 = RLet(RVar("x"), RNum(17), RLet(RVar("v1"), RVector([RVar("x"), RNum(1), RBool(True)]), RAdd(RVectorRef(RVar("v1"), RNum(0)), RVectorRef(RVar("v1"), RNum(1)))))
-print(vec1.pp())
-print(vec1.interp())
+# print(vec1.pp())
+# print(vec1.interp())
 vec2 = RLet(RVar("x"), RNum(2), RLet(RVar("v1"), RVector([RVar("x"), RNum(1), RBool(True)]), RLet(RVar("y"), RVectorRef(RVar("v1"), RNum(1)), RAdd(RVar('y'), RNum(2)))))
-print(vec2.pp())
-print(vec2.interp())
+# print(vec2.pp())
+# print(vec2.interp())
 vec3 = RLet(RVar("x"), RNum(4), RLet(RVar("v1"), RVector([RVar("x"), RNum(1), RBool(True)]), RLet(RVar("_"), RVectorSet(RVar("v1"), RNum(2), RNum(2)), RAdd(RVar("x"), RVectorRef(RVar("v1"), RNum(2))))))
-print(vec3.pp())
-print(vec3.interp())
+# print(vec3.pp())
+# print(vec3.interp())
 vec4 = RLet(RVar("x"), RNum(4), RLet(RVar("v1"), RVector([RVar("x"), RNum(1), RBool(True)]), RLet(RVar("_"), RVectorSet(RVar("v1"), RNum(2), RNum(2)), RAdd(RVectorRef(RVar("v1"), RNum(1)), RVectorRef(RVar("v1"), RNum(2))))))
-print(vec4.pp())
-print(vec4.interp())
+# print(vec4.pp())
+# print(vec4.interp())
 vec5 = RLet(RVar("v1"), RVector([RNum(2), RNum(2)]), RAdd(RVectorRef(RVar("v1"), RNum(0)), RVectorRef(RVar("v1"), RNum(1))))
-print(vec5.pp())
-print(vec5.interp())
+# print(vec5.pp())
+# print(vec5.interp())
 vec6 = RLet(RVar("v1"), RVector([RBool(True), RNum(2), RNum(3)]), RCmp("==", RVectorRef(RVar("v1"), RNum(0)), RCmp(">", RVectorRef(RVar("v1"), RNum(1)), RVectorRef(RVar("v1"), RNum(2)))))
-print(vec6.pp())
-print(vec6.interp())
+# print(vec6.pp())
+# print(vec6.interp())
 
 ######## Tests With Typing Vectors #######
 print("\nVector Type Testing")
 vec0 = RVector([RNum(1), RNum(2), RBool(True), RBool(False)])
 vec7 = RLet(RVar("v1"), RVector([RBool(True), RNum(2), RNum(3)]), RAdd(RVectorRef(RVar("v1"), RNum(0)), RCmp(">", RVectorRef(RVar("v1"), RNum(1)), RVectorRef(RVar("v1"), RNum(2)))))
+vec8 = RVector([RNum(1), RNum(2), RNum(3)])
+vec9 = RVector([RBool(False), RBool(False), RBool(True)])
+vec9 = RVector([RBool(False), RNum(3), RBool(True)])
 print(vec0.pp())
 print(vec0.typec())
 print(vec1.pp())
@@ -620,9 +625,10 @@ print(vec6.pp())
 print(vec6.typec())
 print(vec7.pp())
 print(vec7.typec())
+print(vec8.typec())
+print(vec9.typec())
 
 ######## Random Tests With Vectors #######
-# testvec0 =
 # print(testvec0.pp())
 # print(testvec0.interp())
 # for i in range(3000):
@@ -639,40 +645,41 @@ print(vec7.typec())
 
 ######## Big Mem Testing #######
 res = bigMem(128, 1024)
-print(res.pp())
-print(res.interp())
+# print(res.pp())
+# print(res.interp())
 
 ######## Optimizer Testing #######
 optvec1 = RLet(RVar("x"), RAdd(RNum(1), RNum(2)), RVectorRef(RVector([RNum(3), RNum(4)]), RNum(0)))
-print("original ans: ",optvec1.pp())
+#print("original ans: ",optvec1.pp())
 optvec1 = optimizer(optvec1)
-print("optimized ans: ", optvec1.pp())
+#print("optimized ans: ", optvec1.pp())
 
 optvec1 = RLet(RVar("x"), RAdd(RNum(7), RNum(2)), RVectorRef(RVector([RVar("x"), RNum(4)]), RNum(0)))
-print("original ans: ",optvec1.pp())
+#print("original ans: ",optvec1.pp())
 optvec1 = optimizer(optvec1)
-print("optimized ans: ", optvec1.pp())
+#print("optimized ans: ", optvec1.pp())
 
 optvec1 = RLet(RVar("x"), RNegate(RNum(7)), RVectorRef(RVector([RVar("x"), RNum(4)]), RNum(0)))
-print("original ans: ",optvec1.pp())
+#print("original ans: ",optvec1.pp())
 optvec1 = optimizer(optvec1)
-print("optimized ans: ", optvec1.pp())
+#print("optimized ans: ", optvec1.pp())
 
 optvec1 = RLet(RVar("x"), RNegate(RNum(7)), RVectorRef(RVector([RVar("x"), RNum(4)]), RRead()))
-print("original ans: ",optvec1.pp())
+#print("original ans: ",optvec1.pp())
 optvec1 = optimizer(optvec1)
-print("optimized ans: ", optvec1.pp())
+#print("optimized ans: ", optvec1.pp())
 
 optvec1 = RLet(RVar("x"), RNegate(RNum(7)), RVectorSet(RVector([RNum(3), RNum(4)]), RNum(0), RAdd(RNum(1), RNum(1))))
-print("original ans: ",optvec1.pp())
+#print("original ans: ",optvec1.pp())
 optvec1 = optimizer(optvec1)
-print("optimized ans: ", optvec1.pp())
+#print("optimized ans: ", optvec1.pp())
 
 optvec1 = RLet(RVar("x"), RVector([RNegate(RNegate(RNum(7))), RAdd(RNum(1), RNum(3))]), RVectorRef(RVar("x"), RNum(0)))
-print("original ans: ",optvec1.pp())
+#print("original ans: ",optvec1.pp())
 optvec1 = optimizer(optvec1)
-print("optimized ans: ", optvec1.pp())
-######## Combined Testing Updated With R2 Uniquify ########
+#print("optimized ans: ", optvec1.pp())
+
+######## Combined Testing  ########
 #print("\nCombined Tests\n")
 #s.bigTest(5)
 
