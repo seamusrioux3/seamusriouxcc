@@ -283,16 +283,22 @@ class RBool:
 
 
 ############ R3 Programs ############
+class RUnit:
+    def pp(self):
+        return "Unit"
+    def interp(self):
+        return "Unit"
+
 class RVector:
     def __init__(self, args):
         self.args = args
         
     def pp(self):
-        out = "vector "
+        out = "Vector("
         for a in self.args:
             out += a.pp() + " "
         out = out[:-1]
-        return out
+        return out +")"
     
     def tp(self):
         out = "RVector("
@@ -1218,19 +1224,6 @@ def _bigMem(n, m):
 
 
 ######## Optimizer Function ########
-
-
-class OptEnv:
-    def __init__(self):
-        self.env = {}
-
-    def getEnv(self):
-        return self.env
-
-    def setEnv(self, add):
-        self.env.update(add)
-
-
 def simple(n):
     if(isinstance(n, RNum)):
         return True
@@ -1244,6 +1237,23 @@ def simple(n):
         return True
     elif(isinstance(n, RLet)):
         return simple(n.l) and simple(n.r)
+    elif(isinstance(n,RVector)):
+        return False
+    elif(isinstance(n, RVectorRef)):
+        return False
+    elif(isinstance(n, RVectorSet)):
+        return False
+    return False
+
+class OptEnv:
+    def __init__(self):
+        self.env = {}
+
+    def getEnv(self):
+        return self.env
+
+    def setEnv(self, add):
+        self.env.update(add)
 
 
 def optimizer(n):
@@ -1341,8 +1351,30 @@ def _optimizer(n, env):
             return _optimizer(n.r, env)
         else:
             env.setEnv({n.var.name: xe})
-            #be = _optimizer(n.r, env)
-            return RLet(n.var, xe, n.r)
+            be = _optimizer(n.r, env)
+            return RLet(n.var, xe, be)
+    
+    elif(isinstance(n, RVector)):
+        vcarray = n.args
+        newvcarray =[]
+        for e in vcarray:
+            newvcarray.append(_optimizer(e, env))
+        
+        return RVector(newvcarray)
+    elif(isinstance(n, RVectorRef)):
+        vr = n.exp
+        if(isinstance(vr, RVector)):
+            actualref = _optimizer(n.ref, env)
+            if(simple(actualref)):
+                retref = _optimizer(vr.args[actualref.interp()], env)
+                return retref
+            return n
+    elif(isinstance(n, RVectorSet)):
+        vecr = _optimizer(n.exp, env)
+        if(isinstance(vecr, RVector)):
+           return RUnit()
+        else:
+            return RVectorSet(n.exp, n.ref, _optimizer(n.var, env))
 
     return n
 
