@@ -70,19 +70,19 @@ class Test:
     def testAll(self, p):
         actual = 0
         po = optimizer(p)
-        print(po.typec())
-        t = po.typec()
         pu = uniquify(po)
-        pr = RCO(pu)
-        pe = econ(pr)
-        xz = select(pe)
-        aloc = allocate_registers(xz, t)
+        pexpo = exposeAllocation(pu)
+        #pr = RCO(pexpo)
+        # pe = econ(pr)
+        # xz = select(pe)
+        # aloc = allocate_registers(xz, t)
         # print(po.pp())
-        print(aloc.emit())
-
+        #print(aloc.emit())
+        # print(po.typec())
+        # t = po.typec()
         #
         #print(aloc.emit())
-        machine = self.testX0OnHardware(aloc)
+        #machine = self.testX0OnHardware(aloc)
         # print("Machine Level Ans:", machine)
         #print("original: " + p.pp())
        # print("original ans: " + str(p.interp()))
@@ -102,40 +102,32 @@ class Test:
         # ptch = patch(aloc)
         # real = self.testX0OnHardware(ptch)
 
-        if (self.checkAll(p, [po, pu, pr, pe, xz, aloc], machine)):
+        if (self.checkAll(p, [po, pu, pexpo], None)):
             actual = po.interp()
         else:
-            # print("original: " + p.pp())
-            # print("original ans: " + str(p.interp()))
-            # print("optimized: " + po.pp())
-            # print("optimized ans: " + str(po.interp()))
-            # print("uniquify: " + pu.pp())
-            # print("uniquify ans: " + str(pu.interp()))
+            print("original: " + p.pp())
+            print("original ans: " + str(p.interp()))
+            print("optimized: " + po.pp())
+            print("optimized ans: " + str(po.interp()))
+            print("uniquify: " + pu.pp())
+            print("uniquify ans: " + str(pu.interp()))
+            print("expose: " + pexpo.pp())
+            print("expose ans: " + str(pexpo.interp()))
             # print("rco: " + pr.pp())
             # print("rco ans: " + str(pr.interp()))
             # print("econ: " + pe.pp())
             # print("econ ans: " + str(pe.interp()))
             # print("select ans: " + str(xz.interp()))
             actual = not p.interp()
-            # exit(1)
+            exit(1)
 
         self.test(actual, p.interp())
 
     def bigTest(self, n):
-        for i in range(100):
+        for i in range(10):
             self.testAll(randomR2(1))
             self.testAll(randomR2(2))
-            #self.testAll(randomR2(3))
-
-
-def getToX1(p):
-    po = optimizer(p)
-    pu = uniquify(po)
-    pr = RCO(pu)
-    pe = econ(pr)
-    local = uncoverLocal(pe)
-    xz = select(local)
-    return xz
+            self.testAll(randomR2(3))
 
 
 s = Test()
@@ -761,36 +753,39 @@ expall1 = exposeAllocation(expall1)
 print()
 print(expall1.pp())
 print(expall1.interp())
-# print(str(freeptr))
-# test = RLet(RVar("V0"), RLet(RVar("VE0"), RVector([RNum(4), RBool(True)]), RNum(0)), RAdd( RRead(), RVectorRef(RVar("VE0"), RNum(0))))
-# print(test.interp())
-# for i in range(0,500):
-#     uni1 = randomR2(1)
-#     print(uni1.pp())
-#     print("ans:" + str(uni1.interp()))
-#     uni2 =optimizer(uni1)
-#     print(uni2.pp())
-#     print("ans:" + str(uni2.interp()))
-#     s.test(uni1.interp(), uni2.interp())
-#     uni1 = randomR2(2)
-#     print(uni1.tp())
-#     print("ans:" + str(uni1.interp()))
-#     uni2 =optimizer(uni1)
-#     print(uni2.tp())
-#     print("ans:" + str(uni2.interp()))
-#     s.test(uni1.interp(), uni2.interp())
-#     uni1 = randomR2(3)
-#     print(uni1.tp())
-#     print("ans:" + str(uni1.interp()))
-#     uni2 =optimizer(uni1)
-#     print(uni2.tp())
-#     print("ans:" + str(uni2.interp()))
-#     s.test(uni1.interp(), uni2.interp())
+
+#### Expose Alloc Testing #####
+print("\nRCO R3 Testing\n")
+
+print()
+rcor3prog1 =RLet(RVar("v"), RVector([RRead(), RNum(2)]), RVectorRef(RVar("v"), RNum(0)))
+print(rcor3prog1.pp())
+print(rcor3prog1.interp())
+print()
+rcor3prog1 =RCO(exposeAllocation(rcor3prog1))
+print(rcor3prog1.pp())
+print(rcor3prog1.interp())
+
+print()
+rcor3prog1 =RLet(RVar("v"), RVector([RRead(), RNum(2), RVector([RNum(4), RNum(2)])]), RLet(RVar("var0"), RVectorRef(RVar("v"), RNum(0)), RLet(RVar("var1"), RVectorRef(RVar("alloc0"), RNum(0)), RAdd(RVar("var0"), RVar("var1")))))
+print(rcor3prog1.pp())
+print()
+rcor3prog1 =RCO(exposeAllocation(rcor3prog1))
+print(rcor3prog1.pp())
+print(rcor3prog1.interp())
+
+print()
+rcor3prog1 =RLet(RVar("V0"), RLet(RVar("VE0"), RVector([RNum(4), RBool(True)]), RNum(0)), RAdd( RNum(72), RVectorRef(RVar("VE0"), RNum(0))))
+print(rcor3prog1.pp())
+print()
+rcor3prog1 =RCO(exposeAllocation(rcor3prog1))
+print(rcor3prog1.pp())
+print(rcor3prog1.interp())
 
 
 ######## Combined Testing  ########
-#print("\nCombined Tests\n")
-#s.bigTest(5)
+print("\nCombined Tests\n")
+s.bigTest(5)
 
 # s.testAll(letTest1)
 # s.testAll(letTest2)

@@ -1553,9 +1553,9 @@ def uni(e, uenv):
             newVecArray.append(uni(i, uenv))
         return RVector(newVecArray)
     elif(isinstance(e, RVectorRef)):
-        return RVectorRef(uni(e.exp, uenv), uni(e.ref, uenv))
+        return RVectorRef(uni(e.exp, uenv), e.ref)
     elif(isinstance(e, RVectorSet)):
-        return RVectorSet(uni(e.exp, uenv), uni(e.ref, uenv), uni(e.var, uenv))
+        return RVectorSet(uni(e.exp, uenv), e.ref, uni(e.var, uenv))
     print("ERROR")
     return e
 
@@ -1601,7 +1601,7 @@ def exposeAlloc(r, env: ExpEnv):
     elif(isinstance(r, RVectorRef)):
         return RVectorRef(exposeAlloc(r.exp, env), r.ref)
     elif(isinstance(r, RVectorSet)):
-        return RVectorSet(exposeAlloc(r.exp, env), r.ref, env, exposeAlloc(r.var, env))
+        return RVectorSet(exposeAlloc(r.exp, env), r.ref, exposeAlloc(r.var, env))
     elif(isinstance(r, RVector)):
         newVecArray = []
         oldVecArray =r.args
@@ -1698,7 +1698,6 @@ def _rco(isTail, env: RCOEnv, e):
             return ifp
         else:
             return _rcoLift(env, ifp)
-
     elif(isinstance(e, RVar)):
         if(e.name in env.getEnv()):
             return env.getEnv()[e.name]
@@ -1709,7 +1708,21 @@ def _rco(isTail, env: RCOEnv, e):
         lp = _rco(False, env, e.l)
         env.setEnv({e.var.name: lp})
         return _rco(isTail, env, e.r)
-
+    
+    elif(isinstance(e, RVector)):
+        print("RCO UNBOUND Shouldn't see Vectors")
+        return "ERROR"
+    elif(isinstance(e, RVectorSet)):
+        exp =_rco(False, env, e.exp)
+        var = _rco(False, env, e.var)
+        return _rcoLift(env, RVectorSet(exp, e.ref, var))
+    elif(isinstance(e, RVectorRef)):
+        exp =_rco(False, env, e.exp)
+        return _rcoLift(env, RVectorRef(exp, e.ref))
+    elif(isinstance(e, RAllocate)):
+        return _rcoLift(env, e)
+    elif(isinstance(e, RCollect)):
+        return _rcoLift(env, e)
     else:
         return e
 
