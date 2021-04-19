@@ -318,6 +318,9 @@ class RUnit:
     def pp(self):
         return "Unit"
 
+    def tp(self):
+        return "RUnit()"
+
     def typec(self):
         return "Unit"
 
@@ -400,6 +403,9 @@ class RVectorSet:
         if(isinstance(vec, RVector)):
             self.var.interp(env)
             vec.args[self.ref.interp(env)] = self.var
+        elif(isinstance(vec, RAllocate)):
+            self.var.interp(env)
+            vec.vec.arg[self.ref.interp(env)]= self.var
         return self
 
     def typec(self, env: REnv):
@@ -430,6 +436,9 @@ class RCollect():
     
     def pp(self):
         return "Collect(" + self.num.pp() + ")"
+    
+    def tp(self):
+        return "RCollect(" + self.num.tp() + ")"
     
     def interp(self, env= None):
         return self.num.interp(env)
@@ -1168,15 +1177,66 @@ class CIf:
         else:
             return env.blk[self.r.interp()].interp(env)
 
+#################    C2 Language  #####################
+class CUnit:
+    def tp():
+        return "CUnit()"
+    
+    def interp(self, env):
+        return self
+
+class CAllocate:
+    def __init__(self, _num, _typ):
+        self.typ = _typ
+        self.num = _num
+        self.args = []
+
+    def interp(self, env = None):
+        return self
+
+class CVectorSet:
+    def __init__(self, _var, _ref, _exp):
+        self.var = _var
+        self.ref = _ref
+        self.exp = _exp
+
+    def interp(self, env = None):
+        vec = self.var.interp()
+        if(isinstance(vec, RAllocate)):
+            vec.args[self.ref.interp(env)] = self.exp
+        return self
+
+class CVectorRef:
+    def __init__(self, _var, _ref, _exp):
+        self.var = _var
+        self.ref = _ref
+
+    def interp(self, env = None):
+        vec = self.var.interp()
+        if(isinstance(vec, RAllocate)):
+            return vec.args[self.ref.interp(env)]
+        return self
+
+class CCollect():
+    def __init__(self, _num):
+        self.num = _num
+    
+    def tp(self):
+        return "CCollect(" + self.num.tp() + ")"
+    
+    def interp(self, env= None):
+        return self.num.interp(env)
+
 
 ###################### Functions ######################
 class RNGEnv:
     def __init__(self):
-        self.varList = {}
+        self.varList = []
         self.vecList = {}
+        self.varCntr = 1
 
-    def setVarList(self, v, i ):
-        self.varList.update({v: i})
+    def setVarList(self, v):
+        self.varList.append(v)
 
     def setVecList(self, v, i):
         self.vecList.update({v: i})
@@ -1207,8 +1267,8 @@ def _randomR2(typ, n, env: RNGEnv):
     ranNum = RNum(random.randint(0, 16))
     ranBool = RBool(random.choice([True, False]))
     if(n == 0):
-        if(len(list(env.getVarList().keys())) > 0):
-            chosenVar = [RVar(random.choice(list(env.getVarList().keys())))]
+        if(len(env.getVarList()) > 0):
+            chosenVar = [RVar(random.choice(env.getVarList()))]
         else:
             chosenVar = []
         if(len(list(env.getVecList().keys())) > 0):
@@ -1261,16 +1321,17 @@ def _randomR2(typ, n, env: RNGEnv):
 
 
 def ranLet(t, n, env: RNGEnv):
-    name = "V" + str(len(env.getVarList().keys()))
+    name = "V" + str(env.varCntr)
+    env.varCntr+=1
     newVar = RVar(name)
     if(t == "BOOL"):
         l = _randomR2(t, n-1, env)
-        env.setVarList(name, l)
+        env.setVarList(name)
         r = _randomR2(t, n-1, env)
         return RLet(newVar, l, r)
     elif(t == "NUM"):
         l = _randomR2(t, n-1, env)
-        env.setVarList(name, l)
+        env.setVarList(name)
         r = _randomR2(t, n-1, env)
         return RLet(newVar, l, r)
     print("ERROR in RAN")
@@ -1297,7 +1358,6 @@ def ranVec(t, n, env: RNGEnv):
 def ranVecSet(t, n, env: RNGEnv):
     name = random.choice(list(env.getVecList().keys()))
     setVal = RNum(random.randint(0, 16))
-    print(name)
     vecChoice = RVar(name)
     idx = 0
     if(t == "BOOL"):
@@ -1375,12 +1435,6 @@ def _optimizer(n, env:OptEnv):
         op = n.op
         l = n.l
         r = n.r
-        # if(isinstance(l, RNum) and isinstance(r, RNum) and op == "==" and l.interp() == r.interp()):
-        #     return RBool(n.interp())
-        # elif(op == "<"):
-        #     if(isinstance(r, RAdd) and isinstance(r.left, RNum)):
-        #         if(r.right.interp() == l.interp() and r.left.interp() > 0):
-        #             return RBool(True)
         return RCmp(op, _optimizer(l, env), _optimizer(r, env))
     elif(isinstance(n, RNot)):
         if(isinstance(n.e, RNot)):
@@ -1430,19 +1484,15 @@ def _optimizer(n, env:OptEnv):
         var = n.var
         l = n.l
         r = n.r
-        vint = var.interp(env.renv)
-        lint = l.interp(env.renv) 
-        rint = r.interp(env.renv)
-        if(lint == True and rint == False):
-            return _optimizer(var, env)
-        elif(isinstance(var, RIf) and isinstance(l, RBool) and isinstance(r, RBool) and
+        # vint = var.interp(env.renv)
+        # lint = l.interp(env.renv) 
+        # rint = r.interp(env.renv)
+        # if(lint == True and rint == False):
+        #     return _optimizer(var, env)
+        if(isinstance(var, RIf) and isinstance(l, RBool) and isinstance(r, RBool) and
              var.l.interp() == False and var.r.interp() == True):
             if(l.interp() == False and r.interp() == True):
                 return _optimizer(var.var, env)
-        elif(isinstance(var, RNot)):
-            return RIf(_optimizer(var.e, env), _optimizer(r, env), _optimizer(l, env))
-        # elif(l.interp() == r.interp()):
-        #     return RLet(RVar("_"), _optimizer(var, env), _optimizer(l, env))
         return RIf(_optimizer(var, env), _optimizer(l, env), _optimizer(r, env))
 
     elif(isinstance(n, RVar)):
@@ -1453,12 +1503,12 @@ def _optimizer(n, env:OptEnv):
     elif(isinstance(n, RLet)):
         xe = _optimizer(n.l, env)
         if(simple(xe)):
-            env.setEnv(n.var.name, xe)
-            env.renv.setEnv(n.var.name, xe)
+            env.setEnv(n.var.pp(), xe)
+            env.renv.setEnv(n.var.pp(), xe)
             return _optimizer(n.r, env)
         else:
-            env.setEnv(n.var.name, xe)
-            env.renv.setEnv(n.var.name, xe)
+            env.setEnv(n.var.pp(), xe)
+            env.renv.setEnv(n.var.pp(), xe)
             be = _optimizer(n.r, env)
             return RLet(n.var, xe, be)
 
@@ -1539,9 +1589,9 @@ def uni(e, uenv):
     elif(isinstance(e, RLet)):
         uenv.varCntr += 1
         x = RVar("U"+str(uenv.varCntr))
-        if(e.var.pp() == "_"):
-            x = "_"
-        x = RVar("U"+str(uenv.varCntr))
+        # if(e.var.pp() == "_"):
+        #     x = "_"
+        # x = RVar("U"+str(uenv.varCntr))
         l = uni(e.l, uenv)
         uenv.setEnv({e.var.pp(): x.pp()})
         r = uni(e.r, uenv)
@@ -1564,6 +1614,7 @@ class ExpEnv():
     def __init__(self):
         self.cntr = 0
         self.letBefore = None
+        self.underScoreCntr =0
         self.varBefore = None
 
 def exposeAllocation(r):
@@ -1588,8 +1639,8 @@ def exposeAlloc(r, env: ExpEnv):
         return RAdd(exposeAlloc(r.left, env), exposeAlloc(r.right, env))
     elif(isinstance(r, RLet)):
         if(isinstance(r.l, RVector)):
-            env.varBefore = r.var
             env.letBefore = exposeAlloc(r.r, env)
+            env.varBefore = r.var
             newLet = exposeAlloc(r.l, env)
             return newLet
         else: 
@@ -1618,9 +1669,11 @@ def exposeAlloc(r, env: ExpEnv):
         for e in newVecArray:
             before = RLet(RVar("_"), RVectorSet(name, RNum(cntr), e), before)
             cntr+=1
+            env.underScoreCntr +=1
         
         assignVec = RLet(name, RAllocate(RNum(len(r.args)), r.typec()), before)
-        checkLet = RLet(RVar("_"), RIf(RCmp("<", RAdd(RNum(freeptr), RNum(len(r.args))), RNum(fromend)), RCollect(RNum(len(r.args))), RUnit()), assignVec)
+        env.underScoreCntr +=1
+        checkLet = RLet(RVar("_"), RIf(RCmp(">", RAdd(RNum(freeptr), RNum(len(r.args))), RNum(fromend)), RCollect(RNum(len(r.args))), RUnit()), assignVec)
         env.cntr+=1
         env.varBefore = None
         env.letBefore = None
@@ -1638,8 +1691,8 @@ class RCOEnv:
     def getEnv(self):
         return self.env
 
-    def setEnv(self, add):
-        self.env.update(add)
+    def setEnv(self, name, add):
+        self.env[name] = add
 
     def getLift(self):
         return self.lifts
@@ -1706,7 +1759,7 @@ def _rco(isTail, env: RCOEnv, e):
             return "FAILURE"
     elif(isinstance(e, RLet)):
         lp = _rco(False, env, e.l)
-        env.setEnv({e.var.name: lp})
+        env.setEnv(e.var.pp(), lp)
         return _rco(isTail, env, e.r)
     
     elif(isinstance(e, RVector)):
@@ -1714,10 +1767,12 @@ def _rco(isTail, env: RCOEnv, e):
         return "ERROR"
     elif(isinstance(e, RVectorSet)):
         exp =_rco(False, env, e.exp)
+        # ref = _rco(False, env, e.ref) 
         var = _rco(False, env, e.var)
         return _rcoLift(env, RVectorSet(exp, e.ref, var))
     elif(isinstance(e, RVectorRef)):
         exp =_rco(False, env, e.exp)
+        # ref = _rco(False, env, e.ref) 
         return _rcoLift(env, RVectorRef(exp, e.ref))
     elif(isinstance(e, RAllocate)):
         return _rcoLift(env, e)
