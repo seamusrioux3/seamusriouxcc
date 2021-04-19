@@ -1182,7 +1182,7 @@ class CUnit:
     def tp():
         return "CUnit()"
     
-    def pp():
+    def pp(self):
         return "Unit()"
     
     def interp(self, env):
@@ -1197,7 +1197,7 @@ class CAllocate:
             self.args.append(0)
     
     def pp(self):
-        return "Allocate(" + self.num.pp() + " " + self.typ.pp() + ")"
+        return "Allocate(" + self.num.pp() + " " + self.typ + ")"
 
     def interp(self, env = None):
         return self
@@ -1224,7 +1224,7 @@ class CVectorRef:
         self.ref = _ref
     
     def pp(self):
-        return "(VectorSet! " + self.var.pp() + " " + self.ref.pp() +" "+ self.exp.pp() + ")"
+        return "(VectorSet! " + self.var.pp() + " " + self.ref.pp() + ")"
 
     def interp(self, env = None):
         vec = self.var.interp(env)
@@ -1857,6 +1857,8 @@ def econArgs(r):
         return CVar(r.name)
     elif(isinstance(r, RBool)):
         return CBool(r.b)
+    elif(isinstance(r, RUnit)):
+        return CUnit()
     else:
         return "ERROR"
 
@@ -1872,6 +1874,14 @@ def econExp(r):
         return CAdd(econArgs(r.left), econArgs(r.right))
     elif(isinstance(r, RCmp)):
         return getOp(r)
+    elif(isinstance(r, RCollect)):
+        return CCollect(econArgs(r.num))
+    elif(isinstance(r, RVectorRef)):
+        return CVectorRef(econArgs(r.exp), econArgs(r.ref))
+    elif(isinstance(r, RVectorSet)):
+        return CVectorSet(econArgs(r.exp), econArgs(r.ref), econArgs(r.var))
+    elif(isinstance(r, RAllocate)):
+        return CAllocate(econArgs(r.num), r.has_type)
     else:
         return econArgs(r)
 

@@ -73,19 +73,9 @@ class Test:
         pu = uniquify(po)
         palloc = exposeAllocation(pu)
         prco = RCO(palloc)
-        
-        # print("original: " + p.tp())
-        # print("original ans: " + str(p.interp()))
-        # print("optimized: " + po.pp())
-        # print("optimized ans: " + str(po.interp()))
-        # print("uniquify: " + pu.pp())
-        # print("uniquify ans: " + str(pu.interp()))
-        # print("expose allocation: " + palloc.tp())
-        # print("expose allocation ans: " + str(palloc.interp()))
-        print("rco: " + prco.tp())
-        print("rco ans: " + str(prco.interp()))
+        pecon = econ(prco)
 
-        if (p.interp() == po.interp() == pu.interp() == palloc.interp()):
+        if (p.interp() == pecon.interp()):
             actual = palloc.interp()
         else:
             print("original: " + p.tp())
@@ -94,19 +84,22 @@ class Test:
             print("optimized ans: " + str(po.interp()))
             print("uniquify: " + pu.pp())
             print("uniquify ans: " + str(pu.interp()))
-            print("expose allocation: " + palloc.pp())
+            print("expose allocation: " + palloc.tp())
             print("expose allocation ans: " + str(palloc.interp()))
+            print("rco: " + prco.tp())
+            print("rco ans: " + str(prco.interp()))
+            print("econ: " + pecon.pp())
+            print("econ ans: " + str(prco.interp()))
             actual = not p.interp()
-            #exit(1)
 
         self.test(actual, p.interp())
 
     def bigTest(self, n):
-        for i in range(1000):
+        for i in range(3000):
             self.testAll(randomR2(1))
             self.testAll(randomR2(2))
-            # self.testAll(randomR2(3))
-            # self.testAll(randomR2(4))
+            self.testAll(randomR2(3))
+            self.testAll(randomR2(4))
 
 
 s = Test()
@@ -672,12 +665,12 @@ c2prog3 = CProgram([], {
     CLabel("cLabel"):CBlock([],[CSet(CVar("v"),CCollect(CNum(36))), CRet(CVar("v"))])
 })
 
-print(c2prog1.interp())
-print(c2prog2.interp())
-print(c2prog3.interp())
+# print(c2prog1.interp())
+# print(c2prog2.interp())
+# print(c2prog3.interp())
 ######## Combined Testing  ########
 print("\nCombined Tests\n")
-#s.bigTest(5)
+s.bigTest(5)
 
 
 # s.testAll(letTest1)
