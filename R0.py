@@ -1182,6 +1182,9 @@ class CUnit:
     def tp():
         return "CUnit()"
     
+    def pp():
+        return "Unit()"
+    
     def interp(self, env):
         return self
 
@@ -1190,6 +1193,9 @@ class CAllocate:
         self.typ = _typ
         self.num = _num
         self.args = []
+    
+    def pp(self):
+        return "Allocate(" + self.num.pp() + " " + self.typ.pp() + ")"
 
     def interp(self, env = None):
         return self
@@ -1199,6 +1205,9 @@ class CVectorSet:
         self.var = _var
         self.ref = _ref
         self.exp = _exp
+    
+    def pp(self):
+        return "(VectorSet! " + self.var.pp() + " " + self.ref.pp() +" "+ self.exp.pp() + ")"
 
     def interp(self, env = None):
         vec = self.var.interp()
@@ -1210,6 +1219,9 @@ class CVectorRef:
     def __init__(self, _var, _ref, _exp):
         self.var = _var
         self.ref = _ref
+    
+    def pp(self):
+        return "(VectorSet! " + self.var.pp() + " " + self.ref.pp() +" "+ self.exp.pp() + ")"
 
     def interp(self, env = None):
         vec = self.var.interp()
@@ -1221,6 +1233,9 @@ class CCollect():
     def __init__(self, _num):
         self.num = _num
     
+    def pp(self):
+        return "Collect(" + self.num.pp() + ")"
+
     def tp(self):
         return "CCollect(" + self.num.tp() + ")"
     
