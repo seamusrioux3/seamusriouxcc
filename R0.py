@@ -1193,6 +1193,8 @@ class CAllocate:
         self.typ = _typ
         self.num = _num
         self.args = []
+        for i in range(0, _num.interp(None)):
+            self.args.append(0)
     
     def pp(self):
         return "Allocate(" + self.num.pp() + " " + self.typ.pp() + ")"
@@ -1210,13 +1212,14 @@ class CVectorSet:
         return "(VectorSet! " + self.var.pp() + " " + self.ref.pp() +" "+ self.exp.pp() + ")"
 
     def interp(self, env = None):
-        vec = self.var.interp()
-        if(isinstance(vec, RAllocate)):
+        vec = self.var.interp(env)
+        if(isinstance(vec, CAllocate)):
+            self.var.interp(env)
             vec.args[self.ref.interp(env)] = self.exp
         return self
 
 class CVectorRef:
-    def __init__(self, _var, _ref, _exp):
+    def __init__(self, _var, _ref):
         self.var = _var
         self.ref = _ref
     
@@ -1224,9 +1227,9 @@ class CVectorRef:
         return "(VectorSet! " + self.var.pp() + " " + self.ref.pp() +" "+ self.exp.pp() + ")"
 
     def interp(self, env = None):
-        vec = self.var.interp()
-        if(isinstance(vec, RAllocate)):
-            return vec.args[self.ref.interp(env)]
+        vec = self.var.interp(env)
+        if(isinstance(vec, CAllocate)):
+            return vec.args[self.ref.interp(env)].interp(env)
         return self
 
 class CCollect():
@@ -1758,9 +1761,9 @@ def _rco(isTail, env: RCOEnv, e):
         rp = _rco(False, env, e.r)
         return _rcoLift(env, RCmp(e.op, lp, rp))
     elif(isinstance(e, RIf)):
+        cmpp = rco_c(False, e.var, env)
         t = _rco(isTail, env, e.l)
         f = _rco(isTail, env, e.r)
-        cmpp = rco_c(False, e.var, env)
         ifp = RIf(cmpp, t, f)
         if(isTail):
             return ifp
