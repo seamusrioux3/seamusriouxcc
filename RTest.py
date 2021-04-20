@@ -59,14 +59,6 @@ class Test:
             ans = 0
         return int(ans)
 
-    def checkAll(self, org: RLet, arr):
-        for a in arr:
-            if(not org.interp() == a.interp()):
-                print(org.interp())
-                print(a.interp())
-                return False
-        return True
-
     def testAll(self, p):
         actual = 0
         po = optimizer(p)
@@ -74,12 +66,10 @@ class Test:
         palloc = exposeAllocation(pu)
         prco = RCO(palloc)
         pecon = econ(prco)
-        print("econ: " + pecon.pp())
         uncov = uncoverLocal(pecon)
-        print(uncov)
 
         if (p.interp() == pecon.interp()):
-            actual = palloc.interp()
+            actual = pecon.interp()
         else:
             print("original: " + p.tp())
             print("original ans: " + str(p.interp()))
@@ -590,25 +580,28 @@ rcor3prog1 =RLet(RVar("v"), RVector([RRead(), RNum(2)]), RVectorRef(RVar("v"), R
 print(rcor3prog1.pp())
 print(rcor3prog1.interp())
 print()
-rcor3prog1 =RCO(exposeAllocation(rcor3prog1))
+rcor3prog1 =exposeAllocation(rcor3prog1)
+print(rcor3prog1.pp())
+print(rcor3prog1.interp())
+rcor3prog1 =RCO(rcor3prog1)
 print(rcor3prog1.pp())
 print(rcor3prog1.interp())
 
-print()
-rcor3prog1 =RLet(RVar("v"), RVector([RRead(), RNum(2), RVector([RNum(4), RNum(2)])]), RLet(RVar("var0"), RVectorRef(RVar("v"), RNum(0)), RLet(RVar("var1"), RVectorRef(RVar("alloc0"), RNum(0)), RAdd(RVar("var0"), RVar("var1")))))
-print(rcor3prog1.pp())
-print()
-rcor3prog1 =RCO(exposeAllocation(rcor3prog1))
-print(rcor3prog1.pp())
-print(rcor3prog1.interp())
+# print()
+# rcor3prog1 =RLet(RVar("v"), RVector([RRead(), RNum(2), RVector([RNum(4), RNum(2)])]), RLet(RVar("var0"), RVectorRef(RVar("v"), RNum(0)), RLet(RVar("var1"), RVectorRef(RVar("alloc0"), RNum(0)), RAdd(RVar("var0"), RVar("var1")))))
+# print(rcor3prog1.pp())
+# print()
+# rcor3prog1 =RCO(exposeAllocation(rcor3prog1))
+# print(rcor3prog1.pp())
+# print(rcor3prog1.interp())
 
-print()
-rcor3prog1 =RLet(RVar("V0"), RLet(RVar("VE0"), RVector([RNum(4), RBool(True)]), RNum(0)), RAdd( RNum(72), RVectorRef(RVar("VE0"), RNum(0))))
-print(rcor3prog1.pp())
-print()
-rcor3prog1 =RCO(exposeAllocation(rcor3prog1))
-print(rcor3prog1.pp())
-print(rcor3prog1.interp())
+# print()
+# rcor3prog1 =RLet(RVar("V0"), RLet(RVar("VE0"), RVector([RNum(4), RBool(True)]), RNum(0)), RAdd( RNum(72), RVectorRef(RVar("VE0"), RNum(0))))
+# print(rcor3prog1.pp())
+# print()
+# rcor3prog1 =RCO(exposeAllocation(rcor3prog1))
+# print(rcor3prog1.pp())
+# print(rcor3prog1.interp())
 
 
 ######### C2 Testing #############

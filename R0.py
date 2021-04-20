@@ -444,26 +444,26 @@ class RCollect():
         return self.num.interp(env)
         
 
-# class RGlobal:
-#     def __init__(self, _name):
-#         self.name = _name
+class RGlobal:
+    def __init__(self, _name):
+        self.name = _name
 
-#     def pp(self):
-#         return str(self.name)
+    def pp(self):
+        return "Global " + str(self.name)
 
-#     def tp(self):
-#         return "RVar(" + "\""+str(self.name)+"\""+")"
+    def tp(self):
+        return "RGlobal(" + "\""+str(self.name)+"\""+")"
 
-#     def interp(self, e=None):
-#         if(self.name in e.getEnv()):
-#             value = e.getEnv()[self.name]
-#             return value.interp(e)
-#         return "ERROR"
+    def interp(self, e=None):
+        if(self.name in e.getEnv()):
+            value = e.getEnv()[self.name]
+            return value.interp(e)
+        return "ERROR"
 
-#     def typec(self, env=None):
-#         if(self.name in env.getEnv()):
-#             return env.type[self.name]
-#         return "ERROR"
+    def typec(self, env=None):
+        if(self.name in env.getEnv()):
+            return env.type[self.name]
+        return "ERROR"
 
 
 ############ X0 Programs ############
@@ -944,11 +944,18 @@ def getTrueCmp(cc, l, r):
 class XGlobal:
     def __init__(self, _var):
         self.var = _var
+    
+    def emit(self):
+        return ".global " + self.var.emit()
 
 class XILeaq:
-    def __init__(self, _num, _typ):
-        self.num = _num
-        self.has_type = _typ
+    def __init__(self, _src, _dst):
+        self.src = _src
+        self.dst = _dst
+        self.has_type = "NUM"
+    
+    def emit(self):
+        return "leaq" + self.src.emit() + " " + self.dst.emit()
 
 ###### C0 Program Data Types ########
 
@@ -1334,6 +1341,23 @@ class CCollect():
         return self.num.interp(env)
 
 
+class CGlobal:
+    def __init__(self, _var):
+        self.var = _var
+
+    def pp(self):
+        return self.var
+    
+    def typec(self, env = None):
+        if(self.var in env.type):
+            return env.type[self.var] 
+        return "ERROR"
+
+    def interp(self, env):
+        return env.var[self.var]
+
+
+
 ###################### Functions ######################
 class RNGEnv:
     def __init__(self):
@@ -1590,11 +1614,6 @@ def _optimizer(n, env:OptEnv):
         var = n.var
         l = n.l
         r = n.r
-        # vint = var.interp(env.renv)
-        # lint = l.interp(env.renv) 
-        # rint = r.interp(env.renv)
-        # if(lint == True and rint == False):
-        #     return _optimizer(var, env)
         if(isinstance(var, RIf) and isinstance(l, RBool) and isinstance(r, RBool) and
              var.l.interp() == False and var.r.interp() == True):
             if(l.interp() == False and r.interp() == True):
@@ -1726,7 +1745,8 @@ class ExpEnv():
 def exposeAllocation(r):
     env = ExpEnv()
     e = exposeAlloc(r, env)
-    return e
+    finish = RLet(RGlobal("free_ptr"), RNum(0), RLet(RGlobal("from_end"), RNum(9999), e))
+    return finish
 
 def exposeAlloc(r, env: ExpEnv):
     if(isinstance(r, RNum)):
@@ -1779,7 +1799,7 @@ def exposeAlloc(r, env: ExpEnv):
         
         assignVec = RLet(name, RAllocate(RNum(len(r.args)), r.typec()), before)
         env.underScoreCntr +=1
-        checkLet = RLet(RVar("_"), RIf(RCmp(">", RAdd(RNum(freeptr), RNum(len(r.args))), RNum(fromend)), RCollect(RNum(len(r.args))), RUnit()), assignVec)
+        checkLet = RLet(RVar("_"), RIf(RCmp(">", RAdd(RGlobal("free_ptr"), RNum(4*len(r.args))), RGlobal("from_end")), RCollect(RNum(len(r.args))), RUnit()), assignVec)
         env.cntr+=1
         env.varBefore = None
         env.letBefore = None
@@ -1864,8 +1884,11 @@ def _rco(isTail, env: RCOEnv, e):
             print("RCO UNBOUND")
             return "FAILURE"
     elif(isinstance(e, RLet)):
+        if(isinstance(e.var, RGlobal)):
+            env.setLift((e.var, e.l))
+            return _rco(isTail, env, e.r)
         lp = _rco(False, env, e.l)
-        env.setEnv(e.var.pp(), lp)
+        env.setEnv(e.var.name, lp)
         return _rco(isTail, env, e.r)
     
     elif(isinstance(e, RVector)):
@@ -1947,6 +1970,8 @@ def econArgs(r):
         return CBool(r.b)
     elif(isinstance(r, RUnit)):
         return CUnit()
+    elif(isinstance(r, RGlobal)):
+        return CGlobal(r.name)
     else:
         return "ERROR"
 
@@ -1975,7 +2000,7 @@ def econExp(r):
 
 
 def getForm(a):
-    if(isinstance(a, RNum) or isinstance(a, RBool) or isinstance(a, RRead) or isinstance(a, RVar)):
+    if(isinstance(a, RNum) or isinstance(a, RBool) or isinstance(a, RRead) or isinstance(a, RVar) or isinstance(a, RGlobal)):
         return True
     return False
 
