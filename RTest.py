@@ -74,6 +74,9 @@ class Test:
         palloc = exposeAllocation(pu)
         prco = RCO(palloc)
         pecon = econ(prco)
+        print("econ: " + pecon.pp())
+        uncov = uncoverLocal(pecon)
+        print(uncov)
 
         if (p.interp() == pecon.interp()):
             actual = palloc.interp()
@@ -95,7 +98,7 @@ class Test:
         self.test(actual, p.interp())
 
     def bigTest(self, n):
-        for i in range(3000):
+        for i in range(1000):
             self.testAll(randomR2(1))
             self.testAll(randomR2(2))
             self.testAll(randomR2(3))

@@ -947,6 +947,7 @@ class CEnv:
     def __init__(self):
         self.var = {}
         self.blk = {}
+        self.type = {}
         self.cntr = 0
 
     def setBlk(self, add):
@@ -1015,9 +1016,13 @@ class CRet:
 class CNum:
     def __init__(self, _n):
         self.n = _n
+        self.has_type = "NUM"
 
     def pp(self):
         return str(self.n)
+    
+    def typec(self, env = None):
+        return self.has_type
 
     def interp(self, env):
         return self.n
@@ -1029,6 +1034,11 @@ class CVar:
 
     def pp(self):
         return self.var
+    
+    def typec(self, env = None):
+        if(self.var in env.type):
+            return env.type[self.var] 
+        return "ERROR"
 
     def interp(self, env):
         return env.var[self.var]
@@ -1037,9 +1047,13 @@ class CVar:
 class CRead:
     def __init__(self):
         self.r = 0
+        self.has_type = "NUM"
 
     def pp(self):
         return "Read"
+    
+    def typec(self, env = None):
+        return self.has_type
 
     def interp(self, env):
         return 1
@@ -1050,9 +1064,18 @@ class CRead:
 class CNeg:
     def __init__(self, _n):
         self.n = _n
+        self.has_type = "NUM"
 
     def pp(self):
         return "-("+self.n.pp() + ")"
+    
+    def typec(self, env = None):
+        temp = self.n.typec(env)
+        if(temp != "NUM"):
+            self.has_type = "ERROR"
+        else:
+            self.has_type = "NUM"
+        return self.has_type
 
     def interp(self, env):
         return -1 * self.n.interp(env)
@@ -1062,9 +1085,19 @@ class CAdd:
     def __init__(self, _l, _r):
         self.l = _l
         self.r = _r
+        self.has_type = "NUM"
 
     def pp(self):
         return "(+ " + self.l.pp() + " " + self.r.pp() + ")"
+    
+    def typec(self, env = None):
+        tempL = self.l.typec(env)
+        tempR = self.r.typec(env)
+        if(tempL != "NUM" or tempR != "NUM"):
+            self.has_type = "ERROR"
+        else:
+            self.has_type = "NUM"
+        return self.has_type
 
     def interp(self, env):
         return self.l.interp(env) + self.r.interp(env)
@@ -1078,6 +1111,11 @@ class CSet:
     def pp(self):
         return "(set! " + self.var.pp() + " " + self.exp.pp() + ")"
 
+    def typec(self, env = None):
+        tempE = self.exp.typec(env)
+        env.type[self.var.pp()] = tempE
+        return tempE
+
     def interp(self, env):
         env.setVar({self.var.pp(): self.exp.interp(env)})
         return 0
@@ -1089,9 +1127,13 @@ class CSet:
 class CBool:
     def __init__(self, _b):
         self.b = _b
+        self.has_type = "BOOL"
 
     def pp(self):
         return str(self.b)
+    
+    def typec(self, env = None):
+        return self.has_type 
 
     def interp(self, env):
         return self.b
@@ -1102,10 +1144,14 @@ class CCmp:
         self.op = _op
         self.l = _l
         self.r = _r
+        self.has_type = "BOOL"
 
     def pp(self):
         return "(" + self.op + " " + self.l.pp() + " " + self.r.pp() + ")"
-
+    
+    def typec(self, env = None):
+        return self.has_type
+    
     def interp(self, env=None):
         if(self.op == "=="):
             return self.l.interp(env) == self.r.interp(env)
@@ -1141,9 +1187,18 @@ class CSetCC:
 class CNot:
     def __init__(self, _e):
         self.e = _e
+        self.has_type = "BOOL"
 
     def pp(self):
         return "not(" + self.e.pp() + ")"
+    
+    def typec(self, env = None):
+        temp = self.e.typec(env)
+        if(temp != "BOOL"):
+            self.has_type = "ERROR"
+        else:
+            self.has_type = "BOOL"
+        return self.has_type
 
     def interp(self, env):
         return not self.e.interp(env)
@@ -1169,6 +1224,7 @@ class CIf:
 
     def pp(self):
         return "goto-if(" + self.cmp.pp() + " " + self.l.pp() + " " + self.r.pp() + ")"
+        
 
     def interp(self, env):
         rtn = "ERROR"
@@ -1179,8 +1235,11 @@ class CIf:
 
 #################    C2 Language  #####################
 class CUnit:
-    def tp():
+    def tp(self):
         return "CUnit()"
+    
+    def typec(self, env = None):
+        return "UNIT"
     
     def pp(self):
         return "Unit()"
@@ -1190,14 +1249,17 @@ class CUnit:
 
 class CAllocate:
     def __init__(self, _num, _typ):
-        self.typ = _typ
+        self.has_type = _typ
         self.num = _num
         self.args = []
         for i in range(0, _num.interp(None)):
             self.args.append(0)
     
     def pp(self):
-        return "Allocate(" + self.num.pp() + " " + self.typ + ")"
+        return "Allocate(" + self.num.pp() + " " + self.has_type + ")"
+    
+    def typec(self, env = None):
+        return self.has_type
 
     def interp(self, env = None):
         return self
@@ -1210,6 +1272,12 @@ class CVectorSet:
     
     def pp(self):
         return "(VectorSet! " + self.var.pp() + " " + self.ref.pp() +" "+ self.exp.pp() + ")"
+
+    def typec(self, env = None):
+        if(isinstance(self.exp, CVar)):
+            t = env.type[self.exp.pp()]
+            return t
+        return self.exp.has_type
 
     def interp(self, env = None):
         vec = self.var.interp(env)
@@ -1225,6 +1293,12 @@ class CVectorRef:
     
     def pp(self):
         return "(VectorSet! " + self.var.pp() + " " + self.ref.pp() + ")"
+    
+    def typec(self, env = None):
+        if(isinstance(self.var, CVar)):
+            t = env.type[self.var.pp()]
+            return t
+        return self.var.has_type
 
     def interp(self, env = None):
         vec = self.var.interp(env)
@@ -1235,12 +1309,16 @@ class CVectorRef:
 class CCollect():
     def __init__(self, _num):
         self.num = _num
-    
+        self.has_type = "NUM"
+
     def pp(self):
         return "Collect(" + self.num.pp() + ")"
 
     def tp(self):
         return "CCollect(" + self.num.tp() + ")"
+    
+    def typec(self, env = None):
+        return self.has_type 
     
     def interp(self, env= None):
         return self.num.interp(env)
@@ -1970,12 +2048,17 @@ def econLabel(e, env: EconEnv):
 
 ######## Uncover Local Pass ########
 def uncoverLocal(e: CProgram):
-    varList = []
+    varList = {}
+    uncEnv = CEnv()
     for l, b in e.p.items():
         for s in b.p:
             if(isinstance(s, CSet)):
+                a = s.typec(uncEnv)
                 if(not s.var in varList):
-                    varList.append(s.var)
+                    if(isinstance(s.var, CVar)):
+                        varList.update({s.var.pp():a})
+
+    e.info = varList
     return varList
 
 
