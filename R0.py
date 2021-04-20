@@ -940,6 +940,16 @@ def getTrueCmp(cc, l, r):
         return l == r
 
 
+########### X2 Datatypes ###########
+class XGlobal:
+    def __init__(self, _var):
+        self.var = _var
+
+class XILeaq:
+    def __init__(self, _num, _typ):
+        self.num = _num
+        self.has_type = _typ
+
 ###### C0 Program Data Types ########
 
 
