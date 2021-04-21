@@ -67,6 +67,9 @@ class Test:
         prco = RCO(palloc)
         pecon = econ(prco)
         uncov = uncoverLocal(pecon)
+        pselect = select(pecon)
+        #pselint =  pselect.interp()
+        print(pselect.emit())
 
         if (p.interp() == pecon.interp()):
             actual = pecon.interp()
@@ -87,12 +90,12 @@ class Test:
 
         self.test(actual, p.interp())
 
-    def bigTest(self, n):
-        for i in range(1000):
+    def bigTest(self):
+        for i in range(1):
             self.testAll(randomR2(1))
-            self.testAll(randomR2(2))
-            self.testAll(randomR2(3))
-            self.testAll(randomR2(4))
+            # self.testAll(randomR2(2))
+            # self.testAll(randomR2(3))
+            # self.testAll(randomR2(4))
 
 
 s = Test()
@@ -581,11 +584,12 @@ print(rcor3prog1.pp())
 print(rcor3prog1.interp())
 print()
 rcor3prog1 =exposeAllocation(rcor3prog1)
-print(rcor3prog1.pp())
-print(rcor3prog1.interp())
 rcor3prog1 =RCO(rcor3prog1)
+rcor3prog1 =econ(rcor3prog1)
 print(rcor3prog1.pp())
-print(rcor3prog1.interp())
+rcor3prog1 = select(rcor3prog1)
+print(rcor3prog1.emit())
+#print(rcor3prog1.interp())
 
 # print()
 # rcor3prog1 =RLet(RVar("v"), RVector([RRead(), RNum(2), RVector([RNum(4), RNum(2)])]), RLet(RVar("var0"), RVectorRef(RVar("v"), RNum(0)), RLet(RVar("var1"), RVectorRef(RVar("alloc0"), RNum(0)), RAdd(RVar("var0"), RVar("var1")))))
@@ -664,9 +668,86 @@ c2prog3 = CProgram([], {
 # print(c2prog1.interp())
 # print(c2prog2.interp())
 # print(c2prog3.interp())
-######## Combined Testing  ########
+
+############# X2 Testing ###############
+x2prog1 = XProgram([],{
+    XLabel("main"): XBlock([],[
+        XIMov(XCon(0), XGlobal("free_ptr")),
+        XIMov(XCon(9999), XGlobal("from_end")),
+        XICall("read_int"),
+        XIMov(XRegister("rax"), XVar("r1")),
+        XIMov(XVar("r1"), XVar("r2")),
+        XINeg(XVar("r2")),
+        XIMov(XVar("r2"), XRegister("rax")),
+        XIRet()
+    ])
+})
+
+x2prog2 = XProgram([],{
+    XLabel("main"): XBlock([],[
+        XIMov(XCon(0), XGlobal("free_ptr")),
+        XIMov(XCon(9999), XGlobal("from_end")),
+        XIMov(XCon(16), XVar("r1")),
+        XIMov(XGlobal("free_ptr"), XVar("r2")),
+        XIAdd(XVar("r1"), XVar("r2")),
+        XIMov(XCon(0), XVar("r3")),
+        XICmp(XGlobal("from_end"), XVar("r2")),
+        XIJmpIf(XLabel("label1")),
+        XIJmp(XLabel("label2")),
+        XIRet()
+    ]),
+    XLabel("label1"): XBlock([], [
+        XIMov(XVar("r3"), XVar("r4")),
+        XIJmp(XLabel("label3"))
+    ]),
+    XLabel("label1"): XBlock([], [
+        XIMov(XCon(0), XVar("r4")),
+        XIJmp(XLabel("label3"))
+    ]),
+    XLabel("label3"): XBlock([],[
+        XIMov(XMem(XGlobal("free_ptr"), XRegister("rsp"), XRegister("r11"))),
+        XIAdd(XCon(24),XMem(XGlobal("free_ptr"), XRegister("rsp"))),
+        XIMov(XRegister("r11"), XVar("r5")),
+        XIRet()
+    ]),
+})
+
+x2prog3 = XProgram([],{
+    XLabel("main"): XBlock([],[
+        XIMov(XCon(0), XGlobal("free_ptr")),
+        XIMov(XCon(9999), XGlobal("from_end")),
+        XIMov(XCon(16), XVar("r1")),
+        XIMov(XGlobal("free_ptr"), XVar("r2")),
+        XIAdd(XVar("r1"), XVar("r2")),
+        XIMov(XCon(0), XVar("r3")),
+        XICmp(XGlobal("from_end"), XVar("r2")),
+        XIJmpIf(XLabel("label1")),
+        XIJmp(XLabel("label2")),
+        XIRet()
+    ]),
+    XLabel("label1"): XBlock([], [
+        XIMov(XVar("r3"), XVar("r4")),
+        XIJmp(XLabel("label3"))
+    ]),
+    XLabel("label1"): XBlock([], [
+        XIMov(XCon(0), XVar("r4")),
+        XIJmp(XLabel("label3"))
+    ]),
+    XLabel("label3"): XBlock([],[
+        XIMov(XMem(XGlobal("free_ptr"), XRegister("rsp"), XRegister("r11"))),
+        XIAdd(XCon(16),XMem(XGlobal("free_ptr"), XRegister("rsp"))),
+        XIMov(XRegister("r11"), XVar("r5")),
+        XIMov(XCon(0), XVar("r6")),
+        XIMov(XVar("r5"), XRegister("r11")),
+        XIMov(XMem(0, XRegister("r11"), XVar("r7"))),
+        XIRet()
+    ]),
+})
+
+
+######## Combined Testing  #############
 print("\nCombined Tests\n")
-s.bigTest(5)
+s.bigTest()
 
 
 # s.testAll(letTest1)
