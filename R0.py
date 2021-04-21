@@ -612,6 +612,8 @@ class XMem:
         self.num = _num
 
     def emit(self):
+        if(isinstance(self.num, XGlobal)):
+            return self.num.emit() + "(" + str(self.reg.emit()) + ")"
         return str(self.num) + "(" + str(self.reg.emit()) + ")"
 
     def interp(self, env):
@@ -946,7 +948,7 @@ class XGlobal:
         self.var = _var
     
     def emit(self):
-        return ".global " + self.var.emit()
+        return self.var
 
 class XILeaq:
     def __init__(self, _src, _dst):
@@ -1799,7 +1801,7 @@ def exposeAlloc(r, env: ExpEnv):
         
         assignVec = RLet(name, RAllocate(RNum(len(r.args)), r.typec()), before)
         env.underScoreCntr +=1
-        checkLet = RLet(RVar("_"), RIf(RCmp(">", RAdd(RGlobal("free_ptr"), RNum(4*len(r.args))), RGlobal("from_end")), RCollect(RNum(len(r.args))), RUnit()), assignVec)
+        checkLet = RLet(RVar("_"), RIf(RCmp(">", RAdd(RGlobal("free_ptr"), RNum(8*len(r.args))), RGlobal("from_end")), RCollect(RNum(8*len(r.args))), RUnit()), assignVec)
         env.cntr+=1
         env.varBefore = None
         env.letBefore = None
@@ -2139,12 +2141,33 @@ def _selectT(cp, env):
     elif(isinstance(cp, CSet)):
         src = cp.exp
         dst = cp.var
+        if(isinstance(src, CAllocate)):
+            vecDst = _selectA(dst, env)
+            firstMov = XIMov(XMem(XRegister("rsp"), XGlobal("free_ptr")), XRegister("r11"))
+            firstAdd = XIAdd(XCon((1+src.num.n)*8), XMem(XRegister("rsp"), XGlobal("free_ptr")))
+            secondMov = XIMov(XRegister("r11"), vecDst)
+            return [firstMov, firstAdd, secondMov]
+        elif(isinstance(src, CVectorRef)):
+            vecName = _selectA(src.var, env)
+            #vecNum = _selectA(src.ref, env)
+            vecDst = _selectA(dst, env)
+            return [XIMov(vecName, XRegister("r11")), XIMov(XMem(XRegister("r11"), 8*(src.ref.n-1),), vecDst)]
+        elif(isinstance(src, CVectorSet)):
+            vecName = _selectA(src.var, env)
+            #vecNum = _selectA(src.ref, env)
+            vecArg = _selectA(src.exp, env)
+            vecDst = _selectA(dst, env)
+            return [XIMov(vecName, XRegister("r11")), XIMov(XMem(XRegister("r11"), 8*(src.ref.n-1)), vecDst), XIMov(XCon(0), vecArg)]
+        elif(isinstance(src, CCollect)):
+            vecDst = _selectA(dst, env)
+            return [XIMov(XCon(0), vecDst)]
+        elif(isinstance(src, CUnit)):
+            return _selectE(CNum(0), dst, env)
         return _selectE(src, dst, env)
     elif(isinstance(cp, CSetCC)):
         cmp = cp.cmp
         actualCmp = None
         op = None
-
         if(isinstance(cmp, CCmp)):
             actualCmp = XICmp(_selectA(cmp.l, env), _selectA(cmp.r, env))
             op = _selectC(cmp)
@@ -2186,6 +2209,8 @@ def _selectA(cp, env):
         return XVar(cp.pp())
     elif(isinstance(cp, CBool)):
         return XCon(int(cp.b))
+    elif(isinstance(cp, CGlobal)):
+        return XGlobal(cp.pp())
 
 
 def _selectC(cp: CCmp):
