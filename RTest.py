@@ -68,11 +68,13 @@ class Test:
         pecon = econ(prco)
         uncov = uncoverLocal(pecon)
         pselect = select(pecon)
-        #pselint =  pselect.interp()
         print(pselect.emit())
+        pselint =  pselect.interp()
+        print(str(pselint))
+        
 
-        if (p.interp() == pecon.interp()):
-            actual = pecon.interp()
+        if (p.interp() == pselect.interp()):
+            actual = pselect.interp()
         else:
             print("original: " + p.tp())
             print("original ans: " + str(p.interp()))
@@ -91,11 +93,11 @@ class Test:
         self.test(actual, p.interp())
 
     def bigTest(self):
-        for i in range(1):
+        for i in range(2000):
             self.testAll(randomR2(1))
-            # self.testAll(randomR2(2))
-            # self.testAll(randomR2(3))
-            # self.testAll(randomR2(4))
+            self.testAll(randomR2(2))
+            self.testAll(randomR2(3))
+            self.testAll(randomR2(4))
 
 
 s = Test()
@@ -579,34 +581,16 @@ print(expall1.interp())
 print("\nRCO R3 Testing\n")
 
 print()
-rcor3prog1 =RLet(RVar("v"), RVector([RRead(), RNum(2)]), RVectorRef(RVar("v"), RNum(0)))
-print(rcor3prog1.pp())
-print(rcor3prog1.interp())
-print()
-rcor3prog1 =exposeAllocation(rcor3prog1)
+rcor3prog12 =RLet(RVar("v"), RVector([RRead(), RNum(2)]), RVectorRef(RVar("v"), RNum(0)))
+rcor3prog1 =exposeAllocation(rcor3prog12)
 rcor3prog1 =RCO(rcor3prog1)
 rcor3prog1 =econ(rcor3prog1)
-print(rcor3prog1.pp())
 rcor3prog1 = select(rcor3prog1)
+print(rcor3prog12.pp())
+print()
 print(rcor3prog1.emit())
-#print(rcor3prog1.interp())
-
-# print()
-# rcor3prog1 =RLet(RVar("v"), RVector([RRead(), RNum(2), RVector([RNum(4), RNum(2)])]), RLet(RVar("var0"), RVectorRef(RVar("v"), RNum(0)), RLet(RVar("var1"), RVectorRef(RVar("alloc0"), RNum(0)), RAdd(RVar("var0"), RVar("var1")))))
-# print(rcor3prog1.pp())
-# print()
-# rcor3prog1 =RCO(exposeAllocation(rcor3prog1))
-# print(rcor3prog1.pp())
-# print(rcor3prog1.interp())
-
-# print()
-# rcor3prog1 =RLet(RVar("V0"), RLet(RVar("VE0"), RVector([RNum(4), RBool(True)]), RNum(0)), RAdd( RNum(72), RVectorRef(RVar("VE0"), RNum(0))))
-# print(rcor3prog1.pp())
-# print()
-# rcor3prog1 =RCO(exposeAllocation(rcor3prog1))
-# print(rcor3prog1.pp())
-# print(rcor3prog1.interp())
-
+print(rcor3prog1.interp())
+print(rcor3prog12.interp())
 
 ######### C2 Testing #############
 c2prog1 = CProgram([], {
@@ -670,7 +654,7 @@ c2prog3 = CProgram([], {
 # print(c2prog3.interp())
 
 ############# X2 Testing ###############
-x2prog1 = XProgram([],{
+x2prog1 = XProgram([],[],{
     XLabel("main"): XBlock([],[
         XIMov(XCon(0), XGlobal("free_ptr")),
         XIMov(XCon(9999), XGlobal("from_end")),
@@ -683,7 +667,7 @@ x2prog1 = XProgram([],{
     ])
 })
 
-x2prog2 = XProgram([],{
+x2prog2 = XProgram([], [], {
     XLabel("main"): XBlock([],[
         XIMov(XCon(0), XGlobal("free_ptr")),
         XIMov(XCon(9999), XGlobal("from_end")),
@@ -692,7 +676,7 @@ x2prog2 = XProgram([],{
         XIAdd(XVar("r1"), XVar("r2")),
         XIMov(XCon(0), XVar("r3")),
         XICmp(XGlobal("from_end"), XVar("r2")),
-        XIJmpIf(XLabel("label1")),
+        XIJmpIf(XL(), XLabel("label1")),
         XIJmp(XLabel("label2")),
         XIRet()
     ]),
@@ -705,14 +689,14 @@ x2prog2 = XProgram([],{
         XIJmp(XLabel("label3"))
     ]),
     XLabel("label3"): XBlock([],[
-        XIMov(XMem(XGlobal("free_ptr"), XRegister("rsp"), XRegister("r11"))),
+        XIMov(XMem(XGlobal("free_ptr"), XRegister("rsp")), XRegister("r11")),
         XIAdd(XCon(24),XMem(XGlobal("free_ptr"), XRegister("rsp"))),
         XIMov(XRegister("r11"), XVar("r5")),
         XIRet()
     ]),
 })
 
-x2prog3 = XProgram([],{
+x2prog3 = XProgram([], [], {
     XLabel("main"): XBlock([],[
         XIMov(XCon(0), XGlobal("free_ptr")),
         XIMov(XCon(9999), XGlobal("from_end")),
@@ -721,7 +705,7 @@ x2prog3 = XProgram([],{
         XIAdd(XVar("r1"), XVar("r2")),
         XIMov(XCon(0), XVar("r3")),
         XICmp(XGlobal("from_end"), XVar("r2")),
-        XIJmpIf(XLabel("label1")),
+        XIJmpIf(XL(), XLabel("label1")),
         XIJmp(XLabel("label2")),
         XIRet()
     ]),
@@ -734,12 +718,12 @@ x2prog3 = XProgram([],{
         XIJmp(XLabel("label3"))
     ]),
     XLabel("label3"): XBlock([],[
-        XIMov(XMem(XGlobal("free_ptr"), XRegister("rsp"), XRegister("r11"))),
+        XIMov(XMem(XGlobal("free_ptr"), XRegister("rsp")), XRegister("r11")),
         XIAdd(XCon(16),XMem(XGlobal("free_ptr"), XRegister("rsp"))),
         XIMov(XRegister("r11"), XVar("r5")),
         XIMov(XCon(0), XVar("r6")),
         XIMov(XVar("r5"), XRegister("r11")),
-        XIMov(XMem(0, XRegister("r11"), XVar("r7"))),
+        XIMov(XMem(0, XRegister("r11")), XVar("r7")),
         XIRet()
     ]),
 })

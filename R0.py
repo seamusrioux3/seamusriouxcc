@@ -481,12 +481,13 @@ class XEnv:
 
 
 class XProgram:
-    def __init__(self, _info, _p):
+    def __init__(self, _globals, _info, _p):
         self.p = _p
         self.info = _info
+        self.globals = _globals
 
     def emit(self):
-        return ".global main\n\n" + "".join(["\n"+x.emit() + ":" + "\n" + y.emit() for x, y in self.p.items()])
+        return ".global main\n" +"".join([".global "+ d.emit()+ "\n" for d in self.globals]) + "".join(["\n"+x.emit() + ":" + "\n" + y.emit() for x, y in self.p.items()])
 
     def interp(self):
         env = XEnv()
@@ -617,14 +618,24 @@ class XMem:
         return str(self.num) + "(" + str(self.reg.emit()) + ")"
 
     def interp(self, env):
-        if(self.reg.interp(env) + self.num in env.mem.keys()):
-            return env.mem[self.reg.interp(env) + self.num]
+        if(isinstance(self.num, XGlobal)):
+            if(self.reg.interp(env) + self.num.interp(env) in env.mem.keys()):
+                return env.mem[self.reg.interp(env) + self.num.interp(env) ]
+            else:
+                env.mem[self.reg.interp(env) + self.num.interp(env)] = 0
+                return env.mem[self.reg.interp(env) + self.num.interp(env) ]
         else:
-            env.mem[self.reg.interp(env) + self.num] = 0
-            return env.mem[self.reg.interp(env) + self.num]
+            if(self.reg.interp(env) + self.num in env.mem.keys()):
+                return env.mem[self.reg.interp(env) + self.num]
+            else:
+                env.mem[self.reg.interp(env) + self.num] = 0
+                return env.mem[self.reg.interp(env) + self.num]
 
     def set(self, env, val):
-        env.mem[self.reg.interp(env) + self.num] = val
+        if(isinstance(self.num, XGlobal)):
+            env.mem[self.reg.interp(env) + self.num.interp(env)] = val
+        else:
+            env.mem[self.reg.interp(env) + self.num] = val
         return env
 
     def getName(self):
@@ -946,9 +957,21 @@ def getTrueCmp(cc, l, r):
 class XGlobal:
     def __init__(self, _var):
         self.var = _var
+
+    def set(self, env, val):
+        env.var[self.var] = val
     
     def emit(self):
         return self.var
+    
+    def interp(self, env:XEnv):
+        if(isinstance(env.var[self.var], int)):
+            return env.var[self.var]
+        else:
+            return env.var[self.var].interp(env)
+
+    def getName(self):
+        return self.name
 
 class XILeaq:
     def __init__(self, _src, _dst):
@@ -2104,6 +2127,7 @@ def uncoverLocal(e: CProgram):
 class SelEnv:
     def __init__(self):
         self.vars = []
+        self.globals = []
 
     def setEnv(self, add):
         self.vars(add)
@@ -2132,7 +2156,7 @@ def select(cp: CProgram):
         #     tempBlk.append(XIJmp(XLabel("end")))
         blk.update({tempLabel: XBlock([], tempBlk)})
     blk.update({XLabel("end"): XBlock([], [XIRet()])})
-    return XProgram(cp.info, blk)
+    return XProgram(env.globals, cp.info, blk)
 
 
 def _selectT(cp, env):
@@ -2157,7 +2181,7 @@ def _selectT(cp, env):
             #vecNum = _selectA(src.ref, env)
             vecArg = _selectA(src.exp, env)
             vecDst = _selectA(dst, env)
-            return [XIMov(vecName, XRegister("r11")), XIMov(XMem(XRegister("r11"), 8*(src.ref.n-1)), vecDst), XIMov(XCon(0), vecArg)]
+            return [XIMov(vecName, XRegister("r11")), XIMov(vecArg, XMem(XRegister("r11"), 8*(src.ref.n-1))), XIMov(XCon(0), vecArg)]
         elif(isinstance(src, CCollect)):
             vecDst = _selectA(dst, env)
             return [XIMov(XCon(0), vecDst)]
@@ -2201,6 +2225,15 @@ def _selectE(cp, dst, env):
     else:
         return XIMov(_selectA(cp, env), _selectA(dst, env))
 
+def addGlobal(g, env):
+    inGlobal = False
+    for i in env.globals:
+        if(isinstance(i, XGlobal)):
+            if(i.var == g.var):
+                inGlobal = True
+    if(not inGlobal):
+        env.globals.append(g)
+    return
 
 def _selectA(cp, env):
     if(isinstance(cp, CNum)):
@@ -2210,6 +2243,7 @@ def _selectA(cp, env):
     elif(isinstance(cp, CBool)):
         return XCon(int(cp.b))
     elif(isinstance(cp, CGlobal)):
+        addGlobal(XGlobal(cp.pp()), env)
         return XGlobal(cp.pp())
 
 
@@ -2224,6 +2258,10 @@ def _selectC(cp: CCmp):
         return XLEq()
     elif(cp.op == "=="):
         return XEq()
+
+
+
+
 
 
 ######## Uncover Live ########
@@ -2572,7 +2610,7 @@ def assign_register(xp: XProgram) -> XProgram:
                 body.append(_assign(instr, regs))
             progm.update({lab: XBlock([], body)})
 
-    return XProgram(xp.info, progm)
+    return XProgram(xp.globals, xp.info, progm)
 
 
 def _assign(xp, regs):
@@ -2648,7 +2686,7 @@ def mainpass(xp: XProgram, alloc: int, type: str):
     xp.p.update(main)
     xp.p.update(end)
 
-    return XProgram(xp.info, xp.p)
+    return XProgram(xp.globals, xp.info, xp.p)
 
 
 ######## Patch Instr ########
@@ -2664,7 +2702,7 @@ def patch(xp):
                 for i in blks.blk:
                     newBlks = newBlks + _patch(i)
                 newP.update({lab: XBlock([], newBlks)})
-        return XProgram(xp.info, newP)
+        return XProgram(xp.globals, xp.info, newP)
 
 
 def _patch(i):
