@@ -22,12 +22,47 @@ class Test:
             return True
         print("Test failed expected " + str(_expected) + " got " + str(_actual))
         return False
+    
+    def checkAnsR(self, p:RLet, newP:RLet, s):
+        if(p.interp() == newP.interp()):
+            return newP
+        else:
+            print("original: " +p.pp())
+            print(s + " " + newP.pp())
+            print("original ans: "+ str(p.interp()))
+            print(s+ " ans: "+str(newP.interp()))
+            #exit(1)
+            return newP
+
+    def checkAnsC(self,p:RLet, newP:CProgram, s):
+        if(p.interp() == newP.interp()):
+            print(s + " " + newP.pp())
+            return newP
+        else:
+            print("original: " +p.pp())
+            print(s + " " + newP.pp())
+            print("original ans: "+ str(p.interp()))
+            print(s+ " ans: "+str(newP.interp()))
+            #exit(1)
+            return newP
+    
+    def checkAnsX(self, p:RLet, newP:XProgram, s):
+        if(p.interp() == newP.interp()):
+            return newP
+        else:
+            print("original: " +p.pp())
+            print(s + " " + emitXP(newP))
+            print("original ans: "+ str(p.interp()))
+            print(s+ " ans: "+str(newP.interp()))
+            #exit(1)
+            return newP
+            #exit(1)
 
     def testX0OnHardware(self, prog):
         fileName = "c0.s"
         binName = "c0.bin"
         f = open(fileName, "w")
-        f.write(prog.emit()+"\n")
+        f.write(emitXP(prog) +"\n")
         f.close()
 
         p = subprocess.Popen(
@@ -61,43 +96,24 @@ class Test:
 
     def testAll(self, p):
         actual = 0
-        po = optimizer(p)
-        pu = uniquify(po)
-        palloc = exposeAllocation(pu)
-        prco = RCO(palloc)
-        pecon = econ(prco)
-        uncov = uncoverLocal(pecon)
-        pselect = select(pecon)
-        print(pselect.emit())
-        pselint =  pselect.interp()
-        print(str(pselint))
+        po = self.checkAnsR(p, optimizer(p), "optimized")
+        pu = self.checkAnsR(p, uniquify(po), "uniquify")
+        palloc = self.checkAnsR(p, exposeAllocation(pu), "ralloc")
+        prco = self.checkAnsR(p, RCO(palloc), "rco")
+        pecon = self.checkAnsC(p, econ(prco), "econ")
+        ulocal = self.checkAnsC(p, uncoverLocal(pecon), "econ")
+        finalType = list(ulocal.info.values())[-1]
+        pselect = self.checkAnsX(p, select(ulocal), "select")
+        pxalloc = self.checkAnsX(p,allocate_registers(pselect, finalType), "xalloc")
+        hardwareAnsTest = self.testX0OnHardware(pxalloc)
         
-
-        if (p.interp() == pselect.interp()):
-            actual = pselect.interp()
-        else:
-            print("original: " + p.tp())
-            print("original ans: " + str(p.interp()))
-            print("optimized: " + po.pp())
-            print("optimized ans: " + str(po.interp()))
-            print("uniquify: " + pu.pp())
-            print("uniquify ans: " + str(pu.interp()))
-            print("expose allocation: " + palloc.tp())
-            print("expose allocation ans: " + str(palloc.interp()))
-            print("rco: " + prco.tp())
-            print("rco ans: " + str(prco.interp()))
-            print("econ: " + pecon.pp())
-            print("econ ans: " + str(prco.interp()))
-            actual = not p.interp()
-
-        self.test(actual, p.interp())
+        self.test(p.interp(), hardwareAnsTest)
 
     def bigTest(self):
-        for i in range(2000):
+        for i in range(250):
             self.testAll(randomR2(1))
-            self.testAll(randomR2(2))
-            self.testAll(randomR2(3))
-            self.testAll(randomR2(4))
+            #self.testAll(randomR2(2))
+            #self.testAll(randomR2(3))
 
 
 s = Test()
@@ -581,16 +597,16 @@ print(expall1.interp())
 print("\nRCO R3 Testing\n")
 
 print()
-rcor3prog12 =RLet(RVar("v"), RVector([RRead(), RNum(2)]), RVectorRef(RVar("v"), RNum(0)))
-rcor3prog1 =exposeAllocation(rcor3prog12)
-rcor3prog1 =RCO(rcor3prog1)
-rcor3prog1 =econ(rcor3prog1)
-rcor3prog1 = select(rcor3prog1)
-print(rcor3prog12.pp())
-print()
-print(rcor3prog1.emit())
-print(rcor3prog1.interp())
-print(rcor3prog12.interp())
+# rcor3prog12 =RLet(RVar("v"), RVector([RRead(), RNum(2)]), RVectorRef(RVar("v"), RNum(0)))
+# rcor3prog1 =exposeAllocation(rcor3prog12)
+# rcor3prog1 =RCO(rcor3prog1)
+# rcor3prog1 =econ(rcor3prog1)
+# rcor3prog1 = select(rcor3prog1)
+# print(rcor3prog12.pp())
+# print()
+# print(rcor3prog1.emit())
+# print(rcor3prog1.interp())
+# print(rcor3prog12.interp())
 
 ######### C2 Testing #############
 c2prog1 = CProgram([], {
@@ -730,7 +746,26 @@ x2prog3 = XProgram([], [], {
 
 
 ######## Combined Testing  #############
+def getToC(p:RLet):
+    return uncoverLocal(econ(RCO(exposeAllocation(uniquify(optimizer(p))))))
+def getToX(p:RLet):
+    return allocate_registers(select(uncoverLocal(econ(RCO(exposeAllocation(uniquify(optimizer(p))))))),"NUM")
 print("\nCombined Tests\n")
+# test = RLet(RVar("VE0"), RVector([RNum(15), RBool(True)]), RLet(RVar("VE1"), RVector([RNum(12), RBool(True)]), RVectorRef(RVar("VE0"), RNum(0))))
+#test = RLet(RVar("VE0"), RVector([RBool(True), RNum(7)]), RVectorRef(RVar("VE0"), RNum(1)))
+#test = getToC(test)
+#print(test.pp())
+test = RLet(RVar("VE0"), RVector([RBool(True), RNum(7)]), RVectorRef(RVar("VE0"), RNum(1)))
+test2 = RIf(RCmp(">", RNum(11), RRead()), RNum(24), RNum(2))
+typeAns = test.typec()
+test = getToX(test)
+print(emitXP(test))
+test2 = getToX(test2)
+
+hardwareAns = s.testX0OnHardware(test)
+
+s.test(hardwareAns, test.interp())
+s.test(s.testX0OnHardware(test2), test2.interp())
 s.bigTest()
 
 

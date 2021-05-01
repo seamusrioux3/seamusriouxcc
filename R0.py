@@ -2,15 +2,14 @@ import random
 from datetime import datetime
 from graph import Vertex, Graph
 # R0 Data types
-freeptr =0
-fromend =9999
+freeptr = 0
+fromend = 9999
+wordsize = 8
 
 class REnv:
     def __init__(self):
-        self.env = {}
+        self.env = {"free_ptr":RNum(0), "from_end":RNum(1024*1024*1024)}
         self.type = {}
-        self.freeptr =0
-        self.fromend =9999
 
     def getEnv(self):
         return self.env
@@ -225,7 +224,7 @@ class RCmp:
         return "(" + self.op + " " + self.l.pp() + " " + self.r.pp() + ")"
 
     def tp(self):
-        return "RCmp(" + "\""+ self.op + "\"" + ", " + self.l.tp() + ", " + self.r.tp() + ")"
+        return "RCmp(" + "\"" + self.op + "\"" + ", " + self.l.tp() + ", " + self.r.tp() + ")"
 
     def interp(self, env=None):
         if(not env):
@@ -268,9 +267,11 @@ class RIf:
         return l if v else r
 
     def typec(self, env=None):
+        v = self.var.typec(env)
+        v = self.var.interp(env)
         lt = self.l.typec(env)
         rt = self.r.typec(env)
-        if(self.var.interp(env)):
+        if(v):
             self.has_type = lt
             return lt
         else:
@@ -324,7 +325,7 @@ class RUnit:
     def typec(self):
         return "Unit"
 
-    def interp(self, env= None):
+    def interp(self, env=None):
         return "Unit"
 
 
@@ -405,11 +406,12 @@ class RVectorSet:
             vec.args[self.ref.interp(env)] = self.var
         elif(isinstance(vec, RAllocate)):
             self.var.interp(env)
-            vec.vec.arg[self.ref.interp(env)]= self.var
+            vec.vec.arg[self.ref.interp(env)] = self.var
         return self
 
     def typec(self, env: REnv):
         return self.var.typec(env)
+
 
 class RAllocate:
     def __init__(self, _num, _ty):
@@ -419,30 +421,31 @@ class RAllocate:
         self.vec = RVector(arr)
 
     def pp(self):
-        return "Allocate(" + self.num.pp() + ", " + self.has_type +")"
+        return "Allocate(" + self.num.pp() + ", " + self.has_type + ")"
 
     def tp(self):
-        return "RAllocate(" + self.num.tp() + ", " + "\""+ self.has_type +"\"" + ")"
+        return "RAllocate(" + self.num.tp() + ", " + "\"" + self.has_type + "\"" + ")"
 
     def interp(self, env: REnv):
         return self.vec
 
     def typec(self, env: REnv):
         return self.var.typec(env)
-    
+
+
 class RCollect():
     def __init__(self, _num):
         self.num = _num
-    
+
     def pp(self):
         return "Collect(" + self.num.pp() + ")"
-    
+
     def tp(self):
         return "RCollect(" + self.num.tp() + ")"
-    
-    def interp(self, env= None):
+
+    def interp(self, env=None):
         return self.num.interp(env)
-        
+
 
 class RGlobal:
     def __init__(self, _name):
@@ -473,7 +476,7 @@ class XEnv:
     def __init__(self):
         self.curlab = ""
         self.reg = {}
-        self.var = {}
+        self.var = {"free_ptr":0, "from_end":1024*1024*1024}
         self.mem = {}
         self.blk = {}
         self.cmp = []
@@ -487,7 +490,7 @@ class XProgram:
         self.globals = _globals
 
     def emit(self):
-        return ".global main\n" +"".join([".global "+ d.emit()+ "\n" for d in self.globals]) + "".join(["\n"+x.emit() + ":" + "\n" + y.emit() for x, y in self.p.items()])
+        return ".global main\n" + "".join([".global " + d.emit() + "\n" for d in self.globals]) + "".join(["\n"+x.emit() + ":" + "\n" + y.emit() for x, y in self.p.items()])
 
     def interp(self):
         env = XEnv()
@@ -499,9 +502,9 @@ class XProgram:
         else:
             env.curlab = next(iter(env.blk))
             env.blk[next(iter(env.blk))].interp(env)
-        # print(env.reg)
-        # print(env.var)
-        # print(env.mem)
+        print(env.reg)
+        print(env.var)
+        print(env.mem)
         # print(env.blk)
         # print(env.cntr)
         return env.reg["rax"]
@@ -517,7 +520,10 @@ class XBlock:
 
     def interp(self, env):
         for a in self.blk:
-            a.interp(env)
+            if(isinstance(a, XIRet)):
+                break
+            else:
+                a.interp(env)
         return env
 
 
@@ -555,7 +561,7 @@ class XVar:
 class XRegister:
     def __init__(self, _register):
         ######## Register must be strictly these ########
-        if(_register.lower() in ["rsp", "rbp", "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"]):
+        if(_register.lower() in ["rsp", "rbp", "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "rip"]):
             self.register = _register
         else:
             print(_register.lower())
@@ -590,10 +596,11 @@ callerSavedRegs = [XRegister("rax"), XRegister("rcx"), XRegister("rdx"), XRegist
 argumentRegs = [XRegister("rdi"), XRegister("rsi"), XRegister(
     "rdx"), XRegister("rcx"), XRegister("r8"), XRegister("r9")]
 usableRegs = [XRegister("rbx"), XRegister("rcx"), XRegister("rdx"), XRegister("rsi"),
-              XRegister("rdi"), XRegister("r8"), XRegister("r9"), XRegister(
-                  "r10"), XRegister("r11"), XRegister("r12"), XRegister("r13"),
+               XRegister("r8"), XRegister("r9"), XRegister("r13"),
               XRegister("r14"), XRegister("r15")]
-tempReg = XRegister("rax")
+tempReg = XRegister("r10")
+tempReg2 = XRegister("r11")
+root_stack_reg = XRegister("r12")
 
 
 class XCon:
@@ -606,6 +613,24 @@ class XCon:
     def interp(self, env):
         return self.value
 
+class XGlobal:
+    def __init__(self, _var):
+        self.var = _var
+
+    def set(self, env, val):
+        env.var[self.var] = val
+
+    def emit(self):
+        return self.var
+
+    def interp(self, env: XEnv):
+        if(isinstance(env.var[self.var], int)):
+            return env.var[self.var]
+        else:
+            return env.var[self.var].interp(env)
+
+    def getName(self):
+        return self.name
 
 class XMem:
     def __init__(self, _reg, _num):
@@ -620,10 +645,10 @@ class XMem:
     def interp(self, env):
         if(isinstance(self.num, XGlobal)):
             if(self.reg.interp(env) + self.num.interp(env) in env.mem.keys()):
-                return env.mem[self.reg.interp(env) + self.num.interp(env) ]
+                return env.mem[self.reg.interp(env) + self.num.interp(env)]
             else:
                 env.mem[self.reg.interp(env) + self.num.interp(env)] = 0
-                return env.mem[self.reg.interp(env) + self.num.interp(env) ]
+                return env.mem[self.reg.interp(env) + self.num.interp(env)]
         else:
             if(self.reg.interp(env) + self.num in env.mem.keys()):
                 return env.mem[self.reg.interp(env) + self.num]
@@ -740,6 +765,8 @@ class XICall:
         if(temp == "read_int"):
             env.cntr = 1
             XIMov(XCon(env.cntr), XRegister("rax")).interp(env)
+        elif(temp == "collect"):
+            XIMov(XCon(0), XRegister("rax")).interp(env)
         elif(temp == "print_int"):
             pass
         elif(temp == "print_bool"):
@@ -775,9 +802,9 @@ class XIPush:
         return "pushq" + " " + self.src.emit()
 
     def interp(self, env):
-        XISub(XCon(8), XRegister("RSP")).interp(env)
-        XIMov(self.src, XMem(XRegister("RSP"), 0)).interp(env)
-        return
+        XISub(XCon(8), XRegister("rsp")).interp(env)
+        XIMov(self.src, XMem(XRegister("rsp"), 0)).interp(env)
+        return env
 
 
 class XIPop:
@@ -788,11 +815,12 @@ class XIPop:
         return "popq" + " " + self.src.emit()
 
     def interp(self, env):
-        XIMov(XMem(XRegister("RSP"), 0), self.src).interp(env)
-        XIAdd(XCon(8), XRegister("RSP")).interp(env)
-        return
+        XIMov(XMem(XRegister("rsp"), 0), self.src).interp(env)
+        XIAdd(XCon(8), XRegister("rsp")).interp(env)
+        return env
 
 ###### X1 Program Data Types ########
+
 
 
 class XByteRegister:
@@ -954,40 +982,38 @@ def getTrueCmp(cc, l, r):
 
 
 ########### X2 Datatypes ###########
-class XGlobal:
-    def __init__(self, _var):
-        self.var = _var
-
-    def set(self, env, val):
-        env.var[self.var] = val
-    
-    def emit(self):
-        return self.var
-    
-    def interp(self, env:XEnv):
-        if(isinstance(env.var[self.var], int)):
-            return env.var[self.var]
-        else:
-            return env.var[self.var].interp(env)
-
-    def getName(self):
-        return self.name
-
 class XILeaq:
     def __init__(self, _src, _dst):
         self.src = _src
         self.dst = _dst
         self.has_type = "NUM"
-    
+
     def emit(self):
-        return "leaq" + self.src.emit() + " " + self.dst.emit()
+        return "leaq " + self.src.emit() + " " + self.dst.emit()
+
+    def interp(self, env):
+        env = self.dst.set(env, self.src.interp(env))
+        return env
+
+
+class XType:
+    def __init__(self, _t):
+        self.t = _t
+
+    def emit(self):
+        return self.t
+    
+    def interp(self, env):
+        #if(self.t == "VECTOR"):
+        return 3
+        #return self
 
 ###### C0 Program Data Types ########
 
 
 class CEnv:
     def __init__(self):
-        self.var = {}
+        self.var = {"free_ptr":0, "from_end":1024*1024*1024}
         self.blk = {}
         self.type = {}
         self.cntr = 0
@@ -1062,8 +1088,8 @@ class CNum:
 
     def pp(self):
         return str(self.n)
-    
-    def typec(self, env = None):
+
+    def typec(self, env=None):
         return self.has_type
 
     def interp(self, env):
@@ -1076,10 +1102,10 @@ class CVar:
 
     def pp(self):
         return self.var
-    
-    def typec(self, env = None):
+
+    def typec(self, env=None):
         if(self.var in env.type):
-            return env.type[self.var] 
+            return env.type[self.var]
         return "ERROR"
 
     def interp(self, env):
@@ -1093,8 +1119,8 @@ class CRead:
 
     def pp(self):
         return "Read"
-    
-    def typec(self, env = None):
+
+    def typec(self, env=None):
         return self.has_type
 
     def interp(self, env):
@@ -1110,8 +1136,8 @@ class CNeg:
 
     def pp(self):
         return "-("+self.n.pp() + ")"
-    
-    def typec(self, env = None):
+
+    def typec(self, env=None):
         temp = self.n.typec(env)
         if(temp != "NUM"):
             self.has_type = "ERROR"
@@ -1131,8 +1157,8 @@ class CAdd:
 
     def pp(self):
         return "(+ " + self.l.pp() + " " + self.r.pp() + ")"
-    
-    def typec(self, env = None):
+
+    def typec(self, env=None):
         tempL = self.l.typec(env)
         tempR = self.r.typec(env)
         if(tempL != "NUM" or tempR != "NUM"):
@@ -1153,7 +1179,7 @@ class CSet:
     def pp(self):
         return "(set! " + self.var.pp() + " " + self.exp.pp() + ")"
 
-    def typec(self, env = None):
+    def typec(self, env=None):
         tempE = self.exp.typec(env)
         env.type[self.var.pp()] = tempE
         return tempE
@@ -1173,9 +1199,9 @@ class CBool:
 
     def pp(self):
         return str(self.b)
-    
-    def typec(self, env = None):
-        return self.has_type 
+
+    def typec(self, env=None):
+        return self.has_type
 
     def interp(self, env):
         return self.b
@@ -1190,10 +1216,10 @@ class CCmp:
 
     def pp(self):
         return "(" + self.op + " " + self.l.pp() + " " + self.r.pp() + ")"
-    
-    def typec(self, env = None):
+
+    def typec(self, env=None):
         return self.has_type
-    
+
     def interp(self, env=None):
         if(self.op == "=="):
             return self.l.interp(env) == self.r.interp(env)
@@ -1233,8 +1259,8 @@ class CNot:
 
     def pp(self):
         return "not(" + self.e.pp() + ")"
-    
-    def typec(self, env = None):
+
+    def typec(self, env=None):
         temp = self.e.typec(env)
         if(temp != "BOOL"):
             self.has_type = "ERROR"
@@ -1266,7 +1292,6 @@ class CIf:
 
     def pp(self):
         return "goto-if(" + self.cmp.pp() + " " + self.l.pp() + " " + self.r.pp() + ")"
-        
 
     def interp(self, env):
         rtn = "ERROR"
@@ -1276,18 +1301,21 @@ class CIf:
             return env.blk[self.r.interp()].interp(env)
 
 #################    C2 Language  #####################
+
+
 class CUnit:
     def tp(self):
         return "CUnit()"
-    
-    def typec(self, env = None):
+
+    def typec(self, env=None):
         return "UNIT"
-    
+
     def pp(self):
         return "Unit()"
-    
+
     def interp(self, env):
         return self
+
 
 class CAllocate:
     def __init__(self, _num, _typ):
@@ -1296,57 +1324,63 @@ class CAllocate:
         self.args = []
         for i in range(0, _num.interp(None)):
             self.args.append(0)
-    
+
     def pp(self):
         return "Allocate(" + self.num.pp() + " " + self.has_type + ")"
-    
-    def typec(self, env = None):
-        return self.has_type
 
-    def interp(self, env = None):
+    def typec(self, env=None):
+        temp = {}
+        return temp
+
+    def interp(self, env=None):
         return self
+
 
 class CVectorSet:
     def __init__(self, _var, _ref, _exp):
         self.var = _var
         self.ref = _ref
         self.exp = _exp
-    
-    def pp(self):
-        return "(VectorSet! " + self.var.pp() + " " + self.ref.pp() +" "+ self.exp.pp() + ")"
 
-    def typec(self, env = None):
+    def pp(self):
+        return "(VectorSet! " + self.var.pp() + " " + self.ref.pp() + " " + self.exp.pp() + ")"
+
+    def typec(self, env=None):
         if(isinstance(self.exp, CVar)):
+            env.type[self.var.pp()].update({self.ref.n: self.exp.typec(env)})
             t = env.type[self.exp.pp()]
             return t
         return self.exp.has_type
 
-    def interp(self, env = None):
+    def interp(self, env=None):
         vec = self.var.interp(env)
         if(isinstance(vec, CAllocate)):
             self.var.interp(env)
             vec.args[self.ref.interp(env)] = self.exp
         return self
 
+
 class CVectorRef:
     def __init__(self, _var, _ref):
         self.var = _var
         self.ref = _ref
-    
+
     def pp(self):
-        return "(VectorSet! " + self.var.pp() + " " + self.ref.pp() + ")"
-    
-    def typec(self, env = None):
+        return "(VectorRef! " + self.var.pp() + " " + self.ref.pp() + ")"
+
+    def typec(self, env=None):
         if(isinstance(self.var, CVar)):
             t = env.type[self.var.pp()]
+            t = t[self.ref.n]
             return t
         return self.var.has_type
 
-    def interp(self, env = None):
+    def interp(self, env=None):
         vec = self.var.interp(env)
         if(isinstance(vec, CAllocate)):
             return vec.args[self.ref.interp(env)].interp(env)
         return self
+
 
 class CCollect():
     def __init__(self, _num):
@@ -1358,11 +1392,11 @@ class CCollect():
 
     def tp(self):
         return "CCollect(" + self.num.tp() + ")"
-    
-    def typec(self, env = None):
-        return self.has_type 
-    
-    def interp(self, env= None):
+
+    def typec(self, env=None):
+        return self.has_type
+
+    def interp(self, env=None):
         return self.num.interp(env)
 
 
@@ -1372,15 +1406,14 @@ class CGlobal:
 
     def pp(self):
         return self.var
-    
-    def typec(self, env = None):
+
+    def typec(self, env=None):
         if(self.var in env.type):
-            return env.type[self.var] 
+            return env.type[self.var]
         return "ERROR"
 
     def interp(self, env):
         return env.var[self.var]
-
 
 
 ###################### Functions ######################
@@ -1412,7 +1445,10 @@ def randomR2(n):
 
 
 def ranNeg(t, n, env): return RNegate(_randomR2(t, n-1, env))
-def ranAdd(t, n, env): return RAdd(_randomR2(t, n-1, env), _randomR2(t, n-1, env))
+def ranAdd(t, n, env): return RAdd(
+    _randomR2(t, n-1, env), _randomR2(t, n-1, env))
+
+
 def ranNot(t, n, env): return RNot(_randomR2(t, n-1, env))
 
 
@@ -1477,7 +1513,7 @@ def _randomR2(typ, n, env: RNGEnv):
 
 def ranLet(t, n, env: RNGEnv):
     name = "V" + str(env.varCntr)
-    env.varCntr+=1
+    env.varCntr += 1
     newVar = RVar(name)
     if(t == "BOOL"):
         l = _randomR2(t, n-1, env)
@@ -1505,7 +1541,8 @@ def ranIf(t, n, env: RNGEnv):
 def ranVec(t, n, env: RNGEnv):
     name = "VE" + str(len(env.getVecList().keys()))
     newVar = RVar(name)
-    newVec = RVector([RNum(random.randint(0, 16)), RBool(random.choice([True, False]))])
+    newVec = RVector([RNum(random.randint(0, 16)),
+                      RBool(random.choice([True, False]))])
     env.setVecList(name, newVec)
     return RLet(newVar, newVec, _randomR2(t, n-1, env))
 
@@ -1565,13 +1602,13 @@ def simple(n):
 class OptEnv:
     def __init__(self):
         self.env = {}
-        self.renv =REnv()
+        self.renv = REnv()
 
     def getEnv(self):
         return self.env
 
     def setEnv(self, name, add):
-        self.env.update({name:add})
+        self.env.update({name: add})
 
 
 def optimizer(n):
@@ -1579,7 +1616,7 @@ def optimizer(n):
     return _optimizer(n, env)
 
 
-def _optimizer(n, env:OptEnv):
+def _optimizer(n, env: OptEnv):
     if isinstance(n, RNum):
         return n
     elif isinstance(n, RBool):
@@ -1640,7 +1677,7 @@ def _optimizer(n, env:OptEnv):
         l = n.l
         r = n.r
         if(isinstance(var, RIf) and isinstance(l, RBool) and isinstance(r, RBool) and
-             var.l.interp() == False and var.r.interp() == True):
+           var.l.interp() == False and var.r.interp() == True):
             if(l.interp() == False and r.interp() == True):
                 return _optimizer(var.var, env)
         return RIf(_optimizer(var, env), _optimizer(l, env), _optimizer(r, env))
@@ -1739,19 +1776,16 @@ def uni(e, uenv):
     elif(isinstance(e, RLet)):
         uenv.varCntr += 1
         x = RVar("U"+str(uenv.varCntr))
-        # if(e.var.pp() == "_"):
-        #     x = "_"
-        # x = RVar("U"+str(uenv.varCntr))
         l = uni(e.l, uenv)
         uenv.setEnv({e.var.pp(): x.pp()})
         r = uni(e.r, uenv)
         return RLet(x, l, r)
     elif(isinstance(e, RVector)):
-        vecArray = e.args
-        newVecArray = []
-        for i in vecArray:
-            newVecArray.append(uni(i, uenv))
-        return RVector(newVecArray)
+        # vecArray = e.args
+        # newVecArray = []
+        # for i in vecArray:
+        #     newVecArray.append(uni(i, uenv))
+        return e
     elif(isinstance(e, RVectorRef)):
         return RVectorRef(uni(e.exp, uenv), e.ref)
     elif(isinstance(e, RVectorSet)):
@@ -1760,18 +1794,21 @@ def uni(e, uenv):
     return e
 
 ########### Expose Allocation ###########
+
+
 class ExpEnv():
     def __init__(self):
         self.cntr = 0
         self.letBefore = None
-        self.underScoreCntr =0
+        self.underScoreCntr = 0
         self.varBefore = None
+
 
 def exposeAllocation(r):
     env = ExpEnv()
     e = exposeAlloc(r, env)
-    finish = RLet(RGlobal("free_ptr"), RNum(0), RLet(RGlobal("from_end"), RNum(9999), e))
-    return finish
+    return e
+
 
 def exposeAlloc(r, env: ExpEnv):
     if(isinstance(r, RNum)):
@@ -1794,7 +1831,7 @@ def exposeAlloc(r, env: ExpEnv):
             env.varBefore = r.var
             newLet = exposeAlloc(r.l, env)
             return newLet
-        else: 
+        else:
             return RLet(exposeAlloc(r.var, env), exposeAlloc(r.l, env), exposeAlloc(r.r, env))
     elif(isinstance(r, RIf)):
         return RIf(exposeAlloc(r.var, env), exposeAlloc(r.l, env), exposeAlloc(r.r, env))
@@ -1806,30 +1843,30 @@ def exposeAlloc(r, env: ExpEnv):
         return RVectorSet(exposeAlloc(r.exp, env), r.ref, exposeAlloc(r.var, env))
     elif(isinstance(r, RVector)):
         newVecArray = []
-        oldVecArray =r.args
-        cntr =0
+        oldVecArray = r.args
+        cntr = 0
         name = RVar("alloc" + str(env.cntr))
-        before =  RVar("alloc" + str(env.cntr))
+        before = RVar("alloc" + str(env.cntr))
         for e in oldVecArray:
             newVecArray.append(exposeAlloc(e, ExpEnv()))
-        
+
         if(env.varBefore):
             name = env.varBefore
         if(env.letBefore):
             before = env.letBefore
         for e in newVecArray:
             before = RLet(RVar("_"), RVectorSet(name, RNum(cntr), e), before)
-            cntr+=1
-            env.underScoreCntr +=1
-        
+            cntr += 1
+            env.underScoreCntr += 1
+
         assignVec = RLet(name, RAllocate(RNum(len(r.args)), r.typec()), before)
-        env.underScoreCntr +=1
-        checkLet = RLet(RVar("_"), RIf(RCmp(">", RAdd(RGlobal("free_ptr"), RNum(8*len(r.args))), RGlobal("from_end")), RCollect(RNum(8*len(r.args))), RUnit()), assignVec)
-        env.cntr+=1
+        env.underScoreCntr += 1
+        checkLet = RLet(RVar("_"), RIf(RCmp(">", RAdd(RGlobal("free_ptr"), RNum(8*(len(r.args)+1))), RGlobal("from_end")), RCollect(RNum(len(r.args))), RUnit()), assignVec)
+        env.cntr += 1
         env.varBefore = None
         env.letBefore = None
         return checkLet
-    
+
 ########### Resolve Complex ###########
 
 
@@ -1915,23 +1952,23 @@ def _rco(isTail, env: RCOEnv, e):
         lp = _rco(False, env, e.l)
         env.setEnv(e.var.name, lp)
         return _rco(isTail, env, e.r)
-    
+
     elif(isinstance(e, RVector)):
         print("RCO UNBOUND Shouldn't see Vectors")
         return "ERROR"
     elif(isinstance(e, RVectorSet)):
-        exp =_rco(False, env, e.exp)
-        # ref = _rco(False, env, e.ref) 
+        exp = _rco(False, env, e.exp)
+        # ref = _rco(False, env, e.ref)
         var = _rco(False, env, e.var)
         return _rcoLift(env, RVectorSet(exp, e.ref, var))
     elif(isinstance(e, RVectorRef)):
-        exp =_rco(False, env, e.exp)
-        # ref = _rco(False, env, e.ref) 
+        exp = _rco(False, env, e.exp)
+        # ref = _rco(False, env, e.ref)
         return _rcoLift(env, RVectorRef(exp, e.ref))
     elif(isinstance(e, RAllocate)):
         return _rcoLift(env, e)
-    elif(isinstance(e, RCollect)):
-        return _rcoLift(env, e)
+    # elif(isinstance(e, RCollect)):
+    #     return _rcoLift(env, e)
     else:
         return e
 
@@ -1995,6 +2032,8 @@ def econArgs(r):
         return CBool(r.b)
     elif(isinstance(r, RUnit)):
         return CUnit()
+    elif(isinstance(r, RCollect)):
+        return CCollect(econArgs(r.num))
     elif(isinstance(r, RGlobal)):
         return CGlobal(r.name)
     else:
@@ -2012,8 +2051,6 @@ def econExp(r):
         return CAdd(econArgs(r.left), econArgs(r.right))
     elif(isinstance(r, RCmp)):
         return getOp(r)
-    elif(isinstance(r, RCollect)):
-        return CCollect(econArgs(r.num))
     elif(isinstance(r, RVectorRef)):
         return CVectorRef(econArgs(r.exp), econArgs(r.ref))
     elif(isinstance(r, RVectorSet)):
@@ -2114,12 +2151,17 @@ def uncoverLocal(e: CProgram):
         for s in b.p:
             if(isinstance(s, CSet)):
                 a = s.typec(uncEnv)
-                if(not s.var in varList):
-                    if(isinstance(s.var, CVar)):
-                        varList.update({s.var.pp():a})
+                if(isinstance(a,dict)):
+                    if(not s.var in varList):
+                        if(isinstance(s.var, CVar)):
+                            varList.update({s.var.pp(): {"VECTOR":a}})
+                else:
+                    if(not s.var in varList):
+                        if(isinstance(s.var, CVar)):
+                            varList.update({s.var.pp(): a})
 
     e.info = varList
-    return varList
+    return e
 
 
 ######## Select Instr Pass ########
@@ -2128,6 +2170,7 @@ class SelEnv:
     def __init__(self):
         self.vars = []
         self.globals = []
+        self.typecntr =0
 
     def setEnv(self, add):
         self.vars(add)
@@ -2139,6 +2182,8 @@ class SelEnv:
         return self.vars
 
 
+
+
 def select(cp: CProgram):
     env = SelEnv()
     blk = {}
@@ -2147,19 +2192,30 @@ def select(cp: CProgram):
         tempLabel = XLabel(lab.interp())
         if(isinstance(lin, CBlock)):
             for l in lin.p:
-                rtn = _selectT(l, env)
+                rtn = _selectT(l, tempBlk, env, cp.info)
                 if(isinstance(rtn, list)):
                     tempBlk = tempBlk + rtn
                 else:
                     tempBlk.append(rtn)
-        # if(lab.interp() == "main"):
-        #     tempBlk.append(XIJmp(XLabel("end")))
         blk.update({tempLabel: XBlock([], tempBlk)})
     blk.update({XLabel("end"): XBlock([], [XIRet()])})
     return XProgram(env.globals, cp.info, blk)
 
+def selectGetType(var: XVar, info, env: SelEnv):
+    tempType = "type" + str(env.typecntr)
+    tempTypeArr = info[var.name]["VECTOR"]
+    tempTypeStr =tempType + ":\n.quad 3\n.quad " + str(len(tempTypeArr.values())) + "\n"
+    for i,t in tempTypeArr.items():
+        if(t == "NUM"):
+            tempTypeStr += ".quad 1\n"
+        elif(t == "BOOL"):
+            tempTypeStr += ".quad 2\n"
+    env.globals.append(tempTypeStr)
+    env.typecntr+=1
+    return XType(tempType)
 
-def _selectT(cp, env):
+def _selectT(cp, arr, env, info):
+   
     if isinstance(cp, CRet):
         return [XIMov(_selectA(cp.var, env), XRegister("rax")), XIJmp(XLabel("end"))]
     elif(isinstance(cp, CSet)):
@@ -2167,26 +2223,34 @@ def _selectT(cp, env):
         dst = cp.var
         if(isinstance(src, CAllocate)):
             vecDst = _selectA(dst, env)
-            firstMov = XIMov(XMem(XRegister("rsp"), XGlobal("free_ptr")), XRegister("r11"))
-            firstAdd = XIAdd(XCon((1+src.num.n)*8), XMem(XRegister("rsp"), XGlobal("free_ptr")))
-            secondMov = XIMov(XRegister("r11"), vecDst)
-            return [firstMov, firstAdd, secondMov]
+            tempType = selectGetType(vecDst, info, env)
+            return [XIMov(XGlobal("free_ptr"), vecDst),
+                    XIAdd(XCon(wordsize*(1+src.num.n)), XGlobal("free_ptr")),
+                    XIMov(vecDst, tempReg),
+                    XILeaq(tempType, tempReg),
+                    XIMov(tempReg, tempReg2)
+            ]
         elif(isinstance(src, CVectorRef)):
             vecName = _selectA(src.var, env)
-            #vecNum = _selectA(src.ref, env)
+            print(vecName.emit())
             vecDst = _selectA(dst, env)
-            return [XIMov(vecName, XRegister("r11")), XIMov(XMem(XRegister("r11"), 8*(src.ref.n-1),), vecDst)]
+            return [XIMov(vecName, tempReg), 
+                    XIMov(XMem(XRegister("r11"), wordsize*(src.ref.n+1)), vecDst)
+                    ]
         elif(isinstance(src, CVectorSet)):
             vecName = _selectA(src.var, env)
-            #vecNum = _selectA(src.ref, env)
             vecArg = _selectA(src.exp, env)
             vecDst = _selectA(dst, env)
-            return [XIMov(vecName, XRegister("r11")), XIMov(vecArg, XMem(XRegister("r11"), 8*(src.ref.n-1))), XIMov(XCon(0), vecArg)]
+            return [XIMov(vecName, tempReg),
+                    XIMov(vecArg, tempReg),
+                    XIMov(tempReg, XMem(XRegister("r11"), 8*(src.ref.n+1))), 
+                ]
         elif(isinstance(src, CCollect)):
             vecDst = _selectA(dst, env)
-            return [XIMov(XCon(0), vecDst)]
-        elif(isinstance(src, CUnit)):
-            return _selectE(CNum(0), dst, env)
+            colNum = src.num.n*8
+            return [
+                XIMov(XCon(colNum), XRegister("rdi")), XICall(XLabel("collect")), XIMov(XCon(1), vecDst)
+            ]
         return _selectE(src, dst, env)
     elif(isinstance(cp, CSetCC)):
         cmp = cp.cmp
@@ -2225,6 +2289,7 @@ def _selectE(cp, dst, env):
     else:
         return XIMov(_selectA(cp, env), _selectA(dst, env))
 
+
 def addGlobal(g, env):
     inGlobal = False
     for i in env.globals:
@@ -2235,6 +2300,7 @@ def addGlobal(g, env):
         env.globals.append(g)
     return
 
+
 def _selectA(cp, env):
     if(isinstance(cp, CNum)):
         return XCon(cp.n)
@@ -2242,9 +2308,11 @@ def _selectA(cp, env):
         return XVar(cp.pp())
     elif(isinstance(cp, CBool)):
         return XCon(int(cp.b))
+    elif(isinstance(cp, CUnit)):
+        return XCon(1)
     elif(isinstance(cp, CGlobal)):
-        addGlobal(XGlobal(cp.pp()), env)
-        return XGlobal(cp.pp())
+        #addGlobal(XGlobal(cp.pp()), env)
+        return XGlobal(cp.var)
 
 
 def _selectC(cp: CCmp):
@@ -2260,189 +2328,226 @@ def _selectC(cp: CCmp):
         return XEq()
 
 
-
-
-
-
 ######## Uncover Live ########
+class UNCEnv:
+    def __init__(self):
+        self.live_sets = {}
+        self.current_set = set([])
+    def setEnv(self, inst, before):
+        self.live_sets.update({inst: before})
+
 def uncover_live(xp: XProgram):
     m = {}
+    l =UNCEnv()
+    labList =[]
     for lab, blk in xp.p.items():
-        m = live_e(blk, m, lab.emit())
-    return m
+        if(isinstance(lab,XLabel) and isinstance(blk, XBlock)):
+            m[lab.string] = []
+            labList.append(lab.string)
+            for i in reversed(blk.blk):
+                m[lab.string].append(i)
+
+    curLab = "main"           
+    blk =m[curLab]
+    live_e(blk, l, m, curLab)
+    print("LIVE" + str(l))
+    return l.live_sets
 
 
-def live_e(blk, m, lab):
-    if(isinstance(blk, XBlock)):
-        # if(lab != "end"):
-        before = set([])
-        for i in reversed(blk.blk):
-            if(lab in m):
-                before = live_i(before, i, m, lab)
-            else:
-                m[lab] = {}
-                before = live_i(before, i, m, lab)
-        # else:
-        #     m["end"] = {XIRet():set([XRegister("rax").emit()])}
-    return m
+def live_e(blk:list, live_sets:dict, m:dict, lab:str):
+    before = set([])
+    if(lab == "end"):
+        return set([])
+    for i in blk:
+        before = live_i(before, i, live_sets, m, lab)
+        print(before)
+    return before
 
 
-def live_i(before, i, m, lab):
+def live_i(before:set, i, live_sets:UNCEnv, m:dict, lab:str):
 
     if(isinstance(i, XIJmp)):
-        m[lab].update({i: before})
-        m[i.src.emit()] = m[lab]
+        #live_sets.update({i: before})
+        live_e(m[i.src.string], live_sets, m, i.src)
+        return live_sets.current_set
         # m[i.src.emit()].update({i.src.emit():before})
     elif(isinstance(i, XIJmpIf)):
-        m[lab].update({i: before})
-        m[i.label.emit()] = m[lab]
+        #live_sets.update({i: before})
+        live_e(m[i.label.string], live_sets, m, i.label)
+        return live_sets.current_set
+        # m[lab].update({i: before})
+        # m[i.label.string] = m[lab]
         # m[i.label.emit()].update({i.label.emit():before})
+    elif(isinstance(i, XIRet)):
+        return
     else:
-        m[lab].update({i: before})
+        live_sets.setEnv(i, before)
         #print("Live before: " + str(n) +" = " + str(before), end=' ')
         # print(w)
         # print(r)
-        before = before - _uncoverW(i)
-        before = before.union(_uncoverR(i))
-    return before
-    #print("Live after: " + str(before) )
+        live_sets.current_set = live_sets.current_set - _uncoverW(i)
+        live_sets.current_set = before.union(_uncoverR(i))
+        
+    return live_sets.current_set
 
 
 def _uncoverW(i):
     if(isinstance(i, XINeg)):
-        return _uncoverM(i.src)
+        return _uncoverM(i.src, True)
     elif(isinstance(i, XIAdd)):
-        return _uncoverM(i.dst)
+        return _uncoverM(i.dst, True)
     elif(isinstance(i, XISub)):
-        return _uncoverM(i.dst)
+        return _uncoverM(i.dst, True)
     elif(isinstance(i, XIMov)):
-        return _uncoverM(i.dst)
+        return _uncoverM(i.dst, True)
+    elif(isinstance(i, XILeaq)):
+        return _uncoverM(i.dst, True)
     elif(isinstance(i, XICMov)):
-        return _uncoverM(i.dst)
+        return _uncoverM(i.dst, True)
     elif(isinstance(i, XIPush)):
         return set([])
     elif(isinstance(i, XIPop)):
-        return _uncoverM(i.src)
+        return _uncoverM(i.src, True)
     elif(isinstance(i, XIMovzb)):
-        return _uncoverM(i.r)
+        return _uncoverM(i.r, True)
+    elif(isinstance(i, XILeaq)):
+        return _uncoverM(i.dst, True)
     elif(isinstance(i, XIXor)):
-        return _uncoverM(i.r)
+        return _uncoverM(i.r, True)
     elif(isinstance(i, XICmp)):
         return set([])
     elif(isinstance(i, XISet)):
-        return _uncoverM(i.arg)
+        return _uncoverM(i.arg, True)
     elif(isinstance(i, XIJmp)):
         return set([])
     elif(isinstance(i, XIJmpIf)):
         return set([])
+    elif(isinstance(i,XICall)):
+        return set([i.emit() for i in callerSavedRegs])
+    elif(isinstance(i,XICMov)):
+        return _uncoverM(i.dst, True)
     return set([])
 
 
 def _uncoverR(i):
     if(isinstance(i, XINeg)):
-        return _uncoverM(i.src)
+        return _uncoverM(i.src, False)
     elif(isinstance(i, XIAdd)):
-        return _uncoverM(i.dst).union(_uncoverM(i.src))
+        return _uncoverM(i.dst, False).union(_uncoverM(i.src, False))
     elif(isinstance(i, XISub)):
-        return _uncoverM(i.dst).union(_uncoverM(i.src))
+        return _uncoverM(i.dst, False).union(_uncoverM(i.src, False))
     elif(isinstance(i, XIMov)):
-        return _uncoverM(i.src)
+        return _uncoverM(i.src, False)
+    elif(isinstance(i, XILeaq)):
+        return _uncoverM(i.src, False)
     elif(isinstance(i, XICMov)):
-        return _uncoverM(i.src)
+        return _uncoverM(i.src, False)
     elif(isinstance(i, XIPush)):
-        return _uncoverM(i.src)
+        return _uncoverM(i.src, False)
     elif(isinstance(i, XIPop)):
         return set([])
     elif(isinstance(i, XIXor)):
-        return _uncoverM(i.r).union(_uncoverM(i.l))
+        return _uncoverM(i.r, False).union(_uncoverM(i.l, False))
     elif(isinstance(i, XIMovzb)):
-        return _uncoverM(i.l)
+        return _uncoverM(i.l, False)
+    elif(isinstance(i, XILeaq)):
+        return _uncoverM(i.dst, False)
     elif(isinstance(i, XICmp)):
-        return _uncoverM(i.r).union(_uncoverM(i.l))
+        return _uncoverM(i.r, False).union(_uncoverM(i.l, False))
     elif(isinstance(i, XISet)):
-        return _uncoverM(i.arg)
+        return _uncoverM(i.arg, False)
     elif(isinstance(i, XIJmp)):
         return set([])
     elif(isinstance(i, XIJmpIf)):
         return set([])
+    elif(isinstance(i,XICall)):
+        return set([i.emit() for i in calleeSavedRegs])
+    elif(isinstance(i,XICMov)):
+        return _uncoverM(i.src, True)
     return set([])
 
 
-def _uncoverM(a):
+def _uncoverM(a, isWrite) ->set:
     if(isinstance(a, XRegister)):
         return set([a.emit()])
     elif(isinstance(a, XVar)):
         return set([a.emit()])
     elif(isinstance(a, XByteRegister)):
         return set([a.emit()])
+    elif(isinstance(a, XMem)):
+        reg = a.reg
+        if(isWrite):
+            return set([])
+        return set([reg.emit()])
     else:
         return set([])
 
 
 def printUncover(liv: dict):
-    for lab, values in liv.items():
-        print(lab)
-        print(values)
+    for i, a in liv.items():
+        print(i.emit() + " " + str(a))
+        # for i, s in values.items():
+        #     print(i.emit() + " " + str(s))
 
 ######## Build Interferences ########
 
 
-def buildInt(xp: XProgram, live):
+def buildInt(xp: XProgram, live: dict):
     g = Graph()
     m = Graph()
-    for lab, blk in xp.p.items():
-        if(isinstance(blk, XBlock)):
-            for i, s in live[lab.emit()].items():
-                if(isinstance(i, XIMov)):
-                    if(s):
-                        movlike(s, i.dst, i.src, m, g)
+    for i, s in live.items():
+        if(isinstance(i, XIMov)):
+            if(s):
+                movlike(s, i.dst, i.src, m, g)
+        elif(isinstance(i, XILeaq)):
+            if(s):
+                movlike(s, i.dst, i.src, m, g)
+        elif(isinstance(i, XIAdd)):
+            if(s):
+                addlike(s, i.dst, g)
 
-                elif(isinstance(i, XIAdd)):
-                    if(s):
-                        addlike(s, i.dst, g)
+        elif(isinstance(i, XINeg)):
+            if(s):
+                addlike(s, i.src, g)
 
-                elif(isinstance(i, XINeg)):
-                    if(s):
-                        addlike(s, i.src, g)
+        elif(isinstance(i, XICall)):
+            pass
+            if(s):
+                for e in s:
+                    for u in callerSavedRegs:
+                        if(not u == e):
+                            g.add_edge(u.emit(), str(e))
+        elif(isinstance(i, XIPop)):
+            if(s):
+                addlike(s, i.src, g)
 
-                elif(isinstance(i, XICall)):
-                    if(s):
-                        for e in s:
-                            for u in callerSavedRegs:
-                                if(not u == e):
-                                    g.add_edge(u.emit(), str(e))
-                elif(isinstance(i, XIPop)):
-                    if(s):
-                        addlike(s, i.src, g)
+        elif(isinstance(i, XIRet)):
+            pass
 
-                elif(isinstance(i, XIRet)):
-                    pass
+        elif(isinstance(i, XIJmp)):
+            pass
 
-                elif(isinstance(i, XIJmp)):
-                    pass
+        elif(isinstance(i, XIXor)):
+            if(s):
+                addlike(s, i.r, g)
 
-                elif(isinstance(i, XIXor)):
-                    if(s):
-                        addlike(s, i.r, g)
+        elif(isinstance(i, XICmp)):
+            pass
+        elif(isinstance(i, XISet)):
+            if(s):
+                addlike(s, i.arg, g)
 
-                elif(isinstance(i, XICmp)):
-                    pass
-                elif(isinstance(i, XISet)):
-                    if(s):
-                        addlike(s, i.arg, g)
+        elif(isinstance(i, XICMov)):
+            if(s):
+                movlike(s, i.dst, i.src, m, g)
 
-                elif(isinstance(i, XICMov)):
-                    if(s):
-                        movlike(s, i.dst, i.src, m, g)
+        elif(isinstance(i, XIMovzb)):
+            if(s):
+                movlike(s, i.r, i.l, m, g)
 
-                elif(isinstance(i, XIMovzb)):
-                    if(s):
-                        movlike(s, i.r, i.l, m, g)
-
-                elif(isinstance(i, XIJmpIf)):
-                    pass
-            blk.aux = (g, m)
-    return xp
+        elif(isinstance(i, XIJmpIf)):
+            pass
+    return (g,m)
 
 
 def movlike(s, d, sr, m: Graph, g: Graph):
@@ -2476,109 +2581,95 @@ def saturation(v: Vertex):
     return satSet
 
 
-def color(xp: XProgram) -> XProgram:
-    for blk in xp.p.values():
-        g = blk.aux[0]
-        m = blk.aux[1]
-        if(g.vert_dict):
-            w = list(g.vert_dict.copy())
-            colorList = dict()
-            available = dict()
-            cntr = 0
-
-            for x in g.vert_dict:
+def color(xp: XProgram, bldG: Graph, bldM:Graph, mov) -> XProgram:
+    g = bldG
+    m =[]
+    if(mov):
+        m = bldM
+    if(g.vert_dict):
+        w = list(g.vert_dict.copy())
+        colorList = dict()
+        available = dict()
+        cntr =0
+        regCntr = -2
+        for x in g.vert_dict:
+            if(x[0] == '%'):
+                colorList.update({x: regCntr})
+                available.update({cntr: True})
+                regCntr-=1
+            else:
                 colorList.update({x: -1})
                 available.update({cntr: False})
-                cntr += 1
-            colorList[w[0]] = 0
-
-            while w:
-                u = w[0]
-                color = 0
-                mvadj = None
-                adj = saturation(g.vert_dict[u])
-                if(u in m.vert_dict):
-                    mvadj = saturation(m.vert_dict[u])
-                for e in adj:
+            cntr+=1
+        
+        colorList[w[0]] = 0
+        
+        while w:
+            u = w[0]
+            color = 0
+            mvadj = None
+            adj = saturation(g.vert_dict[u])
+            if(m and u in m.vert_dict):
+                mvadj = saturation(m.vert_dict[u])
+            for e in adj:
+                if(e in colorList and colorList[e] != -1):
+                    available[colorList[e]] = True
+            
+            if(mvadj):
+                for e in mvadj:
                     if(e in colorList and colorList[e] != -1):
                         available[colorList[e]] = True
 
-                if(mvadj):
-                    for e in mvadj:
-                        if(e in colorList and colorList[e] != -1):
-                            available[colorList[e]] = True
+            for e in available:
+                if(available[e] == False):
+                    color =e
+                    break
+            
+            colorList[u] = color
 
-                for e in available:
-                    if(available[e] == False):
-                        color = e
-                        break
-
-                colorList[u] = color
-
-                for e in adj:
-                    if(e in colorList and colorList[e] != -1):
-                        available[colorList[e]] = False
-
-                w.remove(u)
-
-            regColorList = dict(enumerate(usableRegs))
-            # print(colorList)
-            # print(regColorList)
-            maxKey = max([int(s) for s in colorList.values()])
+            for e in adj:
+                if(e in colorList and colorList[e] != -1):
+                    available[colorList[e]] = False
+            
+            w.remove(u)
+        if(colorList):
             ss = 0
-            print(maxKey)
-            if(maxKey >= len(regColorList)):
-                stackSize = maxKey
-                i = len(regColorList)
-
-                while(i <= stackSize):
-                    regColorList.update({i: XMem(XRegister("rbp"), cntr)})
-                    ss += 8
-                    i += 1
-                ss = cntr + 8
-                if(not ss % 2 == 0):
-                    ss += 1
-            print("REGCOLORLIST: " + str(regColorList))
-            for v, c in colorList.items():
-                if c in regColorList:
-                    colorList.update({v: regColorList[c]})
-            blk.aux = colorList, ss
+            actualRegsList ={}
+            leftover =[]
             print(colorList)
-        else:
-            blk.aux = ({}, 0)
-    mStackAllocSize = 0
-    for blk in xp.p.values():
-        temp = blk.aux[1]
-        if(mStackAllocSize <= temp):
-            mStackAllocSize = temp
-        blk.aux = blk.aux[0]
+            regsWithColor = dict(enumerate(usableRegs))
+            print(regsWithColor)
+            for name, i in colorList.items():
+                if(name[0] == "!" and i in regsWithColor):
+                    temp = regsWithColor[i]
+                    actualRegsList.update({name:temp})
+            for var, t in xp.info.items():
+                leftover.append("!" + var)
 
-    return (xp, mStackAllocSize)
-
+            for v in leftover:
+                if(not v in actualRegsList.keys()):
+                    actualRegsList.update({v:XMem(XRegister("rsp"), ss)})
+                    ss+=8
+            print("REGS with COLOR: " )
+            for a, b  in actualRegsList.items():
+                print(a +" "+ b.emit())
+            return (actualRegsList, ss)
+    return ({}, 0)
 
 ################ Allocate Registers ################
 
 def allocate_registers(xp: XProgram, type: str) -> XProgram:
     mStackAllocSize = 0
     live = uncover_live(xp)
-    # printUncover(live)
-    bld = buildInt(xp, live)
-    # for lab, blk in xp.p.items():
-    #     printGrph(blk.aux[0])
-    #     printGrph(blk.aux[1])
-    newXp, mStackAllocSize = color(bld)
-    # for lab, blk in newXp.p.items():
-    #     print(lab.emit())
-    #     for key, value in blk.aux.items():
-    #         print(key +":" + value.emit())
+    printUncover(live)
+    bldG, bldM = buildInt(xp, live)
+    # printGrph(bldG)
+    # printGrph(bldM)
+    colorList, mStackAllocSize = color(xp, bldG, bldM, 0)
+    print(colorList)
     print(mStackAllocSize)
-    # Gets whatever is the first block in program assumes it is main
-    # Because Xprogram should only have one block to start
-    # firstBlock: XBlock = list(newXp.p.values())[0]
-    # colorList, stackSize = firstBlock.aux
-    # print(newXp.emit())
 
-    newXp = assign_register(newXp)
+    newXp = assign_register(xp, colorList, mStackAllocSize)
     newXp = mainpass(newXp, mStackAllocSize, type)
     newXp = patch(newXp)
     return newXp
@@ -2586,23 +2677,19 @@ def allocate_registers(xp: XProgram, type: str) -> XProgram:
 ################ Assign Registers ################
 
 
-def assign_register(xp: XProgram) -> XProgram:
+def assign_register(xp: XProgram, regsList, stackSize) -> XProgram:
     originalMain = []
     body = []
     progm = {}
     for lab, blk in xp.p.items():
         body = []
-        if(isinstance(blk.aux, dict)):
-            regs = blk.aux
-        else:
-            regs, stackSize = blk.aux
-        print(regs)
+        regs = regsList
         if(lab.emit() == "main"):
             originalMain = blk.blk
             for instr in originalMain:
                 body.append(_assign(instr, regs))
-            body = body[:-1]
-            body.append(XIJmp(XLabel("end")))
+            # body = body[:-1]
+            # body.append(XIJmp(XLabel("end")))
             progm.update({XLabel("body"): XBlock([], body)})
         else:
             temp = blk.blk
@@ -2620,6 +2707,8 @@ def _assign(xp, regs):
         return XISub(_assignA(xp.src, regs), _assignA(xp.dst,  regs))
     elif(isinstance(xp, XIMov)):
         return XIMov(_assignA(xp.src,  regs), _assignA(xp.dst, regs))
+    elif(isinstance(xp, XILeaq)):
+        return XILeaq(_assignA(xp.src,  regs), _assignA(xp.dst, regs))
     elif(isinstance(xp, XINeg)):
         return XINeg(_assignA(xp.src,  regs))
     elif(isinstance(xp, XIPush)):
@@ -2691,6 +2780,7 @@ def mainpass(xp: XProgram, alloc: int, type: str):
 
 ######## Patch Instr ########
 
+###Add function to check for Mem Ref
 
 def patch(xp):
     if(isinstance(xp, XProgram)):
@@ -2717,11 +2807,20 @@ def _patch(i):
             return []
         if(isinstance(i.src, XMem) and isinstance(i.dst, XMem)):
             return [XIMov(i.src, XRegister("rax")), XIMov(XRegister("rax"), i.dst)]
+        elif(isinstance(i.src, XMem) and isinstance(i.dst, XGlobal)):
+            return [XIMov(i.src, XRegister("rax")), XIMov(XRegister("rax"), i.dst)]
+        elif(isinstance(i.src, XGlobal) and isinstance(i.dst, XMem)):
+            return [XIMov(i.src, XRegister("rax")), XIMov(XRegister("rax"), i.dst)]
+    elif(isinstance(i, XILeaq)):
+        if(i.dst.emit() == i.src.emit()):
+            return []
+        if(isinstance(i.src, XMem) and isinstance(i.dst, XMem)):
+            return [XILeaq(i.src, XRegister("rax")), XILeaq(XRegister("rax"), i.dst)]
     elif(isinstance(i, XIMovzb)):
         if(i.r.emit() == i.l.emit()):
             return []
-        if(isinstance(i.l, XMem) and isinstance(i.r, XMem)):
-            return [XIMovzb(i.l, XRegister("al")), XIMovzb(XRegister("al"), i.r)]
+        if(isinstance(i.r, XMem)):
+            return [XIMovzb(XByteRegister("al"),XRegister("rax")), XIMov(XRegister("rax"),i.r)]
         elif(isinstance(i.l, XCon)):
             return [XIMovzb(i.l, XRegister("al")), XIMovzb(XRegister("al"), i.r)]
         elif(isinstance(i.r, XCon)):
@@ -2729,8 +2828,112 @@ def _patch(i):
     elif(isinstance(i, XICmp)):
         if(isinstance(i.l, XMem) and isinstance(i.r, XMem)):
             return [XIMov(i.l, XRegister("rax")), XICmp(XRegister("rax"), i.r)]
+        elif(isinstance(i.l, XMem) and isinstance(i.r, XGlobal)):
+            return [XIMov(i.l, XRegister("rax")), XICmp(XRegister("rax"), i.r)]
+        elif(isinstance(i.l, XGlobal) and isinstance(i.r, XMem)):
+            return [XIMov(i.l, XRegister("rax")), XICmp(XRegister("rax"), i.r)]
         elif(isinstance(i.l, XCon)):
             return [XIMov(i.l, XRegister("rax")), XICmp(XRegister("rax"), i.r)]
         elif(isinstance(i.r, XCon)):
             return [XIMov(i.r, XRegister("rax")), XICmp(XRegister("rax"), i.l)]
     return [i]
+
+class EmitEnv():
+    def __init__(self):
+        self.types = []
+        self.globals = [XGlobal("free_ptr"), XGlobal("from_end"),XType("T_Unit"), XType("T_S64"), XType("T_Bool"), XType("T_Vector")]
+        self.typecntr = 0
+
+def emitXP(xp: XProgram):
+    finalP = ""
+    emitenv = EmitEnv()
+    sectionInfo = ".section\t.data\n" + emitG(xp, emitenv)
+    for t in xp.globals:
+        sectionInfo += t
+    sectionText = ".section\t.text\n.global main \n\n"
+    blkDict = xp.p
+    pStr = ""
+    for lab, blk in blkDict.items():
+        pStr += emitL(lab, emitenv) + "\n"
+        pStr += emitB(blk, emitenv)
+    print(xp.info)
+    finalP += sectionInfo + sectionText + pStr + "\n\n"
+    return finalP
+
+def emitG(xp: XProgram, emitenv: EmitEnv):
+    temp =""
+    for g in emitenv.globals:
+        if(isinstance(g, XGlobal) and g.var == "free_ptr"):
+            temp += g.var + ":\t.quad\t0\n"
+        elif(isinstance(g, XGlobal) and g.var == "from_end"):
+            temp += g.var + ":\t.quad\t"+ str(1024*1024*1024) +"\n"
+        elif(isinstance(g, XType) and g.t == "T_Unit"):
+            temp += g.t +":\t.quad\t" + str(0) +"\n"
+        elif(isinstance(g, XType) and g.t == "T_S64"):
+            temp += g.t +":\t.quad\t" + str(1) +"\n"
+        elif(isinstance(g, XType) and g.t == "T_Bool"):
+            temp += g.t +":\t.quad\t" + str(2) +"\n"
+        elif(isinstance(g, XType) and g.t == "T_Vector"):
+            temp += g.t +":\t.quad\t" + str(3) +"\n"
+    return temp
+
+def emitL(lab:XLabel, env:EmitEnv):
+    return lab.string + ":"
+
+def emitB(xb: XBlock, env:EmitEnv):
+    blkArray = xb.blk
+    blkStr = ""
+    for instr in blkArray:
+        blkStr+= emitInstr(instr, env) + "\n"
+    return blkStr
+
+def emitInstr(i, env:EmitEnv):
+    if(isinstance(i, XIAdd)):
+        return "addq" + " " + emitA(i.src, env) + ", " + emitA(i.dst, env)
+    elif(isinstance(i, XISub)):
+        return "subq" + " " + emitA(i.src, env)  + ", " + emitA(i.dst, env)
+    elif(isinstance(i, XIMov)):
+        return "movq" + " " + emitA(i.src, env) + ", " + emitA(i.dst, env)
+    elif(isinstance(i, XICMov)):
+        return "cmov" + i.cc.c+ " " + emitA(i.src, env)  + ", " + emitA(i.dst, env)
+    elif(isinstance(i, XINeg)):
+        return "negq" + " " + emitA(i.src, env) 
+    elif(isinstance(i, XICall)):
+        return "callq" + " " + i.src.string
+    elif(isinstance(i, XIJmp)):
+        return "jmp" + " " + i.src.string
+    elif(isinstance(i, XIPush)):
+        return "pushq" + " " + emitA(i.src, env) 
+    elif(isinstance(i, XIPop)):
+        return "popq" + " " + emitA(i.src, env) 
+    elif(isinstance(i, XIXor)):
+        return "xorq" + " " + emitA(i.l, env)  + ", " + emitA(i.r, env)
+    elif(isinstance(i, XICmp)):
+        return "cmpq" + " " + emitA(i.r, env)  + ", " + emitA(i.l, env)
+    elif(isinstance(i, XISet)):
+        return "set" + i.cc.c  + " " + emitA(i.arg, env)
+    elif(isinstance(i, XIMovzb)):
+        return "movzbq" + " " + emitA(i.l, env) + ", " + emitA(i.r, env)
+    elif(isinstance(i, XIJmpIf)):
+        return "j" + i.cc.c + " " + i.label.string
+    elif(isinstance(i, XILeaq)):
+        return "leaq " + emitA(i.src, env) + ", " + emitA(i.dst, env)
+    elif(isinstance(i, XIRet)):
+        return "retq"
+
+def emitA(arg, env:EmitEnv):
+    if(isinstance(arg, XCon)):
+        return "$" + str(arg.value)
+    elif(isinstance(arg, XRegister)):
+        return "%" + str(arg.register)
+    elif(isinstance(arg, XByteRegister)):
+        return "%" + str(arg.r)
+    elif(isinstance(arg, XMem)):
+        rp = emitA(arg.reg, env)
+        return str(arg.num) + "("+ rp + ")"
+    elif(isinstance(arg, XVar)):
+        return "!" + arg.name
+    elif(isinstance(arg, XGlobal)):
+        return arg.var + "(" + emitA(XRegister("rip"), env) + ")"
+    elif(isinstance(arg, XType)):
+        return arg.t + "(" + emitA(XRegister("rip"), env) + ")" 
