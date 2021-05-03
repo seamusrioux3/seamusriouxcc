@@ -267,6 +267,8 @@ class RIf:
         return l if v else r
 
     def typec(self, env=None):
+        if(not env):
+            env = REnv()
         v = self.var.typec(env)
         v = self.var.interp(env)
         lt = self.l.typec(env)
@@ -322,7 +324,7 @@ class RUnit:
     def tp(self):
         return "RUnit()"
 
-    def typec(self):
+    def typec(self, env = None):
         return "Unit"
 
     def interp(self, env=None):
@@ -353,13 +355,13 @@ class RVector:
 
     def typec(self, env=None):
         intp = "VECTOR"
-        for i in self.args:
-            temp = i.typec(env)
-            if(intp == "VECTOR"):
-                intp = temp
-            elif(not temp == intp):
-                return "VECTOR"
-        self.has_type = intp
+        # for i in self.args:
+        #     temp = i.typec(env)
+        #     if(intp == "VECTOR"):
+        #         intp = temp
+        #     elif(not temp == intp):
+        #         return "VECTOR"
+        # self.has_type = intp
         return intp
 
 
@@ -766,10 +768,10 @@ class XICall:
             env.cntr = 1
             XIMov(XCon(env.cntr), XRegister("rax")).interp(env)
         elif(temp == "collect"):
-            XIMov(XCon(0), XRegister("rax")).interp(env)
-        elif(temp == "print_int"):
             pass
-        elif(temp == "print_bool"):
+        elif(temp == "init_mem"):
+            pass
+        elif(temp == "print_value"):
             pass
         else:
             tem = env.curlab
@@ -1684,6 +1686,8 @@ def _optimizer(n, env: OptEnv):
 
     elif(isinstance(n, RVar)):
         if(n.name in env.getEnv()):
+            if(isinstance(env.getEnv()[n.name], RVector)):
+                return n
             return env.getEnv()[n.name]
         else:
             return n
@@ -1843,7 +1847,7 @@ def exposeAlloc(r, env: ExpEnv):
         return RVectorSet(exposeAlloc(r.exp, env), r.ref, exposeAlloc(r.var, env))
     elif(isinstance(r, RVector)):
         newVecArray = []
-        oldVecArray = r.args
+        oldVecArray = reversed(r.args)
         cntr = 0
         name = RVar("alloc" + str(env.cntr))
         before = RVar("alloc" + str(env.cntr))
@@ -1854,9 +1858,10 @@ def exposeAlloc(r, env: ExpEnv):
             name = env.varBefore
         if(env.letBefore):
             before = env.letBefore
+        cntr = len(newVecArray)-1
         for e in newVecArray:
             before = RLet(RVar("_"), RVectorSet(name, RNum(cntr), e), before)
-            cntr += 1
+            cntr -= 1
             env.underScoreCntr += 1
 
         assignVec = RLet(name, RAllocate(RNum(len(r.args)), r.typec()), before)
@@ -2226,9 +2231,9 @@ def _selectT(cp, arr, env, info):
             tempType = selectGetType(vecDst, info, env)
             return [XIMov(XGlobal("free_ptr"), vecDst),
                     XIAdd(XCon(wordsize*(1+src.num.n)), XGlobal("free_ptr")),
-                    XIMov(vecDst, tempReg),
+                    XIMov(vecDst, tempReg2),
                     XILeaq(tempType, tempReg),
-                    XIMov(tempReg, tempReg2)
+                    XIMov(tempReg, XMem(tempReg2,0))
             ]
         elif(isinstance(src, CVectorRef)):
             vecName = _selectA(src.var, env)
@@ -2747,36 +2752,44 @@ def mainpass(xp: XProgram, alloc: int, type: str):
         if(lab.emit() == "end"):
             xp.p.pop(lab)
             break
+    mainBdy = [XIPush(XRegister("rbx")), XIPush(XRegister("rbp")), XIMov(
+            XRegister("rsp"), XRegister("rbp"))]
+    endBlk =  [
+            XIMov(XType(type), XRegister("rdi")),
+            XIMov(XRegister("rax"), XRegister("rsi")),
+            XICall(XLabel("print_value"))
+        ] 
     if(alloc > 0):
-        mainBdy = [XIPush(XRegister("rbp")), XIMov(
-            XRegister("rsp"), XRegister("rbp")), XIPush(XRegister("rbx"))]
-        endBlk = [XIAdd(XCon(alloc), XRegister("rsp")), XIPop(
-            XRegister("rbx")), XIPop(XRegister("rbp"))]
-        for r in calleeSavedRegs:
-            mainBdy.append(XIPush(r))
-            endBlk.append(XIPop(r))
         mainBdy = mainBdy + \
-            [XISub(XCon(alloc), XRegister("rsp")), XIJmp(XLabel("body"))]
-    else:
-        for r in calleeSavedRegs:
-            mainBdy.append(XIPush(r))
-            endBlk.append(XIPop(r))
-        mainBdy = mainBdy + \
-            [XIJmp(XLabel("body"))]
-    if(type == "BOOL"):
-        endBlk = endBlk + [XIMov(XRegister("rax"), XRegister("rdi")),
-                           XICall(XLabel("print_bool")), XIRet()]
-    else:
-        endBlk = endBlk + [XIMov(XRegister("rax"), XRegister("rdi")),
-                           XICall(XLabel("print_int")), XIRet()]
+            [XISub(XCon(-1*alloc), XRegister("rsp"))] 
+        endBlk = endBlk +[XIAdd(XCon(-1*alloc), XRegister("rsp")), XIPop(XRegister("rbp")), XIPop(XRegister("rbx"))]
+        # for r in calleeSavedRegs:
+        #     mainBdy.append(XIPush(r))
+        #     endBlk.append(XIPop(r))
+        
+    #else:
+        # for r in calleeSavedRegs:
+        #     mainBdy.append(XIPush(r))
+        #     endBlk.append(XIPop(r))
+        # mainBdy = mainBdy + \
+        #     [XIJmp(XLabel("body"))]
 
+    mainBdy = mainBdy + [XICall(XLabel("init_mem")), XIJmp(XLabel("body"))]
     main = {XLabel("main"): XBlock([], mainBdy)}
-    end = {XLabel("end"): XBlock([], endBlk)}
+    end = {XLabel("end"): XBlock([], endBlk +[XIRet()])}
     xp.p.update(main)
     xp.p.update(end)
 
     return XProgram(xp.globals, xp.info, xp.p)
 
+
+def getPrintType(ty:str):
+    if(ty == "UNIT"):
+        return [
+            XIMov(XType(ty), XRegister("rdi")),
+            XIMov(XRegister("rax"), XRegister("rsi")),
+            XICall("print_value")
+        ]
 
 ######## Patch Instr ########
 
@@ -2841,7 +2854,7 @@ def _patch(i):
 class EmitEnv():
     def __init__(self):
         self.types = []
-        self.globals = [XGlobal("free_ptr"), XGlobal("from_end"),XType("T_Unit"), XType("T_S64"), XType("T_Bool"), XType("T_Vector")]
+        self.globals = [XType("T_Unit"), XType("T_S64"), XType("T_Bool"), XType("T_Vector")]
         self.typecntr = 0
 
 def emitXP(xp: XProgram):
@@ -2864,17 +2877,17 @@ def emitG(xp: XProgram, emitenv: EmitEnv):
     temp =""
     for g in emitenv.globals:
         if(isinstance(g, XGlobal) and g.var == "free_ptr"):
-            temp += g.var + ":\t.quad\t0\n"
+            temp +=  g.var + ":\t.quad\t0\n"
         elif(isinstance(g, XGlobal) and g.var == "from_end"):
             temp += g.var + ":\t.quad\t"+ str(1024*1024*1024) +"\n"
         elif(isinstance(g, XType) and g.t == "T_Unit"):
-            temp += g.t +":\t.quad\t" + str(0) +"\n"
+            temp += ".global " + g.t + "\n" + g.t +":\t.quad\t" + str(0) +"\n"
         elif(isinstance(g, XType) and g.t == "T_S64"):
-            temp += g.t +":\t.quad\t" + str(1) +"\n"
+            temp += ".global " + g.t + "\n" + g.t +":\t.quad\t" + str(1) +"\n"
         elif(isinstance(g, XType) and g.t == "T_Bool"):
-            temp += g.t +":\t.quad\t" + str(2) +"\n"
+            temp += ".global " + g.t + "\n" + g.t +":\t.quad\t" + str(2) +"\n"
         elif(isinstance(g, XType) and g.t == "T_Vector"):
-            temp += g.t +":\t.quad\t" + str(3) +"\n"
+            temp += ".global " + g.t + "\n" + g.t +":\t.quad\t" + str(3) +"\n"
     return temp
 
 def emitL(lab:XLabel, env:EmitEnv):
@@ -2936,4 +2949,12 @@ def emitA(arg, env:EmitEnv):
     elif(isinstance(arg, XGlobal)):
         return arg.var + "(" + emitA(XRegister("rip"), env) + ")"
     elif(isinstance(arg, XType)):
+        if(arg.t == "Unit"):
+            return "T_Unit" + "(" + emitA(XRegister("rip"), env) + ")" 
+        elif(arg.t == "NUM"):
+            return "T_S64" + "(" + emitA(XRegister("rip"), env) + ")" 
+        elif(arg.t == "BOOL"):
+            return "T_Bool" + "(" + emitA(XRegister("rip"), env) + ")" 
+        elif(arg.t == "VECTOR"):
+            return "T_Vector" + "(" + emitA(XRegister("rip"), env) + ")" 
         return arg.t + "(" + emitA(XRegister("rip"), env) + ")" 
