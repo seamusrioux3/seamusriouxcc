@@ -2240,15 +2240,15 @@ def _selectT(cp, arr, env, info):
             print(vecName.emit())
             vecDst = _selectA(dst, env)
             return [XIMov(vecName, tempReg), 
-                    XIMov(XMem(XRegister("r11"), wordsize*(src.ref.n+1)), vecDst)
+                    XIMov(XMem(tempReg2, wordsize*(src.ref.n+1)), vecDst)
                     ]
         elif(isinstance(src, CVectorSet)):
             vecName = _selectA(src.var, env)
             vecArg = _selectA(src.exp, env)
             vecDst = _selectA(dst, env)
-            return [XIMov(vecName, tempReg),
+            return [XIMov(vecName, tempReg2),
                     XIMov(vecArg, tempReg),
-                    XIMov(tempReg, XMem(XRegister("r11"), 8*(src.ref.n+1))), 
+                    XIMov(tempReg, XMem(tempReg2, 8*(src.ref.n+1))), 
                 ]
         elif(isinstance(src, CCollect)):
             vecDst = _selectA(dst, env)
@@ -2761,8 +2761,8 @@ def mainpass(xp: XProgram, alloc: int, type: str):
         ] 
     if(alloc > 0):
         mainBdy = mainBdy + \
-            [XISub(XCon(-1*alloc), XRegister("rsp"))] 
-        endBlk = endBlk +[XIAdd(XCon(-1*alloc), XRegister("rsp")), XIPop(XRegister("rbp")), XIPop(XRegister("rbx"))]
+            [XISub(XCon(alloc), XRegister("rsp"))] 
+        endBlk = endBlk +[XIAdd(XCon(alloc), XRegister("rsp")), XIPop(XRegister("rbp")), XIPop(XRegister("rbx"))]
         # for r in calleeSavedRegs:
         #     mainBdy.append(XIPush(r))
         #     endBlk.append(XIPop(r))

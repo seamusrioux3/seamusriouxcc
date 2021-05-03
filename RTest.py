@@ -86,13 +86,16 @@ class Test:
         if os.path.exists(binName):
             os.remove(binName)
 
+        print(stderr)
         print(stdout)
-        ans = stdout
-        if(stdout == b'true'):
-            ans = 1
-        elif(stdout == b'false'):
-            ans = 0
-        return int(ans)
+        ans = stdout.decode()
+        if(ans == 'true'):
+            return str(1)
+        elif(ans == 'false'):
+            return str(0)
+        elif(ans == 'Unit'):
+            return "Unit"
+        return ans
 
     def testAll(self, p):
         actual = 0
@@ -106,6 +109,8 @@ class Test:
         pselect = self.checkAnsX(p, select(ulocal), "select")
         pxalloc = self.checkAnsX(p,allocate_registers(pselect, finalType), "xalloc")
         hardwareAnsTest = self.testX0OnHardware(pxalloc)
+        #if(isinstance(pxalloc.interp(),str)):
+            
         
         self.test(p.interp(), hardwareAnsTest)
 
@@ -114,6 +119,10 @@ class Test:
             self.testAll(randomR2(1))
             #self.testAll(randomR2(2))
             #self.testAll(randomR2(3))
+    
+    def testVector(self, p: RVector, strX):
+        pOut = "Vector[" + " ".join([str(i.interp()).lower() for i in p.args ])  + " ]"
+        s.test(pOut, strX)
 
 
 s = Test()
@@ -586,13 +595,6 @@ print(expall1.pp())
 print(expall1.interp())
 print(str(freeptr))
 
-expall1 = RLet(RVar("v"), RVector([RRead(), RNum(2), RVector([RRead(), RNum(2)])]), RLet(RVar("var0"), RVectorRef(RVar("v"), RNum(0)), RLet(RVar("var1"), RVectorRef(RVar("alloc0"), RNum(0)), RAdd(RVar("var0"), RVar("var1")))))
-print(expall1.pp())
-expall1 = exposeAllocation(expall1)
-print()
-print(expall1.pp())
-print(expall1.interp())
-
 #### Expose Alloc Testing #####
 print("\nRCO R3 Testing\n")
 
@@ -746,27 +748,53 @@ x2prog3 = XProgram([], [], {
 
 
 ######## Combined Testing  #############
+def getToR(p:RLet):
+    return exposeAllocation(uniquify(optimizer(p)))
 def getToC(p:RLet):
     return uncoverLocal(econ(RCO(exposeAllocation(uniquify(optimizer(p))))))
-def getToX(p:RLet):
-    return allocate_registers(select(uncoverLocal(econ(RCO(exposeAllocation(uniquify(optimizer(p))))))),"NUM")
+def getToX(p:RLet, type):
+    return allocate_registers(select(uncoverLocal(econ(RCO(exposeAllocation(uniquify(optimizer(p))))))), type)
 print("\nCombined Tests\n")
-# test = RLet(RVar("VE0"), RVector([RNum(15), RBool(True)]), RLet(RVar("VE1"), RVector([RNum(12), RBool(True)]), RVectorRef(RVar("VE0"), RNum(0))))
-#test = RLet(RVar("VE0"), RVector([RBool(True), RNum(7)]), RVectorRef(RVar("VE0"), RNum(1)))
-#test = getToC(test)
-#print(test.pp())
-test = RLet(RVar("VE0"), RVector([RBool(True), RNum(7)]), RVectorRef(RVar("VE0"), RNum(1)))
-test2 = RIf(RCmp(">", RNum(11), RRead()), RNum(24), RNum(2))
-typeAns = test.typec()
-test = getToX(test)
-print(emitXP(test))
-test2 = getToX(test2)
 
-hardwareAns = s.testX0OnHardware(test)
+testBool = RLet(RVar("VE0"), RVector([RBool(True), RNum(7)]), RVectorRef(RVar("VE0"), RNum(1)))
+typeAns = testBool.typec()
+testBool = getToX(testBool, typeAns)
+s.test(s.testX0OnHardware(testBool), str(testBool.interp()))
 
-s.test(hardwareAns, test.interp())
-s.test(s.testX0OnHardware(test2), test2.interp())
-s.bigTest()
+
+testBool = RIf(RCmp(">", RNum(13), RRead()), RBool(True), RNum(234))
+typeAns = testBool.typec()
+testBool = getToX(testBool, typeAns)
+s.test(s.testX0OnHardware(testBool), str(testBool.interp()))
+
+testUnit = RIf(RCmp(">", RNum(13), RRead()), RUnit(), RNum(234))
+typeAns = testUnit.typec()
+testUnit = getToX(testUnit, typeAns)
+s.test(s.testX0OnHardware(testBool), str(testUnit.interp()))
+
+testVec = RLet(RVar("VE0"), RVector([RNum(11), RNum(22), RNum(24)]), RVar("VE0"))
+typeAns = testVec.typec()
+testVecX = getToX(testVec, typeAns)
+s.testVector(testVec.interp(), s.testX0OnHardware(testVecX))
+
+testVec = RLet(RVar("VE0"), RVector([RNum(11), RBool(False)]), RVar("VE0"))
+typeAns = testVec.typec()
+testVecX = getToX(testVec, typeAns)
+s.testVector(testVec.interp(), s.testX0OnHardware(testVecX))
+
+testVec = RLet(RVar("VE0"), RVector([RBool(True), RBool(False), RBool(False)]), RVar("VE0"))
+typeAns = testVec.typec()
+testVecX = getToX(testVec, typeAns)
+print(typeAns)
+s.testVector(testVec.interp(), s.testX0OnHardware(testVecX))
+
+testVec = RLet(RVar("VE0"), RVector([RBool(True), RBool(False), RBool(False), RNum(2), RNum(5)]), RVar("VE0"))
+typeAns = testVec.typec()
+testVecX = getToX(testVec, typeAns)
+print(typeAns)
+s.testVector(testVec.interp(), s.testX0OnHardware(testVecX))
+
+#s.bigTest()
 
 
 # s.testAll(letTest1)

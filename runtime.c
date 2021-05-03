@@ -61,6 +61,18 @@ void print_bool(int x){
 }
 
 void print_vector(uint64_t *val);
+void print_vector(uint64_t *val){
+    uint64_t *ty = (uint64_t*)val[0];
+    printf("Vector[");
+    for(uint8_t i =0; i < ty[1]; i++){
+        print_value(ty[2+i], val[1+i]);
+        if(i != ty[1]){
+            printf(" ");
+        }
+    }
+    printf("]");
+    return;
+}
 
 void print_value(uint64_t ty, uint64_t val){
     if(ty == T_Unit){
