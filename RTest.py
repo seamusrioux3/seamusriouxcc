@@ -1,7 +1,8 @@
 from R0 import *
 import subprocess
 import os
-
+import sys
+sys.setrecursionlimit(5400)
 
 class Test:
     def __init__(self):
@@ -756,43 +757,48 @@ def getToX(p:RLet, type):
     return allocate_registers(select(uncoverLocal(econ(RCO(exposeAllocation(uniquify(optimizer(p))))))), type)
 print("\nCombined Tests\n")
 
-testBool = RLet(RVar("VE0"), RVector([RBool(True), RNum(7)]), RVectorRef(RVar("VE0"), RNum(1)))
-typeAns = testBool.typec()
-testBool = getToX(testBool, typeAns)
-s.test(s.testX0OnHardware(testBool), str(testBool.interp()))
+a = REnv()
+testMem1 = RLet(RVar("VE0"), RVector([RNum(i) for i in range(126)]), RLet(RVar("VE1"), RVector([RNum(i) for i in range(127)]), RLet(RVar("VE2"), RVector([RNum(i) for i in range(128)]),RVar("VE2"))))
+print(testMem1.pp())
+typeAns = "VECTOR"
+testMem1 = getToX(testMem1, typeAns)
+# testBool = RLet(RVar("VE0"), RVector([RBool(True), RNum(7)]), RVectorRef(RVar("VE0"), RNum(1)))
+# typeAns = testBool.typec()
+s.testX0OnHardware(testMem1)
+#s.test(s.testX0OnHardware(testBool), str(testBool.interp()))
 
 
-testBool = RIf(RCmp(">", RNum(13), RRead()), RBool(True), RNum(234))
-typeAns = testBool.typec()
-testBool = getToX(testBool, typeAns)
-s.test(s.testX0OnHardware(testBool), str(testBool.interp()))
+# testBool = RIf(RCmp(">", RNum(13), RRead()), RBool(True), RNum(234))
+# typeAns = testBool.typec()
+# testBool = getToX(testBool, typeAns)
+# s.test(s.testX0OnHardware(testBool), str(testBool.interp()))
 
-testUnit = RIf(RCmp(">", RNum(13), RRead()), RUnit(), RNum(234))
-typeAns = testUnit.typec()
-testUnit = getToX(testUnit, typeAns)
-s.test(s.testX0OnHardware(testBool), str(testUnit.interp()))
+# testUnit = RIf(RCmp(">", RNum(13), RRead()), RUnit(), RNum(234))
+# typeAns = testUnit.typec()
+# testUnit = getToX(testUnit, typeAns)
+# s.test(s.testX0OnHardware(testBool), str(testUnit.interp()))
 
-testVec = RLet(RVar("VE0"), RVector([RNum(11), RNum(22), RNum(24)]), RVar("VE0"))
-typeAns = testVec.typec()
-testVecX = getToX(testVec, typeAns)
-s.testVector(testVec.interp(), s.testX0OnHardware(testVecX))
+# testVec = RLet(RVar("VE0"), RVector([RNum(11), RNum(22), RNum(24)]), RVar("VE0"))
+# typeAns = testVec.typec()
+# testVecX = getToX(testVec, typeAns)
+# s.testVector(testVec.interp(), s.testX0OnHardware(testVecX))
 
-testVec = RLet(RVar("VE0"), RVector([RNum(11), RBool(False)]), RVar("VE0"))
-typeAns = testVec.typec()
-testVecX = getToX(testVec, typeAns)
-s.testVector(testVec.interp(), s.testX0OnHardware(testVecX))
+# testVec = RLet(RVar("VE0"), RVector([RNum(11), RBool(False)]), RVar("VE0"))
+# typeAns = testVec.typec()
+# testVecX = getToX(testVec, typeAns)
+# s.testVector(testVec.interp(), s.testX0OnHardware(testVecX))
 
-testVec = RLet(RVar("VE0"), RVector([RBool(True), RBool(False), RBool(False)]), RVar("VE0"))
-typeAns = testVec.typec()
-testVecX = getToX(testVec, typeAns)
-print(typeAns)
-s.testVector(testVec.interp(), s.testX0OnHardware(testVecX))
+# testVec = RLet(RVar("VE0"), RVector([RBool(True), RBool(False), RBool(False)]), RVar("VE0"))
+# typeAns = testVec.typec()
+# testVecX = getToX(testVec, typeAns)
+# print(typeAns)
+# s.testVector(testVec.interp(), s.testX0OnHardware(testVecX))
 
-testVec = RLet(RVar("VE0"), RVector([RBool(True), RBool(False), RBool(False), RNum(2), RNum(5)]), RVar("VE0"))
-typeAns = testVec.typec()
-testVecX = getToX(testVec, typeAns)
-print(typeAns)
-s.testVector(testVec.interp(), s.testX0OnHardware(testVecX))
+# testVec = RLet(RVar("VE0"), RVector([RBool(True), RBool(False), RBool(False), RNum(2), RNum(5)]), RVar("VE0"))
+# typeAns = testVec.typec()
+# testVecX = getToX(testVec, typeAns)
+# print(typeAns)
+# s.testVector(testVec.interp(), s.testX0OnHardware(testVecX))
 
 #s.bigTest()
 

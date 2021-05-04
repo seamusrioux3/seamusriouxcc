@@ -1570,12 +1570,12 @@ def bigMem(n, m):
 def _bigMem(n, m):
     nums = [RNum(i) for i in range(0, m)]
     if(n == 0):
-        nums.append(RNum(0))
         return RVector(nums)
-    nums.append(RVectorRef(RVar("out"), RNum(0)))
-    e = RLet(RVar("out"), _bigMem(n-1, m), RLet(RVar("in"), RVector(nums), RVectorSet(RVar("in"), RNum(0),
-                                                                                      RAdd(RNum(1), RVectorRef(RVar("in"), RNum(0))))))
-    return e
+    else:
+        nums.insert(0, RVectorRef(RVar("out"), RNum(0)))
+        e = RLet(RVar("out"), _bigMem(n-1, m), RLet(RVar("i"), RVector(nums), RLet(RVar("_"), RVectorSet(RVar("i"), RNum(0),
+                                                                                        RAdd(RNum(1), RVectorRef(RVar("i"), RNum(0)))), RVar("i"))))
+        return e
 
 
 ######## Optimizer Function ########
@@ -1866,7 +1866,7 @@ def exposeAlloc(r, env: ExpEnv):
 
         assignVec = RLet(name, RAllocate(RNum(len(r.args)), r.typec()), before)
         env.underScoreCntr += 1
-        checkLet = RLet(RVar("_"), RIf(RCmp(">", RAdd(RGlobal("free_ptr"), RNum(8*(len(r.args)+1))), RGlobal("from_end")), RCollect(RNum(len(r.args))), RUnit()), assignVec)
+        checkLet = RLet(RVar("_"), RIf(RCmp("<", RAdd(RGlobal("free_ptr"), RNum(8*(len(r.args)+1))), RGlobal("from_end")),  RUnit(), RCollect(RNum(len(r.args)))), assignVec)
         env.cntr += 1
         env.varBefore = None
         env.letBefore = None
@@ -2254,7 +2254,7 @@ def _selectT(cp, arr, env, info):
             vecDst = _selectA(dst, env)
             colNum = src.num.n*8
             return [
-                XIMov(XCon(colNum), XRegister("rdi")), XICall(XLabel("collect")), XIMov(XCon(1), vecDst)
+                XIMov(XCon(colNum), XRegister("rdi")), XIMov(root_stack_reg, XRegister("rsi")), XICall(XLabel("collect")), XIMov(XCon(1), vecDst)
             ]
         return _selectE(src, dst, env)
     elif(isinstance(cp, CSetCC)):
@@ -2466,7 +2466,7 @@ def _uncoverR(i):
     elif(isinstance(i, XIJmpIf)):
         return set([])
     elif(isinstance(i,XICall)):
-        return set([i.emit() for i in calleeSavedRegs])
+        return set([i.emit() for i in argumentRegs])
     elif(isinstance(i,XICMov)):
         return _uncoverM(i.src, True)
     return set([])
@@ -2522,6 +2522,10 @@ def buildInt(xp: XProgram, live: dict):
                     for u in callerSavedRegs:
                         if(not u == e):
                             g.add_edge(u.emit(), str(e))
+                    #When e is a vector get put on root stack
+                    # for u in calleeSavedRegs:
+                    #     if(not u == e):
+                    #         g.add_edge(u.emit(), str(e))
         elif(isinstance(i, XIPop)):
             if(s):
                 addlike(s, i.src, g)
@@ -2752,7 +2756,7 @@ def mainpass(xp: XProgram, alloc: int, type: str):
         if(lab.emit() == "end"):
             xp.p.pop(lab)
             break
-    mainBdy = [XIPush(XRegister("rbx")), XIPush(XRegister("rbp")), XIMov(
+    mainBdy = [XIPush(XRegister("rbx")), XIPush(XRegister("rbp")), XIPush(root_stack_reg), XIMov(
             XRegister("rsp"), XRegister("rbp"))]
     endBlk =  [
             XIMov(XType(type), XRegister("rdi")),
@@ -2762,7 +2766,7 @@ def mainpass(xp: XProgram, alloc: int, type: str):
     if(alloc > 0):
         mainBdy = mainBdy + \
             [XISub(XCon(alloc), XRegister("rsp"))] 
-        endBlk = endBlk +[XIAdd(XCon(alloc), XRegister("rsp")), XIPop(XRegister("rbp")), XIPop(XRegister("rbx"))]
+        endBlk = endBlk +[XIAdd(XCon(alloc), XRegister("rsp")), XIPop(root_stack_reg), XIPop(XRegister("rbp")), XIPop(XRegister("rbx"))]
         # for r in calleeSavedRegs:
         #     mainBdy.append(XIPush(r))
         #     endBlk.append(XIPop(r))
@@ -2774,7 +2778,7 @@ def mainpass(xp: XProgram, alloc: int, type: str):
         # mainBdy = mainBdy + \
         #     [XIJmp(XLabel("body"))]
 
-    mainBdy = mainBdy + [XICall(XLabel("init_mem")), XIJmp(XLabel("body"))]
+    mainBdy = mainBdy + [XICall(XLabel("init_mem")), XIMov(XGlobal("rootstack_start"), XRegister("r12")), XIJmp(XLabel("body"))]
     main = {XLabel("main"): XBlock([], mainBdy)}
     end = {XLabel("end"): XBlock([], endBlk +[XIRet()])}
     xp.p.update(main)
